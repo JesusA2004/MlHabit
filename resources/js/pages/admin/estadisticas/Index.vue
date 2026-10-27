@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowDownRight, ArrowUpRight, ChartColumn, Eye, FileText, Globe, Users } from '@lucide/vue';
+import { Head, router } from '@inertiajs/vue3';
+import {
+    ArrowDownRight,
+    ArrowUpRight,
+    ChartColumn,
+    Eye,
+    Globe,
+    MousePointerClick,
+    Users,
+} from '@lucide/vue';
 import { computed } from 'vue';
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
-import EmptyState from '@/components/admin/EmptyState.vue';
 import StatCard from '@/components/admin/StatCard.vue';
 import TrendChart from '@/components/admin/TrendChart.vue';
+import EmptyState from '@/components/ds/EmptyState.vue';
+import PageContainer from '@/components/ds/PageContainer.vue';
+import PageHeader from '@/components/ds/PageHeader.vue';
+import SectionCard from '@/components/ds/SectionCard.vue';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { estadisticas } from '@/routes/admin';
-import type { BreadcrumbItem } from '@/types';
 
 interface Summary {
     days: number;
@@ -17,6 +27,7 @@ interface Summary {
     viewsToday: number;
     avgPerDay: number;
     deltaPct: number | null;
+    requestPageVisitors: number;
 }
 
 const props = defineProps<{
@@ -24,7 +35,7 @@ const props = defineProps<{
     ranges: number[];
     summary: Summary;
     series: { date: string; label: string; total: number; unique: number }[];
-    topPosts: { title: string; slug: string; category: string | null; color: string | null; views: number; uniques: number }[];
+    areas: { area: string; views: number; uniques: number }[];
     topPages: { path: string; label: string; views: number; uniques: number }[];
     referrers: { host: string; views: number }[];
 }>();
@@ -33,29 +44,31 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Panel', href: '/admin' },
-            { title: 'Estadísticas', href: estadisticas() },
-        ] as BreadcrumbItem[],
+            { title: 'Estadísticas', href: '/admin/estadisticas' },
+        ],
     },
 });
 
-const RANGE_LABEL: Record<number, string> = { 7: '7 días', 30: '30 días', 90: '90 días' };
-
-function setRange(days: number) {
-    if (days === props.range) return;
-    router.get(estadisticas({ query: { dias: days } }).url, {}, { preserveState: true, preserveScroll: true, replace: true });
+function setRange(value: unknown) {
+    const days = Number(value);
+    if (!days || days === props.range) return;
+    router.get(
+        estadisticas({ query: { dias: days } }).url,
+        {},
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 }
 
-const hasData = computed(() => props.summary.totalViews > 0);
 const nf = new Intl.NumberFormat('es-MX');
-function fmt(n: number): string {
-    return nf.format(n);
-}
-
-const maxPost = computed(() => Math.max(1, ...props.topPosts.map((p) => p.views)));
-const maxPage = computed(() => Math.max(1, ...props.topPages.map((p) => p.views)));
+const fmt = (n: number) => nf.format(n);
+const hasData = computed(() => props.summary.totalViews > 0);
+const maxArea = computed(() => Math.max(1, ...props.areas.map((a) => a.views)));
+const maxPage = computed(() =>
+    Math.max(1, ...props.topPages.map((p) => p.views)),
+);
 const deltaLabel = computed(() => {
     const d = props.summary.deltaPct;
-    if (d === null) return 'Sin periodo anterior comparable';
+    if (d === null) return 'Sin periodo anterior para comparar';
 
     return `${d >= 0 ? '+' : ''}${d}% frente a los ${props.summary.days} días previos`;
 });
@@ -64,134 +77,196 @@ const deltaLabel = computed(() => {
 <template>
     <Head title="Estadísticas" />
 
-    <div class="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
-        <AdminPageHeader
-            eyebrow="Audiencia"
+    <PageContainer class="flex flex-col gap-6">
+        <PageHeader
             title="Estadísticas del sitio"
-            description="Cuántas visitas recibe MR. INSIGHT y qué contenido se lee más. Datos anónimos y agregados: sin cookies ni seguimiento personal."
+            description="Visitas al sitio público de ML Habitat. Datos anónimos y agregados: sin cookies ni seguimiento personal. No se cuentan las visitas del personal con sesión iniciada."
         >
             <template #actions>
-                <div class="inline-flex rounded-lg border bg-card p-0.5" role="group" aria-label="Periodo">
-                    <button
-                        v-for="r in ranges"
+                <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    :model-value="String(props.range)"
+                    aria-label="Periodo"
+                    @update:model-value="setRange"
+                >
+                    <ToggleGroupItem
+                        v-for="r in props.ranges"
                         :key="r"
-                        type="button"
-                        class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="r === range ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:text-foreground'"
-                        :aria-pressed="r === range"
-                        @click="setRange(r)"
+                        :value="String(r)"
+                        class="px-3"
+                        >{{ r }} días</ToggleGroupItem
                     >
-                        {{ RANGE_LABEL[r] ?? `${r} días` }}
-                    </button>
-                </div>
+                </ToggleGroup>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <EmptyState
             v-if="!hasData"
             :icon="ChartColumn"
             title="Aún no hay visitas registradas"
-            description="En cuanto el sitio público reciba visitas, aquí verás cuántas son, cómo evolucionan y qué contenido se lee más. El registro es anónimo y no usa cookies."
+            description="En cuanto el sitio reciba visitas verás aquí cuántas son, cómo evolucionan y qué secciones interesan más."
         />
 
         <template v-else>
-            <!-- KPIs -->
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <StatCard label="Visitas" :value="fmt(summary.rangeViews)" :hint="deltaLabel" :icon="Eye" tone="brand" />
-                <StatCard label="Visitantes únicos" :value="fmt(summary.uniqueVisitors)" :hint="`En los últimos ${summary.days} días`" :icon="Users" />
-                <StatCard label="Visitas hoy" :value="fmt(summary.viewsToday)" :hint="`Promedio ${fmt(summary.avgPerDay)}/día`" :icon="ChartColumn" tone="success" />
-                <StatCard label="Total histórico" :value="fmt(summary.totalViews)" hint="Desde el inicio del registro" :icon="Globe" />
+                <StatCard
+                    label="Visitas"
+                    :value="fmt(props.summary.rangeViews)"
+                    :hint="deltaLabel"
+                    :icon="Eye"
+                    tone="brand"
+                />
+                <StatCard
+                    label="Visitantes únicos"
+                    :value="fmt(props.summary.uniqueVisitors)"
+                    :hint="`En los últimos ${props.summary.days} días`"
+                    :icon="Users"
+                />
+                <StatCard
+                    label="Visitas hoy"
+                    :value="fmt(props.summary.viewsToday)"
+                    :hint="`Promedio de ${fmt(props.summary.avgPerDay)} al día`"
+                    :icon="ChartColumn"
+                    tone="success"
+                />
+                <StatCard
+                    label="Llegaron a “Solicitar”"
+                    :value="fmt(props.summary.requestPageVisitors)"
+                    hint="Visitantes únicos en la página de solicitud"
+                    :icon="MousePointerClick"
+                    tone="info"
+                />
             </div>
 
-            <!-- Serie temporal -->
-            <section class="flex flex-col gap-4 rounded-xl border bg-card p-5">
-                <header class="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 class="text-sm font-semibold">Evolución de visitas</h2>
-                        <p class="text-xs text-muted-foreground">Visitas y visitantes únicos por día</p>
-                    </div>
+            <SectionCard
+                title="Evolución de visitas"
+                description="Visitas y visitantes únicos por día"
+            >
+                <template v-if="props.summary.deltaPct !== null" #actions>
                     <span
-                        v-if="summary.deltaPct !== null"
                         class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                        :class="summary.deltaPct >= 0 ? 'bg-success/12 text-success' : 'bg-destructive/10 text-destructive'"
+                        :class="
+                            props.summary.deltaPct >= 0
+                                ? 'bg-success-soft text-success-ink'
+                                : 'bg-danger-soft text-danger-ink'
+                        "
                     >
-                        <component :is="summary.deltaPct >= 0 ? ArrowUpRight : ArrowDownRight" class="size-3.5" />
-                        {{ summary.deltaPct >= 0 ? '+' : '' }}{{ summary.deltaPct }}%
+                        <component
+                            :is="
+                                props.summary.deltaPct >= 0
+                                    ? ArrowUpRight
+                                    : ArrowDownRight
+                            "
+                            class="size-3.5"
+                        />
+                        {{ props.summary.deltaPct >= 0 ? '+' : ''
+                        }}{{ props.summary.deltaPct }}%
                     </span>
-                </header>
-                <TrendChart title="Evolución de visitas" :data="series" />
-            </section>
+                </template>
+                <TrendChart title="Evolución de visitas" :data="props.series" />
+            </SectionCard>
 
             <div class="grid gap-4 xl:grid-cols-2">
-                <!-- Publicaciones más vistas -->
-                <section class="flex flex-col rounded-xl border bg-card">
-                    <header class="flex items-center gap-2 border-b px-5 py-4">
-                        <FileText class="size-4 text-brand" />
-                        <h2 class="text-sm font-semibold">Publicaciones más vistas</h2>
-                    </header>
-                    <ol v-if="topPosts.length" class="flex flex-col divide-y">
-                        <li v-for="(p, i) in topPosts" :key="p.slug" class="px-5 py-3">
-                            <div class="flex items-center gap-3">
-                                <span class="w-5 shrink-0 text-center font-display text-sm font-semibold text-muted-foreground tabular-nums">{{ i + 1 }}</span>
-                                <a :href="`/tips/${p.slug}`" target="_blank" rel="noopener" class="min-w-0 flex-1 truncate text-sm font-medium hover:text-brand">
-                                    {{ p.title }}
-                                </a>
-                                <span class="shrink-0 font-display text-sm font-semibold tabular-nums">{{ fmt(p.views) }}</span>
+                <SectionCard title="Visitas por sección del sitio">
+                    <ul class="grid gap-3">
+                        <li
+                            v-for="a in props.areas"
+                            :key="a.area"
+                            class="grid gap-1"
+                        >
+                            <div
+                                class="flex items-center justify-between text-sm"
+                            >
+                                <span>{{ a.area }}</span>
+                                <span class="font-medium tabular-nums">{{
+                                    fmt(a.views)
+                                }}</span>
                             </div>
-                            <div class="mt-1.5 ml-8 flex items-center gap-2">
-                                <span v-if="p.category" class="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                    <span class="size-1.5 rounded-full" :style="{ background: p.color ?? undefined }" />{{ p.category }}
-                                </span>
-                                <span class="text-[11px] text-muted-foreground">· {{ fmt(p.uniques) }} únicos</span>
-                                <span class="ml-auto h-1 w-24 overflow-hidden rounded-full bg-muted">
-                                    <span class="block h-full rounded-full bg-brand/70" :style="{ width: `${(p.views / maxPost) * 100}%` }" />
-                                </span>
-                            </div>
+                            <span
+                                class="h-1.5 overflow-hidden rounded-full bg-muted"
+                            >
+                                <span
+                                    class="block h-full rounded-full bg-primary/70"
+                                    :style="{
+                                        width: `${(a.views / maxArea) * 100}%`,
+                                    }"
+                                />
+                            </span>
                         </li>
-                    </ol>
-                    <p v-else class="p-5 text-sm text-muted-foreground">Ninguna publicación ha recibido visitas en este periodo.</p>
-                </section>
+                    </ul>
+                </SectionCard>
 
-                <!-- Páginas más vistas -->
-                <section class="flex flex-col rounded-xl border bg-card">
-                    <header class="flex items-center gap-2 border-b px-5 py-4">
-                        <Globe class="size-4 text-brand" />
-                        <h2 class="text-sm font-semibold">Páginas más vistas</h2>
-                    </header>
-                    <ol v-if="topPages.length" class="flex flex-col divide-y">
-                        <li v-for="(p, i) in topPages" :key="p.path" class="flex items-center gap-3 px-5 py-3">
-                            <span class="w-5 shrink-0 text-center font-display text-sm font-semibold text-muted-foreground tabular-nums">{{ i + 1 }}</span>
+                <SectionCard title="Páginas más vistas" flush>
+                    <ol
+                        v-if="props.topPages.length"
+                        class="divide-y divide-border"
+                    >
+                        <li
+                            v-for="(p, i) in props.topPages"
+                            :key="p.path"
+                            class="flex items-center gap-3 px-5 py-3"
+                        >
+                            <span
+                                class="w-5 shrink-0 text-center font-display text-sm font-semibold text-muted-foreground tabular-nums"
+                                >{{ i + 1 }}</span
+                            >
                             <span class="min-w-0 flex-1">
-                                <a :href="p.path" target="_blank" rel="noopener" class="block truncate text-sm font-medium hover:text-brand">{{ p.label }}</a>
-                                <span class="block truncate text-[11px] text-muted-foreground">{{ p.path }}</span>
+                                <a
+                                    :href="p.path"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="block truncate text-sm font-medium hover:text-primary"
+                                    >{{ p.label }}</a
+                                >
+                                <span
+                                    class="block truncate text-xs text-muted-foreground"
+                                    >{{ p.path }} ·
+                                    {{ fmt(p.uniques) }} únicos</span
+                                >
                             </span>
-                            <span class="h-1 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
-                                <span class="block h-full rounded-full bg-brand/70" :style="{ width: `${(p.views / maxPage) * 100}%` }" />
+                            <span
+                                class="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-muted"
+                            >
+                                <span
+                                    class="block h-full rounded-full bg-primary/70"
+                                    :style="{
+                                        width: `${(p.views / maxPage) * 100}%`,
+                                    }"
+                                />
                             </span>
-                            <span class="shrink-0 font-display text-sm font-semibold tabular-nums">{{ fmt(p.views) }}</span>
+                            <span
+                                class="shrink-0 font-display text-sm font-semibold tabular-nums"
+                                >{{ fmt(p.views) }}</span
+                            >
                         </li>
                     </ol>
-                    <p v-else class="p-5 text-sm text-muted-foreground">Sin datos de páginas en este periodo.</p>
-                </section>
+                    <p v-else class="p-5 text-sm text-muted-foreground">
+                        Sin datos en este periodo.
+                    </p>
+                </SectionCard>
             </div>
 
-            <!-- Procedencia -->
-            <section v-if="referrers.length" class="flex flex-col gap-3 rounded-xl border bg-card p-5">
-                <header>
-                    <h2 class="text-sm font-semibold">De dónde llegan</h2>
-                    <p class="text-xs text-muted-foreground">Sitios externos que enviaron visitas</p>
-                </header>
+            <SectionCard
+                v-if="props.referrers.length"
+                title="De dónde llegan"
+                description="Sitios externos que enviaron visitas"
+                :icon="Globe"
+            >
                 <ul class="flex flex-wrap gap-2">
                     <li
-                        v-for="r in referrers"
+                        v-for="r in props.referrers"
                         :key="r.host"
-                        class="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-sm"
+                        class="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-sm"
                     >
                         {{ r.host }}
-                        <span class="font-medium tabular-nums text-muted-foreground">{{ fmt(r.views) }}</span>
+                        <span
+                            class="font-medium text-muted-foreground tabular-nums"
+                            >{{ fmt(r.views) }}</span
+                        >
                     </li>
                 </ul>
-            </section>
+            </SectionCard>
         </template>
-    </div>
+    </PageContainer>
 </template>

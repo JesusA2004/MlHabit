@@ -1,15 +1,19 @@
 <?php
 
+use App\Exceptions\ErrorPageRenderer;
+use App\Http\Middleware\CaptureLeadAttribution;
+use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsureStaff;
+use App\Http\Middleware\EnsureTwoFactorForStaff;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackPageView;
-use App\Services\PublicSiteDataService;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -21,11 +25,19 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        $middleware->alias([
+            'staff' => EnsureStaff::class,
+            'role' => EnsureRole::class,
+        ]);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             TrackPageView::class,
+            CaptureLeadAttribution::class,
+            SecurityHeaders::class,
+            EnsureTwoFactorForStaff::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -33,19 +45,6 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
-        // La 404 editorial se muestra siempre (incluso en local), ya que no
-        // revela información de depuración. El resto de códigos de error
-        // conserva la página de depuración de Laravel mientras APP_DEBUG
-        // esté activo.
-        $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
-            $status = $response->getStatusCode();
-
-            if ($status === 404 && ! $request->expectsJson()) {
-                return Inertia::render('public/NotFound', [
-                    ...app(PublicSiteDataService::class)->base(),
-                ])->toResponse($request)->setStatusCode(404);
-            }
-
-            return $response;
-        });
+        // Páginas de error con marca (403, 404, 419, 429, 500 sin depuración, 503).
+        $exceptions->respond(fn (Response $response, Throwable $e, Request $request) => ErrorPageRenderer::render($response, $e, $request));
     })->create();

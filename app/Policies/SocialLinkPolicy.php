@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\SocialLink;
 use App\Models\User;
 
@@ -10,21 +9,21 @@ class SocialLinkPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->hasPermission('content.manage');
     }
 
     public function create(User $user): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->hasPermission('content.manage');
     }
 
     public function update(User $user, SocialLink $socialLink): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->hasPermission('content.manage');
     }
 
     public function delete(User $user, SocialLink $socialLink): bool
     {
-        return $user->role === UserRole::Admin;
+        return $user->hasPermission('content.manage');
     }
 }

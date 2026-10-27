@@ -1,0 +1,11 @@
+# Módulo projects — decisiones
+
+- **Creación del proyecto**: `ProjectService` (desde prospecto, visita o cliente). Idempotente por `projects.lead_id` UNIQUE. Nace en `preparation` y pasa a `design`; el prospecto pasa a `design` (forzado) y a `won` al activarse el contrato.
+- **Medición**: versionada por proyecto (o por visita mientras no hay proyecto; se renumera al vincular). Una versión enviada es inmutable; corregir crea otra con `supersedes_id`, y al enviarse la anterior queda `superseded`. Medidas en milímetros enteros.
+- **Sin rastreo GPS** del técnico: por privacidad y porque no aporta al flujo. La ubicación es el domicilio del cliente; el técnico abre su app de mapas.
+- **Diseño**: aprobación del cliente (distribución + acabados) ≠ aprobación técnica (`designs.approve_technical`, solo después de la del cliente). Ops exige `technical_approved_at` para fabricar.
+- **Cotización**: totales solo en backend (`QuoteCalculator`, bcmath, half-up a centavos). Importe de partida = round(precio × cantidad) − descuento. Con IVA incluido: base = round(neto ÷ (1+tasa)), IVA = neto − base. Sin IVA: IVA = round(neto × tasa). IVA, modo de precios y vigencia se congelan desde `Settings commercial` al crear cada versión. Cualquier descuento exige `quotes.authorize_discount` (queda en `discount_authorized_by`). `quotes:expire` vence las enviadas fuera de vigencia (programar a diario).
+- **Contrato**: al aceptar se congela `deposit_percent`; se aplica como máximo UN crédito de visita disponible y vigente del mismo cliente ligado al proyecto o a su prospecto. `deposit_due = anticipo − crédito`; el total no cambia. Si no queda anticipo por cobrar, el contrato se activa y el proyecto se autoriza.
+- **Reembolso de anticipo**: nunca se borra nada ni se retrocede el proyecto en automático (puede haber fabricación en curso). Si el neto pagado ya no cubre el anticipo, el contrato pasa a `deposit_refunded` y se registra un evento interno; el equipo decide si cobra de nuevo (el portal vuelve a ofrecer el pago) o cancela.
+- **Archivos del proyecto**: todos privados. Solo los de rol `client_document` son para el cliente (`ProjectPolicy::viewMedia`).
+- **Invitación al portal**: reutiliza la invitación de platform (`/invitacion/{user}`, 72 h, Fortify).

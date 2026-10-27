@@ -1,13 +1,24 @@
 import { ref } from 'vue';
 import { apiFetch } from '@/lib/http';
-import multimediaSesiones from '@/routes/admin/multimedia-sesiones';
+import subidas from '@/routes/subidas';
 
+/**
+ * Endpoints de sesiones de subida: /subidas (módulo web). Cualquier usuario
+ * activo puede subir archivos privados; los públicos requieren media.manage.
+ */
 export interface UploadedMediaResult {
     id: number;
+    uuid?: string;
+    visibility?: 'public' | 'private';
     filename: string;
     type: string;
     url: string | null;
     status: string;
+}
+
+/** Opciones extra que viajan en el payload de inicio de sesión de subida. */
+export interface ChunkedUploadOptions {
+    visibility?: 'public' | 'private';
 }
 
 export interface ChunkedUploadProgress {
@@ -18,7 +29,7 @@ export interface ChunkedUploadProgress {
     status: 'uploading' | 'completed' | 'error' | 'aborted';
 }
 
-const RESUME_STORAGE_KEY = 'mrinsight.chunked-uploads';
+const RESUME_STORAGE_KEY = 'mlhabitat.chunked-uploads';
 // Por encima de este tamaño no se calcula el checksum SHA-256 en el
 // navegador: leer el archivo completo a memoria para hashear deja de ser
 // razonable y el tamaño exacto (verificado en el servidor) ya protege la
@@ -88,9 +99,19 @@ export function useChunkedUpload() {
     let aborted = false;
     let currentUuid: string | null = null;
 
-    async function upload(file: File, collectionPath?: string): Promise<UploadedMediaResult> {
+    async function upload(
+        file: File,
+        collectionPath?: string,
+        options: ChunkedUploadOptions = {},
+    ): Promise<UploadedMediaResult> {
         aborted = false;
-        progress.value = { file, sentBytes: 0, totalBytes: file.size, percent: 0, status: 'uploading' };
+        progress.value = {
+            file,
+            sentBytes: 0,
+            totalBytes: file.size,
+            percent: 0,
+            status: 'uploading',
+        };
 
         let uuid: string;
         let chunkSize: number;
@@ -100,28 +121,55 @@ export function useChunkedUpload() {
         const existing = resumeMap[fingerprint(file)];
 
         if (existing) {
-            const statusResponse = await apiFetch(multimediaSesiones.show(existing.uuid).url);
+            const statusResponse = await apiFetch(
+                subidas.show(existing.uuid).url,
+            );
             if (statusResponse.ok) {
                 const state = await statusResponse.json();
-                if (state.status === 'uploading' && state.totalSize === file.size) {
+                if (
+                    state.status === 'uploading' &&
+                    state.totalSize === file.size
+                ) {
                     uuid = existing.uuid;
                     chunkSize = existing.chunkSize;
                     startChunkIndex = state.nextChunkIndex;
-                    progress.value = { ...progress.value, sentBytes: state.receivedSize, percent: state.progress };
+                    progress.value = {
+                        ...progress.value,
+                        sentBytes: state.receivedSize,
+                        percent: state.progress,
+                    };
                 } else {
                     forgetSession(file);
-                    ({ uuid, chunkSize } = await startSession(file, collectionPath));
+                    ({ uuid, chunkSize } = await startSession(
+                        file,
+                        collectionPath,
+                        options,
+                    ));
                 }
             } else {
                 forgetSession(file);
-                ({ uuid, chunkSize } = await startSession(file, collectionPath));
+                ({ uuid, chunkSize } = await startSession(
+                    file,
+                    collectionPath,
+                    options,
+                ));
             }
         } else {
-            ({ uuid, chunkSize } = await startSession(file, collectionPath));
+            ({ uuid, chunkSize } = await startSession(
+                file,
+                collectionPath,
+                options,
+            ));
         }
 
         currentUuid = uuid;
-        rememberSession(file, { uuid, fileName: file.name, fileSize: file.size, lastModified: file.lastModified, chunkSize });
+        rememberSession(file, {
+            uuid,
+            fileName: file.name,
+            fileSize: file.size,
+            lastModified: file.lastModified,
+            chunkSize,
+        });
 
         let chunkIndex = startChunkIndex;
         let offset = startChunkIndex * chunkSize;
@@ -137,7 +185,7 @@ export function useChunkedUpload() {
             formData.append('chunk', chunk, file.name);
             formData.append('chunkIndex', String(chunkIndex));
 
-            const chunkResponse = await apiFetch(multimediaSesiones.fragmentos(uuid).url, {
+            const chunkResponse = await apiFetch(subidas.fragmentos(uuid).url, {
                 method: 'POST',
                 body: formData,
             });
@@ -151,10 +199,16 @@ export function useChunkedUpload() {
             offset += chunk.size;
             chunkIndex = result.nextChunkIndex;
 
-            progress.value = { ...progress.value!, sentBytes: result.receivedSize, percent: result.progress };
+            progress.value = {
+                ...progress.value!,
+                sentBytes: result.receivedSize,
+                percent: result.progress,
+            };
         }
 
-        const completeResponse = await apiFetch(multimediaSesiones.completar(uuid).url, { method: 'POST' });
+        const completeResponse = await apiFetch(subidas.completar(uuid).url, {
+            method: 'POST',
+        });
         if (!completeResponse.ok) {
             const body = await completeResponse.json().catch(() => null);
             progress.value = { ...progress.value!, status: 'error' };
@@ -163,15 +217,23 @@ export function useChunkedUpload() {
 
         forgetSession(file);
         const { media } = await completeResponse.json();
-        progress.value = { ...progress.value!, percent: 100, status: 'completed' };
+        progress.value = {
+            ...progress.value!,
+            percent: 100,
+            status: 'completed',
+        };
 
         return media;
     }
 
-    async function startSession(file: File, collectionPath?: string): Promise<{ uuid: string; chunkSize: number }> {
+    async function startSession(
+        file: File,
+        collectionPath?: string,
+        options: ChunkedUploadOptions = {},
+    ): Promise<{ uuid: string; chunkSize: number }> {
         const checksumSha256 = await computeChecksum(file);
 
-        const startResponse = await apiFetch(multimediaSesiones.store().url, {
+        const startResponse = await apiFetch(subidas.store().url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -179,13 +241,15 @@ export function useChunkedUpload() {
                 mimeType: file.type || 'application/octet-stream',
                 totalSize: file.size,
                 collection: collectionPath,
+                visibility: options.visibility,
                 checksumSha256,
             }),
         });
 
         if (!startResponse.ok) {
+            const body = await startResponse.json().catch(() => null);
             progress.value = { ...progress.value!, status: 'error' };
-            throw new Error('No se pudo iniciar la sesión de subida.');
+            throw new Error(body?.message ?? 'No se pudo iniciar la subida.');
         }
 
         return startResponse.json();
@@ -195,7 +259,9 @@ export function useChunkedUpload() {
     async function cancel(file?: File) {
         aborted = true;
         if (currentUuid) {
-            await apiFetch(multimediaSesiones.destroy(currentUuid).url, { method: 'DELETE' }).catch(() => undefined);
+            await apiFetch(subidas.destroy(currentUuid).url, {
+                method: 'DELETE',
+            }).catch(() => undefined);
         }
         if (file) forgetSession(file);
     }

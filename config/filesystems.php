@@ -48,7 +48,7 @@ return [
         ],
 
         // Disco físico para el proveedor de almacenamiento "local" de la
-        // biblioteca multimedia de MR. INSIGHT. La entrega al navegador no
+        // biblioteca multimedia de ML Habitat. La entrega al navegador no
         // usa el symlink público de Laravel: pasa por un controlador propio
         // (ver MediaStreamController, Fase 6) para poder soportar peticiones
         // Range en video y, más adelante, servir igual desde el NAS Synology.
@@ -68,6 +68,16 @@ return [
         // disco queda definido pero sin credenciales (no se escriben aquí
         // valores de ejemplo) y el proveedor "synology" permanece inactivo
         // (ver StorageProviderSeeder).
+        // Documentos y evidencias de clientes. Sin URL pública: solo se
+        // sirven vía PrivateMediaController tras autorizar con Policies.
+        'media_private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/media'),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         'media_synology' => [
             'driver' => 'sftp',
             'host' => env('NAS_SFTP_HOST'),
@@ -75,7 +85,7 @@ return [
             'username' => env('NAS_SFTP_USERNAME'),
             'password' => env('NAS_SFTP_PASSWORD'),
             'privateKey' => env('NAS_SFTP_PRIVATE_KEY_PATH'),
-            'root' => env('NAS_SFTP_ROOT', '/mr-insight'),
+            'root' => env('NAS_SFTP_ROOT', '/ml-habitat'),
             'timeout' => 10,
             'throw' => false,
         ],

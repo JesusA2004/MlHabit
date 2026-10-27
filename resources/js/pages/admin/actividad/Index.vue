@@ -1,352 +1,409 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import {
-    Activity,
-    BookOpen,
-    ChevronLeft,
-    ChevronRight,
-    FileText,
-    HardDrive,
-    Home,
-    ImageIcon,
-    Loader2,
-    Palette,
-    PenTool,
-    Search,
-    Share2,
-    Tags,
-    X,
-} from '@lucide/vue';
-import type { Component } from 'vue';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
-import EmptyState from '@/components/admin/EmptyState.vue';
-import { Badge } from '@/components/ui/badge';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Activity, ArrowRight, ChevronLeft, ChevronRight } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
+import DatePicker from '@/components/ds/DatePicker.vue';
+import DateText from '@/components/ds/DateText.vue';
+import EmptyState from '@/components/ds/EmptyState.vue';
+import FilterBar from '@/components/ds/FilterBar.vue';
+import PageContainer from '@/components/ds/PageContainer.vue';
+import PageHeader from '@/components/ds/PageHeader.vue';
+import SearchSelect from '@/components/ds/SearchSelect.vue';
+import type { SearchSelectOption } from '@/components/ds/SearchSelect.vue';
+import StatusBadge from '@/components/ds/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import actividad from '@/routes/admin/actividad';
-import type { BreadcrumbItem } from '@/types';
 
-interface LogRow {
+type DiffRow = { field: string; label: string; before: string; after: string };
+type Entry = {
     id: number;
-    userName: string;
-    actionKey: string;
+    action: string;
     actionLabel: string;
+    module: string;
+    moduleLabel: string;
+    userName: string;
+    userRole: string | null;
     subjectLabel: string | null;
     subjectId: number | null;
-    summary: string[];
+    subjectReference: string | null;
+    diff: DiffRow[];
+    details: { label: string; value: string }[];
     result: string;
+    ipAddress: string | null;
     createdAt: string | null;
-}
+};
+type Option = { value: string; label: string };
 
 const props = defineProps<{
-    logs: { data: LogRow[]; currentPage: number; lastPage: number; total: number };
-    filters: { usuario?: string; accion?: string; desde?: string; hasta?: string; q?: string };
-    actions: { value: string; label: string }[];
-    users: { value: number; label: string }[];
+    logs: {
+        data: Entry[];
+        currentPage: number;
+        hasMore: boolean;
+        prevUrl: string | null;
+        nextUrl: string | null;
+    };
+    filters: {
+        usuario: string;
+        modulo: string;
+        entidad: string;
+        desde: string | null;
+        hasta: string | null;
+        q: string;
+    };
+    options: { users: Option[]; modules: Option[]; entities: Option[] };
 }>();
 
 defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Panel', href: '/admin' },
-            { title: 'Actividad', href: actividad.index() },
-        ] as BreadcrumbItem[],
+            { title: 'Actividad', href: '/admin/actividad' },
+        ],
     },
 });
 
-const TOUCH = 'pointer-coarse:h-11';
-const TOUCH_SELECT = 'pointer-coarse:data-[size=default]:h-11';
-// Reka Select no admite un valor vacío: «todos» se representa con un centinela.
-const ALL = '__todos__';
+const search = ref(props.filters.q);
+const user = ref<string | null>(props.filters.usuario || null);
+const module = ref<string | null>(props.filters.modulo || null);
+const entity = ref<string | null>(props.filters.entidad || null);
+const from = ref<string | null>(props.filters.desde);
+const to = ref<string | null>(props.filters.hasta);
 
-// ---------------------------------------------------------------- Filtros
+const activeCount = computed(
+    () =>
+        [user.value, module.value, entity.value, from.value, to.value].filter(
+            Boolean,
+        ).length,
+);
 
-const search = ref(props.filters.q ?? '');
-const action = ref(props.filters.accion || ALL);
-const user = ref(props.filters.usuario || ALL);
-const desde = ref(props.filters.desde ?? '');
-const hasta = ref(props.filters.hasta ?? '');
-const loading = ref(false);
+const asOptions = (items: Option[]): SearchSelectOption<string>[] =>
+    items.map((o) => ({ value: o.value, label: o.label }));
 
-const hasActiveFilters = computed(() => Object.values(props.filters).some((v) => !!v));
-
-function query(page?: number) {
-    return {
-        q: search.value || undefined,
-        accion: action.value === ALL ? undefined : action.value,
-        usuario: user.value === ALL ? undefined : user.value,
-        desde: desde.value || undefined,
-        hasta: hasta.value || undefined,
-        page: page && page > 1 ? page : undefined,
-    };
+function reload() {
+    router.get(
+        actividad.index().url,
+        {
+            q: search.value || undefined,
+            usuario: user.value || undefined,
+            modulo: module.value || undefined,
+            entidad: entity.value || undefined,
+            desde: from.value || undefined,
+            hasta: to.value || undefined,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['logs', 'filters'],
+        },
+    );
 }
 
-let lastQueried = search.value;
-function visit(page?: number) {
-    clearTimeout(searchTimer);
-    lastQueried = search.value;
-    router.get(actividad.index().url, query(page), {
-        preserveState: true,
-        preserveScroll: page === undefined,
-        replace: true,
-        onStart: () => (loading.value = true),
-        onFinish: () => (loading.value = false),
-    });
-}
-
-function applyFilters() {
-    visit();
-}
-
-let searchTimer: ReturnType<typeof setTimeout> | undefined;
-watch(search, (value) => {
-    if (value === lastQueried) return;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(applyFilters, 350);
-});
-onBeforeUnmount(() => clearTimeout(searchTimer));
+watch([search, user, module, entity, from, to], reload);
 
 function clearFilters() {
     search.value = '';
-    action.value = ALL;
-    user.value = ALL;
-    desde.value = '';
-    hasta.value = '';
-    applyFilters();
+    user.value = null;
+    module.value = null;
+    entity.value = null;
+    from.value = null;
+    to.value = null;
 }
 
-function goToPage(page: number) {
-    visit(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ---------------------------------------------------------------- Formato
-
-const ACTION_ICONS: Record<string, Component> = {
-    studio: PenTool,
-    publicacion: FileText,
-    categoria: Tags,
-    multimedia: ImageIcon,
-    pagina: BookOpen,
-    pagina_entrada: BookOpen,
-    red_social: Share2,
-    inicio: Home,
-    apariencia: Palette,
-    almacenamiento: HardDrive,
-};
-
-function iconFor(log: LogRow): Component {
-    return ACTION_ICONS[log.actionKey.split('.')[0]] ?? Activity;
-}
-
-const RESULTS: Record<string, { label: string; cls: string }> = {
-    success: { label: 'Correcto', cls: 'border-transparent bg-success/12 text-success' },
-    ok: { label: 'Correcto', cls: 'border-transparent bg-success/12 text-success' },
-    error: { label: 'Error', cls: 'border-transparent bg-destructive/10 text-destructive' },
-    failed: { label: 'Error', cls: 'border-transparent bg-destructive/10 text-destructive' },
-    failure: { label: 'Error', cls: 'border-transparent bg-destructive/10 text-destructive' },
-    pending: { label: 'Pendiente', cls: 'border-transparent bg-warning/15 text-warning' },
-};
-
-function resultOf(log: LogRow) {
-    return RESULTS[log.result] ?? { label: log.result, cls: 'border-transparent bg-muted text-muted-foreground' };
-}
-
-function initials(name: string): string {
-    return name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((p) => p[0]?.toUpperCase())
-        .join('');
-}
-
-function time(iso: string | null): string {
-    return iso ? new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso)) : '';
-}
-
-function fullDate(iso: string | null): string {
-    return iso ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(iso)) : '';
-}
-
-function dayKey(iso: string | null): string {
-    return iso ? new Date(iso).toLocaleDateString('en-CA') : 'sin-fecha';
-}
-
-function dayLabel(key: string): string {
-    if (key === 'sin-fecha') return 'Sin fecha';
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    if (key === today.toLocaleDateString('en-CA')) return 'Hoy';
-    if (key === yesterday.toLocaleDateString('en-CA')) return 'Ayer';
-
-    return new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${key}T12:00:00`));
-}
-
-/** Registros agrupados por día, conservando el orden del servidor (más reciente primero). */
-const groups = computed(() => {
-    const out: { key: string; label: string; logs: LogRow[] }[] = [];
-    for (const log of props.logs.data) {
-        const key = dayKey(log.createdAt);
-        let group = out.find((g) => g.key === key);
-        if (!group) {
-            group = { key, label: dayLabel(key), logs: [] };
-            out.push(group);
-        }
-        group.logs.push(log);
-    }
-
-    return out;
-});
+const resultTone = (result: string) =>
+    result === 'success'
+        ? 'success'
+        : result === 'failed' || result === 'error'
+          ? 'danger'
+          : 'neutral';
+const resultLabel = (result: string) =>
+    result === 'success'
+        ? 'Correcto'
+        : result === 'failed' || result === 'error'
+          ? 'Fallido'
+          : result;
 </script>
 
 <template>
     <Head title="Actividad" />
 
-    <div class="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
-        <AdminPageHeader
-            eyebrow="Sistema"
+    <PageContainer>
+        <PageHeader
             title="Actividad"
-            description="Quién cambió qué y cuándo. Útil para revisar publicaciones, cambios de Studio y movimientos de la biblioteca."
-        >
-            <template #meta>
-                <p class="mt-3 text-xs text-muted-foreground">
-                    <span class="font-semibold text-foreground tabular-nums">{{ logs.total }}</span>
-                    {{ logs.total === 1 ? 'registro' : 'registros' }}{{ hasActiveFilters ? ' con los filtros actuales' : '' }}
-                </p>
-            </template>
-        </AdminPageHeader>
-
-        <!-- Filtros -->
-        <form class="grid gap-3 rounded-xl border bg-card p-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-end" @submit.prevent="applyFilters">
-            <div class="grid gap-1.5 sm:col-span-2 lg:col-span-4">
-                <Label for="act-q" class="text-xs text-muted-foreground">Buscar</Label>
-                <div class="relative">
-                    <Search class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="act-q" v-model="search" type="search" :class="cn('pl-8', TOUCH)" placeholder="Usuario o acción" />
-                </div>
-            </div>
-            <div class="grid gap-1.5 lg:col-span-2">
-                <Label for="act-user" class="text-xs text-muted-foreground">Usuario</Label>
-                <Select v-model="user" @update:model-value="applyFilters">
-                    <SelectTrigger id="act-user" :class="cn('w-full', TOUCH_SELECT)"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem :value="ALL">Todos</SelectItem>
-                        <SelectItem v-for="u in users" :key="u.value" :value="String(u.value)">{{ u.label }}</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div class="grid gap-1.5 lg:col-span-2">
-                <Label for="act-action" class="text-xs text-muted-foreground">Acción</Label>
-                <Select v-model="action" @update:model-value="applyFilters">
-                    <SelectTrigger id="act-action" :class="cn('w-full', TOUCH_SELECT)"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem :value="ALL">Todas</SelectItem>
-                        <SelectItem v-for="a in actions" :key="a.value" :value="a.value">{{ a.label }}</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div class="grid gap-1.5 lg:col-span-2">
-                <Label for="act-desde" class="text-xs text-muted-foreground">Desde</Label>
-                <Input id="act-desde" v-model="desde" type="date" :max="hasta || undefined" :class="TOUCH" @change="applyFilters" />
-            </div>
-            <div class="grid gap-1.5 lg:col-span-2">
-                <Label for="act-hasta" class="text-xs text-muted-foreground">Hasta</Label>
-                <Input id="act-hasta" v-model="hasta" type="date" :min="desde || undefined" :class="TOUCH" @change="applyFilters" />
-            </div>
-            <div class="flex items-center gap-2 sm:col-span-2 lg:col-span-12">
-                <Button type="submit" size="sm" :class="TOUCH">
-                    <Loader2 v-if="loading" class="size-4 animate-spin" />
-                    <Search v-else class="size-4" />
-                    Filtrar
-                </Button>
-                <Button v-if="hasActiveFilters" type="button" variant="ghost" size="sm" :class="TOUCH" @click="clearFilters">
-                    <X class="size-4" /> Limpiar filtros
-                </Button>
-            </div>
-        </form>
-
-        <!-- Línea de tiempo -->
-        <EmptyState
-            v-if="logs.data.length === 0 && hasActiveFilters"
-            :icon="Search"
-            title="Sin actividad con estos filtros"
-            description="Amplía el rango de fechas o quita algún filtro."
-        >
-            <Button variant="outline" :class="TOUCH" @click="clearFilters">Limpiar filtros</Button>
-        </EmptyState>
-        <EmptyState
-            v-else-if="logs.data.length === 0"
-            :icon="Activity"
-            title="Aún no hay actividad"
-            description="Cada vez que alguien publique, suba un archivo o cambie el sitio, quedará registrado aquí."
+            description="Bitácora de lo que pasa en la plataforma: quién hizo qué, cuándo y qué cambió. Las contraseñas, llaves y datos de tarjeta nunca se muestran."
         />
 
-        <div v-else class="flex flex-col gap-6 transition-opacity" :class="loading && 'opacity-60'">
-            <section v-for="group in groups" :key="group.key" :aria-labelledby="`dia-${group.key}`">
-                <h2 :id="`dia-${group.key}`" class="mb-2 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-                    {{ group.label }}
-                </h2>
-                <ol class="divide-y overflow-hidden rounded-xl border bg-card">
-                    <li v-for="log in group.logs" :key="log.id" class="flex gap-3 p-4 md:items-start">
-                        <span class="relative shrink-0">
-                            <span class="grid size-9 place-items-center rounded-full bg-muted text-xs font-semibold" :title="log.userName" aria-hidden="true">
-                                {{ initials(log.userName) || '·' }}
-                            </span>
-                            <span class="absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full border-2 border-card bg-brand/15 text-brand">
-                                <component :is="iconFor(log)" class="size-3" />
-                            </span>
-                        </span>
+        <FilterBar
+            v-model:search="search"
+            placeholder="Buscar por acción o persona…"
+            :active-count="activeCount"
+            @clear="clearFilters"
+        >
+            <template #filters>
+                <SearchSelect
+                    v-model="user"
+                    :options="asOptions(options.users)"
+                    placeholder="Cualquier persona"
+                    clearable
+                    class="w-full md:w-52"
+                />
+                <SearchSelect
+                    v-model="module"
+                    :options="asOptions(options.modules)"
+                    placeholder="Cualquier módulo"
+                    clearable
+                    class="w-full md:w-48"
+                />
+                <SearchSelect
+                    v-model="entity"
+                    :options="asOptions(options.entities)"
+                    placeholder="Cualquier entidad"
+                    clearable
+                    class="w-full md:w-52"
+                />
+                <DatePicker
+                    v-model="from"
+                    placeholder="Desde"
+                    :max="to ?? undefined"
+                    clearable
+                    class="w-full md:w-44"
+                    :display-format="{
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                    }"
+                />
+                <DatePicker
+                    v-model="to"
+                    placeholder="Hasta"
+                    :min="from ?? undefined"
+                    clearable
+                    class="w-full md:w-44"
+                    :display-format="{
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                    }"
+                />
+            </template>
+        </FilterBar>
+
+        <EmptyState
+            v-if="logs.data.length === 0"
+            :icon="Activity"
+            :title="
+                activeCount || filters.q
+                    ? 'Sin resultados'
+                    : 'Aún no hay actividad registrada'
+            "
+            :description="
+                activeCount || filters.q
+                    ? 'Ningún movimiento coincide con los filtros. Prueba con otro rango de fechas.'
+                    : 'Cuando el equipo cree, edite o autorice algo, aparecerá aquí.'
+            "
+        />
+
+        <ol
+            v-else
+            class="divide-y overflow-hidden rounded-xl border bg-card"
+            aria-label="Movimientos"
+        >
+            <li v-for="entry in logs.data" :key="entry.id">
+                <Collapsible v-slot="{ open }">
+                    <div
+                        class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:gap-4 sm:px-5"
+                    >
                         <div class="min-w-0 flex-1">
-                            <div class="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4">
-                                <p class="text-sm">
-                                    <span class="font-semibold">{{ log.userName }}</span>
-                                    <span class="text-muted-foreground"> · </span>
-                                    <span>{{ log.actionLabel }}</span>
-                                    <span v-if="log.subjectLabel" class="text-muted-foreground"> · {{ log.subjectLabel }}</span>
-                                </p>
-                                <div class="flex shrink-0 items-center gap-2">
-                                    <Badge variant="outline" :class="resultOf(log).cls">{{ resultOf(log).label }}</Badge>
-                                    <time :datetime="log.createdAt ?? undefined" :title="fullDate(log.createdAt)" class="text-xs text-muted-foreground tabular-nums">
-                                        {{ time(log.createdAt) }}
-                                    </time>
-                                </div>
-                            </div>
-                            <ul v-if="log.summary.length" class="mt-2 flex flex-wrap gap-1.5">
-                                <li
-                                    v-for="(line, i) in log.summary"
-                                    :key="i"
-                                    class="max-w-full truncate rounded-md bg-muted/70 px-2 py-0.5 text-xs text-muted-foreground"
-                                    :title="line"
+                            <p
+                                class="flex flex-wrap items-center gap-x-2 gap-y-1"
+                            >
+                                <span class="font-medium text-foreground">{{
+                                    entry.actionLabel
+                                }}</span>
+                                <StatusBadge
+                                    v-if="entry.result !== 'success'"
+                                    size="sm"
+                                    :tone="resultTone(entry.result)"
+                                    :label="resultLabel(entry.result)"
+                                />
+                            </p>
+                            <p class="mt-0.5 text-sm text-muted-foreground">
+                                <span>{{ entry.userName }}</span>
+                                <span v-if="entry.userRole">
+                                    · {{ entry.userRole }}</span
                                 >
-                                    {{ line }}
-                                </li>
-                            </ul>
+                                <template v-if="entry.subjectLabel">
+                                    · {{ entry.subjectLabel }}
+                                    <span class="font-medium text-foreground">{{
+                                        entry.subjectReference ??
+                                        (entry.subjectId
+                                            ? `#${entry.subjectId}`
+                                            : '')
+                                    }}</span>
+                                </template>
+                                <span class="hidden sm:inline">
+                                    · {{ entry.moduleLabel }}</span
+                                >
+                            </p>
                         </div>
-                    </li>
-                </ol>
-            </section>
-        </div>
+                        <div
+                            class="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end"
+                        >
+                            <DateText
+                                :value="entry.createdAt"
+                                format="datetime"
+                                class="text-sm text-muted-foreground tabular-nums"
+                            />
+                            <CollapsibleTrigger
+                                v-if="entry.diff.length || entry.details.length"
+                                as-child
+                            >
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2 text-xs"
+                                    :aria-expanded="open"
+                                >
+                                    {{
+                                        open ? 'Ocultar detalle' : 'Ver detalle'
+                                    }}
+                                </Button>
+                            </CollapsibleTrigger>
+                        </div>
+                    </div>
+                    <CollapsibleContent>
+                        <div
+                            class="grid gap-4 border-t bg-muted/30 px-4 py-4 sm:px-5"
+                        >
+                            <table
+                                v-if="entry.diff.length"
+                                class="w-full text-sm"
+                            >
+                                <caption class="sr-only">
+                                    Cambios antes y después
+                                </caption>
+                                <thead
+                                    class="text-left text-xs text-muted-foreground"
+                                >
+                                    <tr>
+                                        <th
+                                            scope="col"
+                                            class="pb-2 font-medium"
+                                        >
+                                            Campo
+                                        </th>
+                                        <th
+                                            scope="col"
+                                            class="pb-2 font-medium"
+                                        >
+                                            Antes
+                                        </th>
+                                        <th scope="col" class="w-6 pb-2">
+                                            <span class="sr-only">a</span>
+                                        </th>
+                                        <th
+                                            scope="col"
+                                            class="pb-2 font-medium"
+                                        >
+                                            Después
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="row in entry.diff"
+                                        :key="row.field"
+                                        class="align-top"
+                                    >
+                                        <th
+                                            scope="row"
+                                            class="py-1.5 pr-3 font-normal text-muted-foreground"
+                                        >
+                                            {{ row.label }}
+                                        </th>
+                                        <td
+                                            class="py-1.5 pr-3 break-words text-danger-ink line-through decoration-danger/40"
+                                        >
+                                            {{ row.before }}
+                                        </td>
+                                        <td
+                                            class="py-1.5 text-muted-foreground"
+                                        >
+                                            <ArrowRight
+                                                class="size-3.5"
+                                                aria-hidden="true"
+                                            />
+                                        </td>
+                                        <td
+                                            class="py-1.5 break-words text-success-ink"
+                                        >
+                                            {{ row.after }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <dl
+                                v-if="entry.details.length"
+                                class="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[max-content_1fr]"
+                            >
+                                <template
+                                    v-for="detail in entry.details"
+                                    :key="detail.label"
+                                >
+                                    <dt class="text-muted-foreground">
+                                        {{ detail.label }}
+                                    </dt>
+                                    <dd class="break-words">
+                                        {{ detail.value }}
+                                    </dd>
+                                </template>
+                            </dl>
+                            <p
+                                v-if="entry.ipAddress"
+                                class="text-xs text-muted-foreground"
+                            >
+                                IP: {{ entry.ipAddress }} · Acción técnica:
+                                <code>{{ entry.action }}</code>
+                            </p>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+            </li>
+        </ol>
 
         <nav
-            v-if="logs.lastPage > 1"
-            class="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"
-            aria-label="Paginación"
+            v-if="logs.prevUrl || logs.nextUrl"
+            class="flex items-center justify-between gap-2"
+            aria-label="Paginación de actividad"
         >
-            <span>Página {{ logs.currentPage }} de {{ logs.lastPage }} · {{ logs.total }} registros</span>
-            <div class="flex items-center gap-2">
-                <Button size="sm" variant="outline" :class="TOUCH" :disabled="logs.currentPage <= 1" @click="goToPage(logs.currentPage - 1)">
-                    <ChevronLeft class="size-4" /> Anterior
-                </Button>
-                <Button size="sm" variant="outline" :class="TOUCH" :disabled="logs.currentPage >= logs.lastPage" @click="goToPage(logs.currentPage + 1)">
-                    Siguiente <ChevronRight class="size-4" />
-                </Button>
-            </div>
+            <Button variant="outline" :disabled="!logs.prevUrl" as-child>
+                <Link
+                    v-if="logs.prevUrl"
+                    :href="logs.prevUrl"
+                    preserve-scroll
+                    :only="['logs', 'filters']"
+                    ><ChevronLeft class="size-4" /> Más recientes</Link
+                >
+                <span v-else><ChevronLeft class="size-4" /> Más recientes</span>
+            </Button>
+            <span class="text-sm text-muted-foreground tabular-nums"
+                >Página {{ logs.currentPage }}</span
+            >
+            <Button variant="outline" :disabled="!logs.nextUrl" as-child>
+                <Link
+                    v-if="logs.nextUrl"
+                    :href="logs.nextUrl"
+                    preserve-scroll
+                    :only="['logs', 'filters']"
+                    >Anteriores <ChevronRight class="size-4"
+                /></Link>
+                <span v-else>Anteriores <ChevronRight class="size-4" /></span>
+            </Button>
         </nav>
-    </div>
+    </PageContainer>
 </template>

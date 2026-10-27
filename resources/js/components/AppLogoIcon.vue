@@ -1,29 +1,63 @@
 <script setup lang="ts">
+import { useId } from 'vue';
 import type { HTMLAttributes } from 'vue';
 
-defineOptions({
-    inheritAttrs: false,
-});
+/**
+ * Monograma ML Habitat: la M cuyo trazo final se convierte en la L, sobre
+ * eucalipto con un canto de roble (como el canto de un tablero).
+ * `variant="mono"` hereda `currentColor` para fondos de color.
+ */
+defineOptions({ inheritAttrs: false });
 
-type Props = {
-    className?: HTMLAttributes['class'];
-};
+const props = withDefaults(
+    defineProps<{
+        className?: HTMLAttributes['class'];
+        variant?: 'color' | 'mono';
+        title?: string;
+    }>(),
+    { variant: 'color' },
+);
 
-defineProps<Props>();
+const clipId = `ml-tile-${useId()}`;
 </script>
 
 <template>
     <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 40 42"
-        :class="className"
+        viewBox="0 0 32 32"
+        :class="props.className"
+        :role="props.title ? 'img' : undefined"
+        :aria-hidden="props.title ? undefined : 'true'"
+        :aria-label="props.title"
         v-bind="$attrs"
     >
+        <template v-if="props.variant === 'color'">
+            <defs>
+                <clipPath :id="clipId">
+                    <rect width="32" height="32" rx="8" />
+                </clipPath>
+            </defs>
+            <g :clip-path="`url(#${clipId})`">
+                <rect width="32" height="32" fill="#2F5A4C" />
+                <rect y="26.5" width="32" height="5.5" fill="#B07D4F" />
+            </g>
+            <path
+                d="M7.5 21.5V9l6.5 7 6.5-7v12.5H25"
+                fill="none"
+                stroke="#FFFFFF"
+                stroke-width="2.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+        </template>
         <path
-            fill="currentColor"
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
+            v-else
+            d="M7.5 21.5V9l6.5 7 6.5-7v12.5H25"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
         />
     </svg>
 </template>

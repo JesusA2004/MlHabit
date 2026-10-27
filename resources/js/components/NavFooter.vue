@@ -6,27 +6,22 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { toUrl } from '@/lib/utils';
+import { cn, toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
-type Props = {
-    items: NavItem[];
-    class?: string;
-};
-
-defineProps<Props>();
+/** Enlaces externos al pie de la barra lateral. */
+const props = defineProps<{ items: NavItem[]; class?: string }>();
 </script>
 
 <template>
-    <SidebarGroup
-        :class="`group-data-[collapsible=icon]:p-0 ${$props.class || ''}`"
-    >
+    <SidebarGroup :class="cn('group-data-[collapsible=icon]:p-0', props.class)">
         <SidebarGroupContent>
             <SidebarMenu>
-                <SidebarMenuItem v-for="item in items" :key="item.title">
+                <SidebarMenuItem v-for="item in props.items" :key="item.title">
                     <SidebarMenuButton
-                        class="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
                         as-child
+                        :tooltip="item.title"
+                        class="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                     >
                         <a
                             :href="toUrl(item.href)"

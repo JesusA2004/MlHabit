@@ -3,60 +3,51 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Cuenta → Perfil: nombre, correo y teléfono. Si cambia el correo se pide
+ * verificarlo de nuevo.
+ */
 class ProfileController extends Controller
 {
-    /**
-     * Show the user's profile settings page.
-     */
     public function edit(Request $request): Response
     {
+        /** @var User $user */
+        $user = $request->user();
+
         return Inertia::render('settings/Profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => true,
+            'emailVerified' => $user->email_verified_at !== null,
+            'phone' => $user->phone,
             'status' => $request->session()->get('status'),
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        /** @var User $user */
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $emailChanged = $user->isDirty('email');
+        if ($emailChanged) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Perfil actualizado.']);
+        if ($emailChanged) {
+            $user->sendEmailVerificationNotification();
 
-        return to_route('profile.edit');
-    }
+            return to_route('profile.edit')->with('success', 'Perfil actualizado. Te enviamos un enlace para verificar tu nuevo correo.');
+        }
 
-    /**
-     * Delete the user's profile.
-     */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
-    {
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/');
+        return to_route('profile.edit')->with('success', 'Perfil actualizado.');
     }
 }

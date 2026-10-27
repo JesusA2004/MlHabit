@@ -2,37 +2,44 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Page;
 use App\Models\PageView;
-use App\Models\Post;
+use App\Models\Product;
+use App\Models\ProductCategory;
+use App\Models\ShowcaseProject;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
- * Registra, de forma anónima y agregada, las visitas a las pantallas
- * públicas de MR. INSIGHT para alimentar el panel de estadísticas.
+ * Registra de forma anónima y agregada las visitas al sitio público de
+ * ML Habitat para el panel de estadísticas.
  *
- * Privacidad por diseño:
- * - No se guarda IP, cookie ni URL de referido completa.
- * - El visitante se identifica con un hash que incluye la fecha, por lo que
- *   rota cada día y no permite seguimiento entre días.
+ * Privacidad por diseño: no se guarda IP, cookie ni URL de referencia
+ * completa; el visitante se identifica con un hash que rota cada día.
  *
- * La escritura ocurre en terminate(), después de enviar la respuesta, para
- * no añadir latencia perceptible. Solo cuenta respuestas HTML 200 de rutas
- * públicas servidas por GET; descarta administración, descargas, vistas
- * previas y bots.
+ * Cuenta cargas completas (HTML) y navegaciones de Inertia (no recargas
+ * parciales ni prefetch). Excluye panel, portal, app de técnicos,
+ * archivos, personal interno con sesión y bots. La escritura ocurre en
+ * terminate(), después de enviar la respuesta.
  */
 class TrackPageView
 {
-    /** Nombres de ruta → [clave de página de Studio, etiqueta legible]. */
+    /** Pantallas fijas: nombre de ruta → etiqueta. */
     private const SCREENS = [
-        'home' => ['home', 'Inicio'],
-        'tips.index' => [null, 'Tips'],
-        'tips.show' => ['tip', null],
-        'pages.historia' => ['mi-historia', 'Mi historia'],
-        'pages.proceso' => ['mi-proceso', 'Mi proceso'],
-        'pages.privacidad' => [null, 'Aviso de privacidad'],
-        'social.index' => ['redes', 'Redes'],
+        'home' => 'Inicio',
+        'public.catalogo.index' => 'Catálogo',
+        'public.inspiracion.index' => 'Inspiración',
+        'public.preguntas' => 'Preguntas frecuentes',
+    ];
+
+    /** Prefijos de ruta que nunca se registran. */
+    private const EXCLUDED = [
+        'admin', 'portal', 'tecnico', 'archivos', 'subidas', 'settings', 'login', 'logout', 'register',
+        'forgot-password', 'reset-password', 'two-factor-challenge', 'user', 'email', 'media', 'up',
+        'storage', 'build', 'sitemap.xml', 'robots.txt', 'webhooks', 'cobertura',
     ];
 
     public function handle(Request $request, Closure $next): Response
@@ -42,76 +49,92 @@ class TrackPageView
 
     public function terminate(Request $request, Response $response): void
     {
-        if (! $this->shouldTrack($request, $response)) {
-            return;
+        try {
+            if (! $this->shouldTrack($request, $response)) {
+                return;
+            }
+
+            $path = '/'.ltrim($request->path(), '/');
+            $visitorHash = $this->visitorHash($request);
+            $viewedOn = now()->toDateString();
+
+            $isUnique = ! PageView::query()
+                ->where('visitor_hash', $visitorHash)
+                ->where('path', $path)
+                ->where('viewed_on', $viewedOn)
+                ->exists();
+
+            PageView::query()->create([
+                'path' => mb_substr($path, 0, 2048),
+                'label' => mb_substr($this->label($request, $path), 0, 255),
+                'referrer_host' => $this->referrerHost($request),
+                'visitor_hash' => $visitorHash,
+                'is_unique' => $isUnique,
+                'viewed_on' => $viewedOn,
+            ]);
+        } catch (Throwable $e) {
+            report($e);
         }
-
-        $routeName = $request->route()?->getName();
-        [$studioKey, $label] = self::SCREENS[$routeName] ?? [null, null];
-
-        $postId = null;
-        if ($routeName === 'tips.show') {
-            $slug = (string) $request->route('slug');
-            $post = Post::query()->where('slug', $slug)->first(['id', 'title']);
-            $postId = $post?->id;
-            $label = $post?->title ?? 'Tip';
-        }
-
-        $path = '/'.ltrim($request->path(), '/');
-        $label ??= $this->labelFromPath($path);
-
-        $visitorHash = $this->visitorHash($request);
-        $viewedOn = now()->toDateString();
-
-        $isUnique = ! PageView::query()
-            ->where('visitor_hash', $visitorHash)
-            ->where('path', $path)
-            ->whereDate('viewed_on', $viewedOn)
-            ->exists();
-
-        PageView::query()->create([
-            'path' => mb_substr($path, 0, 2048),
-            'post_id' => $postId,
-            'studio_page_key' => $studioKey,
-            'label' => $label !== null ? mb_substr($label, 0, 255) : null,
-            'referrer_host' => $this->referrerHost($request),
-            'visitor_hash' => $visitorHash,
-            'is_unique' => $isUnique,
-            'viewed_on' => $viewedOn,
-        ]);
     }
 
     private function shouldTrack(Request $request, Response $response): bool
     {
-        if (! $request->isMethod('GET')) {
+        if (! $request->isMethod('GET') || $response->getStatusCode() !== 200) {
             return false;
         }
 
-        if ($response->getStatusCode() !== 200) {
-            return false;
-        }
-
-        // Solo documentos HTML (descarta JSON de Inertia parcial, descargas…).
-        $contentType = (string) $response->headers->get('Content-Type', '');
-        if ($contentType !== '' && ! str_contains($contentType, 'text/html')) {
-            return false;
-        }
-
-        // Peticiones parciales de Inertia: ya se contó la carga completa.
-        if ($request->headers->has('X-Inertia')) {
-            return false;
+        $isInertia = $request->headers->has('X-Inertia');
+        if ($isInertia) {
+            // Recargas parciales y prefetch no son visitas nuevas.
+            if ($request->headers->has('X-Inertia-Partial-Data') || $request->headers->has('X-Inertia-Partial-Component')) {
+                return false;
+            }
+            if (strtolower((string) $request->headers->get('Purpose')) === 'prefetch') {
+                return false;
+            }
+        } else {
+            $contentType = (string) $response->headers->get('Content-Type', '');
+            if ($contentType !== '' && ! str_contains($contentType, 'text/html')) {
+                return false;
+            }
         }
 
         $path = ltrim($request->path(), '/');
-
-        // Rutas no públicas o técnicas.
-        foreach (['admin', 'settings', 'login', 'register', 'media', 'vista-previa', 'up', 'storage', 'build'] as $prefix) {
+        foreach (self::EXCLUDED as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
                 return false;
             }
         }
 
+        // El personal navegando el sitio no infla las cifras.
+        $user = $request->user();
+        if ($user instanceof User && $user->isStaff()) {
+            return false;
+        }
+
         return ! $this->isBot((string) $request->userAgent());
+    }
+
+    private function label(Request $request, string $path): string
+    {
+        $route = $request->route();
+        $name = $route?->getName();
+
+        if ($name !== null && isset(self::SCREENS[$name])) {
+            return self::SCREENS[$name];
+        }
+
+        $param = fn (string $key) => $route?->parameter($key);
+
+        return match (true) {
+            $name === 'public.catalogo.categoria' && $param('category') instanceof ProductCategory => 'Catálogo · '.$param('category')->name,
+            $name === 'public.catalogo.producto' && $param('product') instanceof Product => 'Producto · '.$param('product')->name,
+            $name === 'public.inspiracion.show' && $param('showcase') instanceof ShowcaseProject => 'Inspiración · '.$param('showcase')->title,
+            $name === 'public.legal' && $param('page') instanceof Page => 'Legal · '.$param('page')->title,
+            str_starts_with(trim($path, '/'), 'solicitar') => 'Solicitud de asesoría',
+            str_starts_with(trim($path, '/'), 'agendar-visita') => 'Agendar visita',
+            default => $this->labelFromPath($path),
+        };
     }
 
     private function isBot(string $userAgent): bool
@@ -121,7 +144,7 @@ class TrackPageView
         }
 
         return (bool) preg_match(
-            '/bot|crawl|spider|slurp|bing|google|yandex|baidu|duckduck|facebookexternalhit|embedly|preview|headless|lighthouse|pingdom|uptime|monitor|curl|wget|python-requests|axios|node-fetch/i',
+            '/bot|crawl|spider|slurp|bing|google|yandex|baidu|duckduck|facebookexternalhit|embedly|preview|headless|lighthouse|pingdom|uptime|monitor|curl|wget|python-requests|axios|node-fetch|guzzle|httpclient/i',
             $userAgent,
         );
     }
@@ -148,7 +171,6 @@ class TrackPageView
             return null;
         }
 
-        // Las visitas internas no cuentan como referido externo.
         if (str_ends_with(strtolower($host), strtolower((string) $request->getHost()))) {
             return null;
         }
@@ -163,7 +185,8 @@ class TrackPageView
             return 'Inicio';
         }
 
-        $last = (string) (collect(explode('/', $trimmed))->last() ?? $trimmed);
+        $segments = explode('/', $trimmed);
+        $last = end($segments);
 
         return mb_convert_case(str_replace('-', ' ', $last), MB_CASE_TITLE);
     }

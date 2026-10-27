@@ -4,37 +4,67 @@ namespace Database\Seeders;
 
 use App\Models\MediaCollection;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Crea la jerarquía lógica por defecto de la biblioteca multimedia:
- * mr-insight / {negocios,habitos,vida,general} / {fotos,videos,portadas,recursos}
- * tal como se describe en la especificación (sección 8).
+ * CONFIGURACIÓN: colecciones (carpetas lógicas) de la biblioteca de ML
+ * Habitat. Las rutas `privado/…` corresponden a archivos de clientes que
+ * solo se sirven con autorización. También renombra colecciones heredadas
+ * del proyecto anterior (`mr-insight/…`) a `sitio/archivo-anterior/…`.
+ * Idempotente.
  */
 class MediaCollectionSeeder extends Seeder
 {
+    /** @var array<string, list<string>> */
+    private const TREE = [
+        'sitio' => ['portada', 'identidad', 'general'],
+        'catalogo' => ['categorias', 'productos', 'acabados'],
+        'inspiracion' => ['proyectos'],
+        'privado' => ['prospectos', 'visitas', 'proyectos', 'documentos', 'evidencias', 'general'],
+    ];
+
     public function run(): void
     {
-        $biblioteca = MediaCollection::query()->firstOrCreate(
-            ['path' => 'mr-insight'],
-            ['parent_id' => null, 'name' => 'MR. INSIGHT', 'slug' => 'mr-insight']
-        );
+        $this->renameLegacy();
 
-        $colecciones = ['negocios', 'habitos', 'vida', 'general'];
-        $carpetas = ['fotos', 'videos', 'portadas', 'recursos'];
-
-        foreach ($colecciones as $coleccion) {
-            $nodo = MediaCollection::query()->firstOrCreate(
-                ['path' => "mr-insight/{$coleccion}"],
-                ['parent_id' => $biblioteca->id, 'name' => Str::headline($coleccion), 'slug' => $coleccion]
+        foreach (self::TREE as $root => $children) {
+            $parent = MediaCollection::query()->firstOrCreate(
+                ['path' => $root],
+                ['parent_id' => null, 'name' => Str::headline($root), 'slug' => $root],
             );
 
-            foreach ($carpetas as $carpeta) {
+            foreach ($children as $child) {
                 MediaCollection::query()->firstOrCreate(
-                    ['path' => "mr-insight/{$coleccion}/{$carpeta}"],
-                    ['parent_id' => $nodo->id, 'name' => Str::headline($carpeta), 'slug' => $carpeta]
+                    ['path' => "{$root}/{$child}"],
+                    ['parent_id' => $parent->id, 'name' => Str::headline($child), 'slug' => $child],
                 );
             }
         }
+    }
+
+    private function renameLegacy(): void
+    {
+        $legacy = MediaCollection::query()->where('path', 'mr-insight')->orWhere('path', 'like', 'mr-insight/%')->orderBy('path')->get();
+        if ($legacy->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(function () use ($legacy) {
+            $sitio = MediaCollection::query()->firstOrCreate(['path' => 'sitio'], ['parent_id' => null, 'name' => 'Sitio', 'slug' => 'sitio']);
+
+            foreach ($legacy as $collection) {
+                $newPath = 'sitio/archivo-anterior'.substr($collection->path, strlen('mr-insight'));
+                if (MediaCollection::query()->where('path', $newPath)->exists()) {
+                    continue;
+                }
+                $collection->update([
+                    'path' => $newPath,
+                    'name' => $collection->path === 'mr-insight' ? 'Archivo anterior' : $collection->name,
+                    'slug' => $collection->path === 'mr-insight' ? 'archivo-anterior' : $collection->slug,
+                    'parent_id' => $collection->path === 'mr-insight' ? $sitio->id : $collection->parent_id,
+                ]);
+            }
+        });
     }
 }

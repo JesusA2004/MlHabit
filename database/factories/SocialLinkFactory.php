@@ -14,10 +14,12 @@ class SocialLinkFactory extends Factory
 
     public function definition(): array
     {
+        $user = fake()->userName();
+
         return [
             'platform' => 'instagram',
-            'username' => '@mrinsight',
-            'url' => 'https://instagram.com/mrinsight',
+            'username' => '@'.$user,
+            'url' => 'https://instagram.com/'.$user,
             'is_visible' => true,
             'open_new_tab' => true,
             'order' => 0,

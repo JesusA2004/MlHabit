@@ -3,34 +3,33 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
-use App\Models\Post;
-use App\Services\PostPresenter;
-use App\Services\PublicSiteDataService;
-use App\Studio\StudioPagePresenter;
-use Inertia\Inertia;
+use App\Services\Web\HomePage;
+use App\Services\Web\PublicPage;
+use App\Services\Web\PublicSite;
+use App\Services\Web\Seo;
 use Inertia\Response;
 
 /**
- * Inicio: la composición la define la versión publicada en Studio
- * (/admin/studio). `tips` se conserva como resumen de las últimas
- * publicaciones para integraciones y compatibilidad.
+ * Portada: secciones del CMS en el orden y visibilidad guardados.
  */
 class HomeController extends Controller
 {
-    public function __invoke(PublicSiteDataService $siteData, PostPresenter $presenter, StudioPagePresenter $studio): Response
+    public function __invoke(HomePage $home, PublicPage $page, Seo $seo): Response
     {
-        $latestPosts = Post::query()
-            ->published()
-            ->with(['category', 'cover'])
-            ->orderByDesc('published_at')
-            ->limit(6)
-            ->get()
-            ->map(fn (Post $post) => $presenter->summary($post));
+        $sections = $home->sections();
+        $first = $sections[0] ?? null;
+        $heroImage = is_array($first) && $first['type'] === 'hero' && is_array($first['image'] ?? null) ? $first['image'] : null;
 
-        return Inertia::render('public/Home', [
-            ...$siteData->base(),
-            'studio' => $studio->published('home'),
-            'tips' => ['posts' => $latestPosts],
-        ]);
+        return $page->render('public/Home', [
+            'sections' => $sections,
+            'heroImage' => $heroImage,
+        ], $seo->page(
+            image: is_array($heroImage) ? url((string) $heroImage['src']) : null,
+            jsonLd: [
+                $seo->organization(),
+                ['@type' => 'WebSite', '@id' => url('/').'#sitio', 'name' => PublicSite::name(), 'url' => url('/'), 'inLanguage' => 'es-MX'],
+            ],
+            canonical: url('/'),
+        ), overlay: is_array($first) && $first['type'] === 'hero');
     }
 }

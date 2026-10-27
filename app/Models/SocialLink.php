@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\FlushesPublicSite;
 use Database\Factories\SocialLinkFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +24,7 @@ use Illuminate\Support\Carbon;
 class SocialLink extends Model
 {
     /** @use HasFactory<SocialLinkFactory> */
-    use HasFactory;
+    use FlushesPublicSite, HasFactory;
 
     protected $fillable = ['platform', 'username', 'url', 'icon', 'is_visible', 'open_new_tab', 'order'];
 

@@ -1,85 +1,67 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Notification;
+use Inertia\Testing\AssertableInertia as Assert;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->get(route('profile.edit'));
-
-    $response->assertOk();
+beforeEach(function () {
+    $this->withoutVite();
 });
 
-test('profile information can be updated', function () {
+test('profile page is displayed', function () {
+    $user = User::factory()->create(['phone' => '5512345678']);
+
+    $this->actingAs($user)
+        ->get('/settings/profile')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('settings/Profile')
+            ->where('phone', '5512345678')
+            ->where('emailVerified', true));
+});
+
+test('profile information can be updated and a new email must be verified again', function () {
+    Notification::fake();
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->patch(route('profile.update'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
-    $response
+    $this->actingAs($user)
+        ->patch('/settings/profile', ['name' => 'Laura Pérez', 'email' => 'Laura@Example.com', 'phone' => '+52 55 1234 5678'])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('profile.edit'));
+        ->assertRedirect('/settings/profile');
 
     $user->refresh();
+    expect($user->name)->toBe('Laura Pérez')
+        ->and($user->email)->toBe('laura@example.com')
+        ->and($user->phone)->toBe('+52 55 1234 5678')
+        ->and($user->email_verified_at)->toBeNull();
 
-    expect($user->name)->toBe('Test User');
-    expect($user->email)->toBe('test@example.com');
-    expect($user->email_verified_at)->toBeNull();
+    Notification::assertSentTo($user, VerifyEmail::class);
 });
 
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->patch(route('profile.update'), [
-            'name' => 'Test User',
-            'email' => $user->email,
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('profile.edit'));
+    $this->actingAs($user)
+        ->patch('/settings/profile', ['name' => 'Otro Nombre', 'email' => $user->email])
+        ->assertSessionHasNoErrors();
 
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
-test('user can delete their account', function () {
+test('the email must be unique and the phone valid', function () {
+    $other = User::factory()->create();
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->delete(route('profile.destroy'), [
-            'password' => 'password',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('home'));
-
-    $this->assertGuest();
-    expect($user->fresh())->toBeNull();
+    $this->actingAs($user)
+        ->patch('/settings/profile', ['name' => 'X', 'email' => $other->email, 'phone' => 'llámame'])
+        ->assertSessionHasErrors(['email', 'phone']);
 });
 
-test('correct password must be provided to delete account', function () {
+test('accounts cannot be self deleted', function () {
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->from(route('profile.edit'))
-        ->delete(route('profile.destroy'), [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrors('password')
-        ->assertRedirect(route('profile.edit'));
+    $this->actingAs($user)->delete('/settings/profile', ['password' => 'password'])->assertStatus(405);
 
     expect($user->fresh())->not->toBeNull();
 });

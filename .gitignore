@@ -47,3 +47,9 @@ yarn-error.log
 /tests/e2e/screenshots
 /storage/e2e.sqlite
 /tests/e2e/node_modules
+/test-results/playwright
+/test-results/playwright-report
+/.env.e2e
+/.env.e2e
+/test-results
+/playwright-report

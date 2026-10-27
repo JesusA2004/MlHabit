@@ -17,12 +17,12 @@ import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 
 const page = usePage();
-const user = computed(() => page.props.auth.user);
+const user = computed(() => page.props.auth?.user ?? null);
 const { isMobile, state } = useSidebar();
 </script>
 
 <template>
-    <SidebarMenu>
+    <SidebarMenu v-if="user">
         <SidebarMenuItem>
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
@@ -30,9 +30,12 @@ const { isMobile, state } = useSidebar();
                         size="lg"
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         data-test="sidebar-menu-button"
+                        :aria-label="`Cuenta de ${user.name}`"
                     >
                         <UserInfo :user="user" show-role />
-                        <ChevronsUpDown class="ml-auto size-4 text-muted-foreground" />
+                        <ChevronsUpDown
+                            class="ml-auto size-4 text-muted-foreground"
+                        />
                     </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -41,11 +44,11 @@ const { isMobile, state } = useSidebar();
                         isMobile
                             ? 'bottom'
                             : state === 'collapsed'
-                              ? 'left'
-                              : 'bottom'
+                              ? 'right'
+                              : 'top'
                     "
                     align="end"
-                    :side-offset="4"
+                    :side-offset="6"
                 >
                     <UserMenuContent :user="user" />
                 </DropdownMenuContent>

@@ -5,15 +5,40 @@ import { cn } from '@/lib/utils';
 
 const { appearance, updateAppearance } = useAppearance();
 
+/** Colores fijos de las miniaturas: muestran cada tema sin importar el actual. */
+const LIGHT = {
+    bg: '#F7F5F2',
+    side: '#EFEBE5',
+    card: '#FFFFFF',
+    ink: '#231E1A',
+    accent: '#2F5A4C',
+};
+const DARK = {
+    bg: '#141311',
+    side: '#1C1A17',
+    card: '#26231F',
+    ink: '#EFEAE3',
+    accent: '#8CC0AA',
+};
+
 const options = [
-    { value: 'light', Icon: Sun, label: 'Claro', hint: 'Marfil y tinta' },
-    { value: 'dark', Icon: Moon, label: 'Oscuro', hint: 'Ideal de noche' },
-    { value: 'system', Icon: Monitor, label: 'Sistema', hint: 'Sigue tu dispositivo' },
+    { value: 'light', Icon: Sun, label: 'Claro', hint: 'Lino y espresso' },
+    { value: 'dark', Icon: Moon, label: 'Oscuro', hint: 'Cómodo de noche' },
+    {
+        value: 'system',
+        Icon: Monitor,
+        label: 'Sistema',
+        hint: 'Igual que tu dispositivo',
+    },
 ] as const;
 </script>
 
 <template>
-    <div role="radiogroup" aria-label="Tema del panel" class="grid gap-3 sm:grid-cols-3">
+    <div
+        role="radiogroup"
+        aria-label="Tema de la aplicación"
+        class="grid gap-3 sm:grid-cols-3"
+    >
         <button
             v-for="{ value, Icon, label, hint } in options"
             :key="value"
@@ -22,54 +47,70 @@ const options = [
             :aria-checked="appearance === value"
             :class="
                 cn(
-                    'group relative flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-[border-color,box-shadow] hover:border-foreground/30',
-                    appearance === value && 'border-brand ring-2 ring-brand/40 hover:border-brand',
+                    'group relative flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-[border-color,box-shadow] duration-150 hover:border-foreground/25 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none',
+                    appearance === value &&
+                        'border-primary ring-2 ring-primary/30 hover:border-primary',
                 )
             "
             @click="updateAppearance(value)"
         >
-            <!-- Miniatura del panel -->
-            <span class="relative flex aspect-[16/10] w-full overflow-hidden border-b" aria-hidden="true">
-                <template v-if="value === 'system'">
-                    <span class="flex w-1/2 gap-1.5 bg-paper p-2.5">
-                        <span class="w-1/4 rounded-sm bg-ink/10" />
+            <span
+                class="relative flex aspect-[16/10] w-full overflow-hidden border-b"
+                aria-hidden="true"
+            >
+                <template
+                    v-for="(theme, i) in value === 'system'
+                        ? [LIGHT, DARK]
+                        : [value === 'light' ? LIGHT : DARK]"
+                    :key="i"
+                >
+                    <span
+                        class="flex flex-1 gap-2 p-2.5"
+                        :style="{ background: theme.bg }"
+                    >
+                        <span
+                            class="w-1/5 rounded-sm"
+                            :style="{ background: theme.side }"
+                        />
                         <span class="flex flex-1 flex-col gap-1.5">
-                            <span class="h-1.5 w-3/4 rounded-full bg-ink/70" />
-                            <span class="flex-1 rounded-sm bg-white ring-1 ring-ink/10" />
-                        </span>
-                    </span>
-                    <span class="flex w-1/2 gap-1.5 bg-ink p-2.5">
-                        <span class="w-1/4 rounded-sm bg-paper/10" />
-                        <span class="flex flex-1 flex-col gap-1.5">
-                            <span class="h-1.5 w-3/4 rounded-full bg-paper/70" />
-                            <span class="flex-1 rounded-sm bg-ink-soft ring-1 ring-paper/10" />
+                            <span
+                                class="h-1.5 w-1/2 rounded-full"
+                                :style="{
+                                    background: theme.ink,
+                                    opacity: 0.75,
+                                }"
+                            />
+                            <span
+                                class="flex-1 rounded-sm"
+                                :style="{ background: theme.card }"
+                            />
+                            <span
+                                class="h-1.5 w-1/4 rounded-full"
+                                :style="{ background: theme.accent }"
+                            />
                         </span>
                     </span>
                 </template>
-                <span v-else :class="cn('flex w-full gap-2 p-3', value === 'light' ? 'bg-paper' : 'bg-ink')">
-                    <span :class="cn('w-1/5 rounded-sm', value === 'light' ? 'bg-ink/10' : 'bg-paper/10')" />
-                    <span class="flex flex-1 flex-col gap-2">
-                        <span :class="cn('h-2 w-1/2 rounded-full', value === 'light' ? 'bg-ink/70' : 'bg-paper/70')" />
-                        <span class="flex flex-1 gap-2">
-                            <span :class="cn('flex-1 rounded-sm ring-1', value === 'light' ? 'bg-white ring-ink/10' : 'bg-ink-soft ring-paper/10')" />
-                            <span :class="cn('flex-1 rounded-sm ring-1', value === 'light' ? 'bg-white ring-ink/10' : 'bg-ink-soft ring-paper/10')" />
-                        </span>
-                        <span class="h-1.5 w-1/4 rounded-full bg-gold" />
-                    </span>
-                </span>
             </span>
 
             <span class="flex min-h-14 items-center gap-3 px-3.5 py-3">
-                <component :is="Icon" class="size-4 shrink-0 text-muted-foreground" />
+                <component
+                    :is="Icon"
+                    class="size-4 shrink-0 text-muted-foreground"
+                />
                 <span class="flex min-w-0 flex-1 flex-col leading-tight">
                     <span class="text-sm font-medium">{{ label }}</span>
-                    <span class="truncate text-xs text-muted-foreground">{{ hint }}</span>
+                    <span class="truncate text-xs text-muted-foreground">{{
+                        hint
+                    }}</span>
                 </span>
                 <span
                     :class="
                         cn(
                             'flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-                            appearance === value ? 'border-brand bg-brand text-brand-foreground' : 'border-border',
+                            appearance === value
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border',
                         )
                     "
                 >

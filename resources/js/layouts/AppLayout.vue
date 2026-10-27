@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 
-const { breadcrumbs = [] } = defineProps<{
-    breadcrumbs?: BreadcrumbItem[];
-}>();
+/**
+ * Layout del panel. Las páginas pasan migas con
+ * `defineOptions({ layout: { breadcrumbs: [...] } })` y envuelven su
+ * contenido en `<PageContainer>` (components/ds) para el padding estándar.
+ */
+const { breadcrumbs = [] } = defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
         <slot />
-    </AppLayout>
+    </AppSidebarLayout>
 </template>

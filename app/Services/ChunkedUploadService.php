@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\MediaVisibility;
 use App\Enums\UploadSessionStatus;
 use App\Exceptions\IncompleteUploadException;
 use App\Exceptions\InvalidChunkException;
+use App\Exceptions\RejectedUploadException;
 use App\Models\Media;
 use App\Models\UploadSession;
 use Illuminate\Http\UploadedFile;
@@ -39,9 +41,10 @@ class ChunkedUploadService
         ?string $storageProviderKey,
         MediaUploadService $uploader,
         ?string $checksumSha256 = null,
+        string $visibility = 'public',
     ): UploadSession {
         $uuid = (string) Str::uuid();
-        $collection = $uploader->resolveCollection($collectionPath ?? 'mr-insight/general');
+        $collection = $uploader->resolveCollection($collectionPath ?? ($visibility === 'private' ? 'privado/general' : 'sitio/general'));
 
         return UploadSession::query()->create([
             'uuid' => $uuid,
@@ -55,6 +58,7 @@ class ChunkedUploadService
             'chunk_size' => config('media.chunk_size_mb') * 1024 * 1024,
             'next_chunk_index' => 0,
             'checksum_sha256' => $checksumSha256,
+            'visibility' => $visibility,
             'status' => UploadSessionStatus::Uploading->value,
             'temp_path' => self::TEMP_DIR.'/'.$uuid.'.part',
             'expires_at' => now()->addHours(24),
@@ -163,13 +167,26 @@ class ChunkedUploadService
             }
         }
 
-        $media = $uploader->ingest(
-            $absolutePath,
-            $session->filename,
-            $session->mime_type ?? 'application/octet-stream',
-            $actualSize,
-            $session->collection?->path,
-        );
+        $session->loadMissing('collection');
+
+        try {
+            $media = $uploader->ingest(
+                $absolutePath,
+                $session->filename,
+                $session->mime_type ?? 'application/octet-stream',
+                $actualSize,
+                $session->collection?->path,
+                MediaVisibility::tryFrom($session->visibility) ?? MediaVisibility::Private,
+            );
+        } catch (RejectedUploadException $e) {
+            @unlink($absolutePath);
+            $session->update([
+                'status' => UploadSessionStatus::Failed->value,
+                'error_message' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
 
         @unlink($absolutePath);
 

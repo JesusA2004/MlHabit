@@ -1,24 +1,43 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { Component } from 'vue';
+import DsStatusBadge from '@/components/ds/StatusBadge.vue';
+import type { Tone } from '@/types/ui';
 
-/** Chip de estado de publicación (único en todo el admin). */
-const props = defineProps<{ status: string }>();
+/**
+ * Chip de estado del panel. Preferido: `tone` + `label` (genérico). Con
+ * `status` se traducen estados de contenido comunes; los módulos de negocio
+ * deben mapear su estado a tono/etiqueta en su propio código.
+ */
+const props = defineProps<{
+    tone?: Tone;
+    label?: string;
+    status?: string;
+    icon?: Component;
+}>();
 
-const MAP: Record<string, { label: string; cls: string }> = {
-    draft: { label: 'Borrador', cls: 'bg-muted text-muted-foreground' },
-    scheduled: { label: 'Programada', cls: 'bg-warning/15 text-warning' },
-    published: { label: 'Publicada', cls: 'bg-success/12 text-success' },
-    archived: { label: 'Archivada', cls: 'bg-secondary text-secondary-foreground line-through decoration-1' },
-    changes: { label: 'Cambios sin publicar', cls: 'bg-brand/15 text-brand' },
-    unpublished: { label: 'Sin publicar', cls: 'bg-muted text-muted-foreground' },
+const CONTENT_STATUS: Record<string, { label: string; tone: Tone }> = {
+    draft: { label: 'Borrador', tone: 'neutral' },
+    scheduled: { label: 'Programado', tone: 'info' },
+    published: { label: 'Publicado', tone: 'success' },
+    archived: { label: 'Archivado', tone: 'neutral' },
+    active: { label: 'Activo', tone: 'success' },
+    inactive: { label: 'Inactivo', tone: 'neutral' },
 };
 
-const entry = computed(() => MAP[props.status] ?? { label: props.status, cls: 'bg-muted text-muted-foreground' });
+const resolved = computed(() => {
+    if (props.label) {
+        return { label: props.label, tone: props.tone ?? 'neutral' };
+    }
+
+    const entry = props.status ? CONTENT_STATUS[props.status] : undefined;
+
+    return (
+        entry ?? { label: props.status ?? '', tone: props.tone ?? 'neutral' }
+    );
+});
 </script>
 
 <template>
-    <span class="inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold whitespace-nowrap" :class="entry.cls">
-        <span class="size-1.5 rounded-full bg-current" aria-hidden="true" />
-        {{ entry.label }}
-    </span>
+    <DsStatusBadge :tone="resolved.tone" :label="resolved.label" :icon="icon" />
 </template>

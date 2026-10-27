@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $visibility
  * @property string $uuid
  * @property int $user_id
  * @property int|null $media_collection_id
@@ -33,7 +34,7 @@ class UploadSession extends Model
     protected $fillable = [
         'uuid', 'user_id', 'media_collection_id', 'media_id', 'storage_provider_key',
         'filename', 'mime_type', 'total_size', 'received_size', 'chunk_size',
-        'next_chunk_index', 'checksum_sha256',
+        'next_chunk_index', 'checksum_sha256', 'visibility',
         'status', 'temp_path', 'error_message', 'expires_at',
     ];
 

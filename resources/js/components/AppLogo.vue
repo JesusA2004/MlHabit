@@ -1,17 +1,56 @@
 <script setup lang="ts">
-/** Marca de MR. INSIGHT en el panel (isotipo + nombre). */
+import type { HTMLAttributes } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { cn } from '@/lib/utils';
+
+/**
+ * Marca ML Habitat: monograma + logotipo. `subtitle` añade una línea
+ * secundaria (p. ej. "Panel"); `inverted` para fondos espresso.
+ */
+const props = withDefaults(
+    defineProps<{
+        subtitle?: string;
+        inverted?: boolean;
+        size?: 'sm' | 'md' | 'lg';
+        class?: HTMLAttributes['class'];
+    }>(),
+    { inverted: false, size: 'md' },
+);
+
+const iconSize = { sm: 'size-7', md: 'size-8', lg: 'size-10' } as const;
+const textSize = { sm: 'text-[15px]', md: 'text-base', lg: 'text-xl' } as const;
 </script>
 
 <template>
-    <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-[#0d0e10] ring-1 ring-brand/40">
-        <svg viewBox="0 0 64 64" class="size-6" aria-hidden="true">
-            <circle cx="32" cy="29" r="14" fill="none" stroke="#C7AA7D" stroke-width="3.5" />
-            <circle cx="32" cy="29" r="4.5" fill="#C7AA7D" />
-            <line x1="17" y1="50" x2="47" y2="50" stroke="#C7AA7D" stroke-width="3.5" stroke-linecap="round" />
-        </svg>
-    </div>
-    <div class="ml-1 grid flex-1 text-left leading-tight">
-        <span class="truncate font-display text-[15px] font-semibold tracking-tight">MR. INSIGHT</span>
-        <span class="truncate text-[10px] tracking-[0.16em] text-muted-foreground uppercase">Sala de redacción</span>
-    </div>
+    <span :class="cn('flex min-w-0 items-center gap-2.5', props.class)">
+        <AppLogoIcon :class-name="cn('shrink-0', iconSize[props.size])" />
+        <span class="grid min-w-0 flex-1 text-left leading-none">
+            <span
+                :class="
+                    cn(
+                        'truncate font-display font-semibold tracking-[-0.02em]',
+                        textSize[props.size],
+                        props.inverted
+                            ? 'text-espresso-foreground'
+                            : 'text-foreground',
+                    )
+                "
+            >
+                ML Habitat
+            </span>
+            <span
+                v-if="props.subtitle"
+                :class="
+                    cn(
+                        'mt-1 truncate text-xs',
+                        props.inverted
+                            ? 'text-espresso-foreground/70'
+                            : 'text-muted-foreground',
+                    )
+                "
+            >
+                {{ props.subtitle }}
+            </span>
+        </span>
+    </span>
 </template>

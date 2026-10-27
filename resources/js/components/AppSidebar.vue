@@ -1,22 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    CalendarDays,
-    ChartColumn,
-    ClipboardList,
-    Database,
-    ExternalLink,
-    FileText,
-    FolderOpen,
-    Home,
-    Image,
-    LayoutDashboard,
-    Palette,
-    PenTool,
-    Settings,
-    Share2,
-    Tags,
-} from '@lucide/vue';
+import { ExternalLink } from '@lucide/vue';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -30,84 +15,61 @@ import {
     SidebarMenuItem,
     SidebarRail,
 } from '@/components/ui/sidebar';
-import { calendario, dashboard, estadisticas } from '@/routes/admin';
-import actividad from '@/routes/admin/actividad';
-import almacenamiento from '@/routes/admin/almacenamiento';
-import apariencia from '@/routes/admin/apariencia';
-import categorias from '@/routes/admin/categorias';
-import inicio from '@/routes/admin/inicio';
-import multimedia from '@/routes/admin/multimedia';
-import paginas from '@/routes/admin/paginas';
-import publicaciones from '@/routes/admin/publicaciones';
-import redesSociales from '@/routes/admin/redes-sociales';
-import studio from '@/routes/admin/studio';
-import { edit as profileEdit } from '@/routes/profile';
-import type { NavGroup } from '@/types';
+import { adminNavigation } from '@/lib/navigation';
+import { filterNavigation, usePermissions } from '@/lib/permissions';
 
-/** Navegación agrupada (solo módulos existentes). Ver skill mrinsight-admin-ux. */
-const groups: NavGroup[] = [
-    {
-        label: 'General',
-        items: [
-            { title: 'Panel', href: dashboard(), icon: LayoutDashboard },
-            { title: 'Estadísticas', href: estadisticas(), icon: ChartColumn },
-            { title: 'Studio', href: studio.index(), icon: PenTool },
-            { title: 'Calendario editorial', href: calendario(), icon: CalendarDays },
-        ],
-    },
-    {
-        label: 'Contenido',
-        items: [
-            { title: 'Publicaciones', href: publicaciones.index(), icon: FolderOpen },
-            { title: 'Categorías', href: categorias.index(), icon: Tags },
-            { title: 'Multimedia', href: multimedia.index(), icon: Image },
-            { title: 'Páginas', href: paginas.index(), icon: FileText },
-        ],
-    },
-    {
-        label: 'Sitio web',
-        items: [
-            { title: 'Apariencia', href: apariencia.edit(), icon: Palette },
-            { title: 'Inicio', href: inicio.edit(), icon: Home },
-            { title: 'Redes sociales', href: redesSociales.index(), icon: Share2 },
-        ],
-    },
-    {
-        label: 'Sistema',
-        items: [
-            { title: 'Almacenamiento', href: almacenamiento.index(), icon: Database },
-            { title: 'Actividad', href: actividad.index(), icon: ClipboardList },
-            { title: 'Configuración', href: profileEdit(), icon: Settings },
-        ],
-    },
-];
+/**
+ * Barra lateral del panel: marca, navegación filtrada por permisos y
+ * cuenta. Colapsa a riel de iconos (Ctrl/Cmd + B) y en móvil es una hoja.
+ */
+const { user } = usePermissions();
+
+const groups = computed(() => filterNavigation(adminNavigation, user.value));
+const homeHref = computed(
+    () => groups.value[0]?.items[0]?.href ?? '/settings/profile',
+);
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
+    <Sidebar
+        collapsible="icon"
+        variant="inset"
+        aria-label="Navegación principal"
+    >
+        <SidebarHeader class="pb-1">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
-                            <AppLogo />
+                    <SidebarMenuButton
+                        size="lg"
+                        as-child
+                        class="hover:bg-transparent"
+                    >
+                        <Link
+                            :href="homeHref"
+                            aria-label="ML Habitat, ir al inicio del panel"
+                        >
+                            <AppLogo subtitle="Panel de operación" />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent class="gap-0 pb-2">
             <NavMain :groups="groups" />
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter class="gap-1 border-t border-sidebar-border/70 pt-2">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton as-child tooltip="Ver sitio público">
+                    <SidebarMenuButton
+                        as-child
+                        tooltip="Ver sitio web"
+                        class="h-10 text-sidebar-foreground/75 md:h-8"
+                    >
                         <a href="/" target="_blank" rel="noopener">
                             <ExternalLink />
-                            <span>Ver sitio público</span>
+                            <span>Ver sitio web</span>
                         </a>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

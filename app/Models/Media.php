@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\MediaStatus;
 use App\Enums\MediaType;
+use App\Enums\MediaVisibility;
 use Database\Factories\MediaFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,9 +13,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
+ * @property string $uuid
+ * @property MediaVisibility $visibility
+ * @property string|null $description
+ * @property string|null $origin render|real_photo
  * @property int|null $media_collection_id
  * @property int|null $uploaded_by
  * @property string $disk
@@ -42,15 +48,30 @@ class Media extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'uuid', 'visibility', 'description', 'origin',
         'media_collection_id', 'uploaded_by', 'disk', 'path', 'filename', 'original_filename',
         'type', 'mime_type', 'size', 'width', 'height', 'duration_seconds',
         'title', 'alt_text', 'status', 'metadata', 'last_used_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (Media $media) {
+            $media->uuid ??= (string) Str::uuid();
+            $media->visibility ??= MediaVisibility::Public;
+        });
+    }
+
+    public function isPrivate(): bool
+    {
+        return $this->visibility === MediaVisibility::Private;
+    }
+
     protected function casts(): array
     {
         return [
             'type' => MediaType::class,
+            'visibility' => MediaVisibility::class,
             'status' => MediaStatus::class,
             'metadata' => 'array',
             'size' => 'integer',
@@ -85,13 +106,30 @@ class Media extends Model
             return null;
         }
 
+        if ($this->isPrivate()) {
+            return route('archivos.show', ['media' => $this->uuid]);
+        }
+
         return Storage::disk($this->disk)->url($this->path);
     }
 
     public function variantUrl(string $type): ?string
     {
         $variant = $this->variants->firstWhere('type', $type);
+        if ($variant === null) {
+            return null;
+        }
 
-        return $variant ? Storage::disk($variant->disk)->url($variant->path) : null;
+        if ($this->isPrivate()) {
+            return route('archivos.show', ['media' => $this->uuid, 'variante' => $type]);
+        }
+
+        return Storage::disk($variant->disk)->url($variant->path);
+    }
+
+    /** @return HasMany<MediaAttachment, $this> */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(MediaAttachment::class);
     }
 }

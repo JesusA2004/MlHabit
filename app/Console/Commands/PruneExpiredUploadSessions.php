@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class PruneExpiredUploadSessions extends Command
 {
-    protected $signature = 'mrinsight:prune-uploads';
+    protected $signature = 'uploads:prune';
 
     protected $description = 'Limpia sesiones de subida multimedia abandonadas y sus archivos temporales';
 

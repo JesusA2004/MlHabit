@@ -116,6 +116,7 @@ return [
 
     'limiters' => [
         'login' => 'login',
+        'two-factor' => 'two-factor',
     ],
 
     /*
@@ -142,8 +143,18 @@ return [
     |
     */
 
+    // ML Habitat: sin registro público. Las cuentas del equipo se crean por
+    // invitación (/admin/usuarios); clientes desde el CRM/portal y técnicos
+    // desde operaciones. La verificación en dos pasos es opcional por
+    // usuario, salvo que se exija al personal (security.require_2fa_for_staff).
     'features' => [
         Features::resetPasswords(),
+        Features::emailVerification(),
+        Features::updatePasswords(),
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]),
     ],
 
 ];

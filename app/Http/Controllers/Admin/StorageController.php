@@ -9,6 +9,7 @@ use App\Models\Media;
 use App\Models\StorageProvider;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -26,7 +27,7 @@ class StorageController extends Controller
 {
     public function index(): Response
     {
-        abort_unless(request()->user()?->isAdmin(), 403);
+        Gate::authorize('settings.manage');
 
         $providers = StorageProvider::query()->orderBy('key')->get();
 
@@ -71,7 +72,11 @@ class StorageController extends Controller
 
     public function activate(StorageProvider $provider, ActivityLogger $activity): RedirectResponse
     {
-        abort_unless(request()->user()?->isAdmin(), 403);
+        Gate::authorize('settings.manage');
+
+        if ($provider->key === StorageProviderKey::Synology && ($provider->last_test_result['status'] ?? null) !== 'ok') {
+            return back()->with('error', 'Prueba la conexión con el NAS antes de activarlo.');
+        }
 
         StorageProvider::query()->update(['is_active' => false]);
         $provider->update(['is_active' => true]);
@@ -83,7 +88,7 @@ class StorageController extends Controller
 
     public function test(StorageProvider $provider, ActivityLogger $activity): RedirectResponse
     {
-        abort_unless(request()->user()?->isAdmin(), 403);
+        Gate::authorize('settings.manage');
 
         $result = $provider->key === StorageProviderKey::Local
             ? $this->testLocal()

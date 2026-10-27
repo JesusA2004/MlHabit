@@ -32,7 +32,12 @@ function y(value: number): number {
 }
 
 function linePath(key: 'total' | 'unique'): string {
-    return props.data.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(' ');
+    return props.data
+        .map(
+            (d, i) =>
+                `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`,
+        )
+        .join(' ');
 }
 
 const areaPath = computed(() => {
@@ -46,11 +51,16 @@ const gridlines = computed(() => {
     const step = Math.max(1, Math.ceil(max.value / 4));
     const top = step * 4;
 
-    return [0, 1, 2, 3, 4].map((i) => ({ value: i * step, y: y((i * step) / top * max.value) }));
+    return [0, 1, 2, 3, 4].map((i) => ({
+        value: i * step,
+        y: y(((i * step) / top) * max.value),
+    }));
 });
 
 const hover = ref<number | null>(null);
-const active = computed(() => (hover.value !== null ? props.data[hover.value] : null));
+const active = computed(() =>
+    hover.value !== null ? props.data[hover.value] : null,
+);
 
 // Puntos espaciados del eje X (máx. 6 etiquetas para no saturar).
 const xLabels = computed(() => {
@@ -58,7 +68,11 @@ const xLabels = computed(() => {
     if (n === 0) return [];
     const every = Math.max(1, Math.ceil(n / 6));
 
-    return props.data.map((d, i) => ({ i, label: d.label, show: i % every === 0 || i === n - 1 }));
+    return props.data.map((d, i) => ({
+        i,
+        label: d.label,
+        show: i % every === 0 || i === n - 1,
+    }));
 });
 </script>
 
@@ -75,8 +89,16 @@ const xLabels = computed(() => {
             >
                 <defs>
                     <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--brand)" stop-opacity="0.22" />
-                        <stop offset="100%" stop-color="var(--brand)" stop-opacity="0" />
+                        <stop
+                            offset="0%"
+                            stop-color="var(--chart-1)"
+                            stop-opacity="0.22"
+                        />
+                        <stop
+                            offset="100%"
+                            stop-color="var(--chart-1)"
+                            stop-opacity="0"
+                        />
                     </linearGradient>
                 </defs>
 
@@ -100,7 +122,7 @@ const xLabels = computed(() => {
                 <path
                     :d="linePath('total')"
                     fill="none"
-                    stroke="var(--brand)"
+                    stroke="var(--chart-1)"
                     stroke-width="2"
                     stroke-linejoin="round"
                     stroke-linecap="round"
@@ -122,7 +144,7 @@ const xLabels = computed(() => {
                     :cx="x(hover)"
                     :cy="y(active.total)"
                     r="4"
-                    fill="var(--brand)"
+                    fill="var(--chart-1)"
                     stroke="var(--card)"
                     stroke-width="2"
                     vector-effect="non-scaling-stroke"
@@ -152,29 +174,63 @@ const xLabels = computed(() => {
             >
                 <p class="font-medium">{{ active.label }}</p>
                 <p class="flex items-center gap-1.5 text-muted-foreground">
-                    <span class="size-2 rounded-full bg-brand" /> {{ active.total }} visitas
+                    <span class="size-2 rounded-full bg-brand" />
+                    {{ active.total }} visitas
                 </p>
                 <p class="flex items-center gap-1.5 text-muted-foreground">
-                    <span class="size-2 rounded-full border border-dashed border-muted-foreground" /> {{ active.unique }} únicos
+                    <span
+                        class="size-2 rounded-full border border-dashed border-muted-foreground"
+                    />
+                    {{ active.unique }} únicos
                 </p>
             </div>
         </div>
 
         <!-- eje x -->
-        <div class="mt-2 flex justify-between px-1 text-[11px] text-muted-foreground">
-            <span v-for="l in xLabels" :key="l.i" :class="{ 'opacity-0': !l.show }">{{ l.label }}</span>
+        <div
+            class="mt-2 flex justify-between px-1 text-[11px] text-muted-foreground"
+        >
+            <span
+                v-for="l in xLabels"
+                :key="l.i"
+                :class="{ 'opacity-0': !l.show }"
+                >{{ l.label }}</span
+            >
         </div>
 
-        <figcaption class="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-            <span class="flex items-center gap-1.5"><span class="h-0.5 w-4 rounded bg-brand" /> Visitas</span>
-            <span class="flex items-center gap-1.5"><span class="h-0 w-4 border-t border-dashed border-muted-foreground" /> Visitantes únicos</span>
+        <figcaption
+            class="mt-3 flex items-center gap-4 text-xs text-muted-foreground"
+        >
+            <span class="flex items-center gap-1.5"
+                ><span class="h-0.5 w-4 rounded bg-brand" /> Visitas</span
+            >
+            <span class="flex items-center gap-1.5"
+                ><span
+                    class="h-0 w-4 border-t border-dashed border-muted-foreground"
+                />
+                Visitantes únicos</span
+            >
         </figcaption>
 
         <table class="sr-only">
-            <caption>{{ title }}</caption>
-            <thead><tr><th>Día</th><th>Visitas</th><th>Únicos</th></tr></thead>
+            <caption>
+                {{
+                    title
+                }}
+            </caption>
+            <thead>
+                <tr>
+                    <th>Día</th>
+                    <th>Visitas</th>
+                    <th>Únicos</th>
+                </tr>
+            </thead>
             <tbody>
-                <tr v-for="(d, i) in data" :key="i"><td>{{ d.label }}</td><td>{{ d.total }}</td><td>{{ d.unique }}</td></tr>
+                <tr v-for="(d, i) in data" :key="i">
+                    <td>{{ d.label }}</td>
+                    <td>{{ d.total }}</td>
+                    <td>{{ d.unique }}</td>
+                </tr>
             </tbody>
         </table>
     </figure>
