@@ -1,0 +1,497 @@
+{
+    "schemaVersion": 1,
+    "limits": {
+        "maxSections": 40,
+        "maxElementsPerSlot": 24,
+        "maxNodes": 600
+    },
+    "breakpoints": {
+        "base": { "label": "Escritorio", "preview": 1440, "max": null },
+        "laptop": { "label": "Laptop", "preview": 1024, "max": 1279 },
+        "tablet": { "label": "Tablet", "preview": 768, "max": 1023 },
+        "mobile": { "label": "Móvil", "preview": 390, "max": 767 }
+    },
+    "colorTokens": {
+        "ink": "Tinta",
+        "ink-soft": "Tinta suave",
+        "ink-raised": "Tinta elevada",
+        "paper": "Papel",
+        "gold": "Oro",
+        "gold-soft": "Oro suave",
+        "mist": "Niebla"
+    },
+    "fonts": {
+        "display": { "label": "Títulos del tema", "theme": true },
+        "body": { "label": "Texto del tema", "theme": true },
+        "Fraunces": { "label": "Fraunces", "fallback": "serif" },
+        "Playfair Display": { "label": "Playfair Display", "fallback": "serif" },
+        "Cormorant Garamond": { "label": "Cormorant Garamond", "fallback": "serif" },
+        "DM Serif Display": { "label": "DM Serif Display", "fallback": "serif" },
+        "Instrument Sans": { "label": "Instrument Sans", "fallback": "sans-serif" },
+        "Inter": { "label": "Inter", "fallback": "sans-serif" },
+        "Work Sans": { "label": "Work Sans", "fallback": "sans-serif" },
+        "Space Grotesk": { "label": "Space Grotesk", "fallback": "sans-serif" }
+    },
+    "styleProps": {
+        "fontFamily": { "kind": "font", "label": "Familia", "group": "typography" },
+        "fontSize": { "kind": "number", "label": "Tamaño", "min": 10, "max": 220, "step": 1, "unit": "px", "group": "typography" },
+        "fontWeight": { "kind": "enum", "label": "Peso", "options": { "300": "Ligera", "400": "Regular", "500": "Media", "600": "Seminegra", "700": "Negrita", "800": "Extra", "900": "Black" }, "group": "typography" },
+        "fontStyle": { "kind": "enum", "label": "Estilo", "options": { "normal": "Normal", "italic": "Cursiva" }, "group": "typography" },
+        "color": { "kind": "color", "label": "Color", "group": "typography" },
+        "letterSpacing": { "kind": "number", "label": "Tracking", "min": -0.1, "max": 0.6, "step": 0.01, "unit": "em", "group": "typography" },
+        "lineHeight": { "kind": "number", "label": "Interlineado", "min": 0.8, "max": 2.4, "step": 0.02, "unit": "", "group": "typography" },
+        "textAlign": { "kind": "enum", "label": "Alineación del texto", "options": { "left": "Izquierda", "center": "Centro", "right": "Derecha" }, "group": "typography" },
+        "textTransform": { "kind": "enum", "label": "Mayúsculas", "options": { "none": "Normal", "uppercase": "MAYÚS", "lowercase": "minús", "capitalize": "Título" }, "group": "typography" },
+        "maxWidth": { "kind": "number", "label": "Ancho máximo", "min": 0, "max": 1600, "step": 10, "unit": "px", "group": "typography", "zeroLabel": "Sin límite" },
+
+        "background": { "kind": "color", "label": "Fondo", "group": "box" },
+        "paddingX": { "kind": "number", "label": "Relleno horizontal", "min": 0, "max": 200, "step": 2, "unit": "px", "group": "box" },
+        "paddingY": { "kind": "number", "label": "Relleno vertical", "min": 0, "max": 200, "step": 2, "unit": "px", "group": "box" },
+        "radius": { "kind": "number", "label": "Radio", "min": 0, "max": 400, "step": 1, "unit": "px", "group": "box" },
+        "marginTop": { "kind": "number", "label": "Margen superior", "min": 0, "max": 320, "step": 2, "unit": "px", "group": "box" },
+        "marginBottom": { "kind": "number", "label": "Margen inferior", "min": 0, "max": 320, "step": 2, "unit": "px", "group": "box" },
+
+        "align": { "kind": "enum", "label": "Posición en la columna", "options": { "start": "Inicio", "center": "Centro", "end": "Final", "stretch": "Ancho completo" }, "group": "position" },
+        "widthPct": { "kind": "number", "label": "Anchura", "min": 10, "max": 100, "step": 1, "unit": "%", "group": "position" },
+        "offsetX": { "kind": "number", "label": "Desplazamiento X", "min": -160, "max": 160, "step": 1, "unit": "px", "group": "position" },
+        "offsetY": { "kind": "number", "label": "Desplazamiento Y", "min": -160, "max": 160, "step": 1, "unit": "px", "group": "position" },
+        "order": { "kind": "number", "label": "Orden", "min": -10, "max": 10, "step": 1, "unit": "", "group": "position" },
+
+        "hide": { "kind": "bool", "label": "Ocultar en este dispositivo", "group": "visibility" },
+
+        "aspectRatio": { "kind": "enum", "label": "Proporción", "options": { "auto": "Original", "1/1": "1:1", "4/5": "4:5", "3/4": "3:4", "2/3": "2:3", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "9/16": "9:16" }, "group": "media" },
+        "height": { "kind": "number", "label": "Altura", "min": 0, "max": 1200, "step": 4, "unit": "px", "group": "media", "zeroLabel": "Automática" },
+        "objectFit": { "kind": "enum", "label": "Ajuste", "options": { "cover": "Rellenar", "contain": "Contener" }, "group": "media" },
+        "focalX": { "kind": "number", "label": "Encuadre horizontal", "min": 0, "max": 100, "step": 1, "unit": "%", "group": "media" },
+        "focalY": { "kind": "number", "label": "Encuadre vertical", "min": 0, "max": 100, "step": 1, "unit": "%", "group": "media" },
+        "zoom": { "kind": "number", "label": "Zoom", "min": 1, "max": 3, "step": 0.05, "unit": "×", "group": "media" },
+        "frame": { "kind": "enum", "label": "Marco", "options": { "none": "Ninguno", "offset": "Desplazado", "arch": "Arco", "circle": "Círculo", "inset": "Paspartú" }, "group": "media" },
+        "shadow": { "kind": "enum", "label": "Sombra", "options": { "none": "Ninguna", "soft": "Suave", "medium": "Media", "deep": "Profunda" }, "group": "media" },
+        "opacity": { "kind": "number", "label": "Opacidad", "min": 0.1, "max": 1, "step": 0.05, "unit": "", "group": "media" },
+        "overlayColor": { "kind": "color", "label": "Color de superposición", "group": "media" },
+        "overlayOpacity": { "kind": "number", "label": "Superposición", "min": 0, "max": 0.9, "step": 0.05, "unit": "", "group": "media" },
+        "borderWidth": { "kind": "number", "label": "Borde", "min": 0, "max": 12, "step": 1, "unit": "px", "group": "media" },
+        "borderColor": { "kind": "color", "label": "Color del borde", "group": "media" },
+
+        "paddingTop": { "kind": "number", "label": "Espacio superior", "min": 0, "max": 400, "step": 4, "unit": "px", "group": "section" },
+        "paddingBottom": { "kind": "number", "label": "Espacio inferior", "min": 0, "max": 400, "step": 4, "unit": "px", "group": "section" },
+        "minHeight": { "kind": "number", "label": "Altura mínima", "min": 0, "max": 100, "step": 1, "unit": "vh", "group": "section", "zeroLabel": "Automática" },
+        "sectionBackground": { "kind": "color", "label": "Fondo de sección", "group": "section" },
+        "textColor": { "kind": "color", "label": "Color de texto", "group": "section" },
+        "contentWidth": { "kind": "enum", "label": "Ancho del contenido", "options": { "narrow": "Estrecho", "normal": "Normal", "wide": "Amplio", "full": "Completo" }, "group": "section" },
+        "gap": { "kind": "number", "label": "Separación", "min": 0, "max": 160, "step": 4, "unit": "px", "group": "section" },
+        "verticalAlign": { "kind": "enum", "label": "Alineación vertical", "options": { "start": "Arriba", "center": "Centro", "end": "Abajo" }, "group": "section" },
+        "stack": { "kind": "bool", "label": "Apilar columnas", "group": "section" },
+        "reverse": { "kind": "bool", "label": "Invertir orden de columnas", "group": "section" },
+        "columns": { "kind": "number", "label": "Columnas", "min": 1, "max": 4, "step": 1, "unit": "", "group": "grid" },
+
+        "spacerHeight": { "kind": "number", "label": "Altura", "min": 0, "max": 400, "step": 4, "unit": "px", "group": "spacer" }
+    },
+    "styleTabs": {
+        "typography": "style",
+        "box": "layout",
+        "position": "layout",
+        "visibility": "responsive",
+        "media": "style",
+        "section": "layout",
+        "grid": "layout",
+        "spacer": "layout"
+    },
+    "motion": {
+        "presets": {
+            "none": "Sin animación",
+            "fade": "Aparecer",
+            "slide-up": "Deslizar hacia arriba",
+            "slide-left": "Deslizar desde la derecha",
+            "slide-right": "Deslizar desde la izquierda",
+            "scale": "Escalar",
+            "reveal": "Revelar (cortina)",
+            "stagger": "Escalonado (hijos)"
+        },
+        "fields": {
+            "duration": { "min": 150, "max": 1500, "step": 50, "default": 700 },
+            "delay": { "min": 0, "max": 2000, "step": 50, "default": 0 },
+            "distance": { "min": 0, "max": 120, "step": 2, "default": 24 }
+        },
+        "triggers": { "scroll": "Al entrar en pantalla", "load": "Al cargar la página" },
+        "mobile": { "same": "Igual", "reduce": "Reducida", "none": "Desactivada" }
+    },
+    "sharedSectionProps": {
+        "tone": { "kind": "enum", "label": "Tono", "options": { "ink": "Tinta", "ink-soft": "Tinta suave", "paper": "Papel", "gold": "Oro" }, "default": "ink" },
+        "spacing": { "kind": "enum", "label": "Espaciado", "options": { "compact": "Compacto", "balanced": "Equilibrado", "editorial": "Editorial", "wide": "Amplio", "cinematic": "Cinematográfico" }, "default": "balanced" },
+        "width": { "kind": "enum", "label": "Ancho", "options": { "narrow": "Estrecho", "normal": "Normal", "wide": "Amplio", "full": "Completo" }, "default": "normal" },
+        "divider": { "kind": "bool", "label": "Línea divisoria superior", "default": false },
+        "anchor": { "kind": "string", "label": "Ancla (#id)", "max": 40, "pattern": "^[a-z0-9-]*$", "default": "", "tab": "advanced" }
+    },
+    "sections": {
+        "hero": {
+            "label": "Hero",
+            "icon": "Sparkles",
+            "version": 1,
+            "description": "Portada de la página: titular, texto, botones y fotografía o video.",
+            "slots": {
+                "content": { "label": "Contenido", "accepts": ["eyebrow", "heading", "text", "buttons", "quote", "divider", "spacer", "social-links", "post-meta", "share"] },
+                "media": { "label": "Multimedia", "accepts": ["image", "video", "quote"] }
+            },
+            "layouts": {
+                "editorial": { "label": "Editorial clásico", "slots": ["content", "media"] },
+                "split": { "label": "Split moderno", "slots": ["content", "media"] },
+                "cinematic": { "label": "Cinematográfico", "slots": ["content", "media"] },
+                "centered": { "label": "Minimal centrado", "slots": ["content", "media"] },
+                "asymmetric": { "label": "Asimétrico", "slots": ["content", "media"] },
+                "framed": { "label": "Fotografía enmarcada", "slots": ["content", "media"] },
+                "video": { "label": "Video principal", "slots": ["content", "media"] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "editorial" },
+                "height": { "kind": "enum", "label": "Altura", "options": { "auto": "Automática", "tall": "Alta (80 %)", "screen": "Pantalla completa" }, "default": "auto" },
+                "mediaSide": { "kind": "enum", "label": "Lado de la imagen", "options": { "right": "Derecha", "left": "Izquierda" }, "default": "right" },
+                "overlay": { "kind": "number", "label": "Oscurecer fondo", "min": 0.25, "max": 0.9, "step": 0.05, "default": 0.45, "showWhen": { "layout": ["cinematic", "video"] } }
+            },
+            "styleGroups": ["section", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "editorial" }
+        },
+        "columns": {
+            "label": "Columnas",
+            "icon": "Columns3",
+            "version": 1,
+            "description": "Sección flexible de una a tres columnas o bento.",
+            "slots": {
+                "col1": { "label": "Columna 1", "accepts": "*elements" },
+                "col2": { "label": "Columna 2", "accepts": "*elements" },
+                "col3": { "label": "Columna 3", "accepts": "*elements" }
+            },
+            "layouts": {
+                "one": { "label": "Una columna", "slots": ["col1"] },
+                "two": { "label": "Dos columnas", "slots": ["col1", "col2"] },
+                "two-wide-left": { "label": "Split 7/5", "slots": ["col1", "col2"] },
+                "two-wide-right": { "label": "Split 5/7", "slots": ["col1", "col2"] },
+                "three": { "label": "Tres columnas", "slots": ["col1", "col2", "col3"] },
+                "bento": { "label": "Bento", "slots": ["col1", "col2", "col3"] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Distribución", "default": "two" },
+                "cards": { "kind": "bool", "label": "Columnas como tarjetas", "default": false }
+            },
+            "styleGroups": ["section", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        },
+        "posts": {
+            "label": "Publicaciones",
+            "icon": "Newspaper",
+            "version": 1,
+            "description": "Tips del CMS por referencia dinámica (no copia los artículos).",
+            "slots": {},
+            "layouts": {
+                "cards": { "label": "Tarjetas editoriales", "slots": [] },
+                "magazine": { "label": "Revista asimétrica", "slots": [] },
+                "spotlight": { "label": "Destacado + secundarios", "slots": [] },
+                "carousel": { "label": "Carrusel", "slots": [] },
+                "list": { "label": "Lista numerada", "slots": [] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "cards" },
+                "eyebrow": { "kind": "string", "label": "Antetítulo", "max": 80, "default": "TIPS" },
+                "title": { "kind": "text", "label": "Título", "max": 200, "default": "IDEAS QUE DEJAN HUELLA." },
+                "source": { "kind": "enum", "label": "Origen", "options": { "latest": "Más recientes", "featured": "Destacadas", "category": "De una categoría", "related": "Relacionadas con esta publicación" }, "default": "latest" },
+                "category": { "kind": "category", "label": "Categoría", "default": "", "showWhen": { "source": ["category"] } },
+                "limit": { "kind": "int", "label": "Cantidad", "min": 1, "max": 12, "default": 6 },
+                "showExcerpt": { "kind": "bool", "label": "Mostrar extracto", "default": true },
+                "showDate": { "kind": "bool", "label": "Mostrar fecha", "default": true },
+                "linkLabel": { "kind": "string", "label": "Texto del enlace", "max": 60, "default": "Ver todos los tips" }
+            },
+            "styleGroups": ["section", "grid", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        },
+        "categories": {
+            "label": "Empieza aquí",
+            "icon": "LayoutGrid",
+            "version": 1,
+            "description": "Una puerta de entrada por categoría con su tip destacado.",
+            "slots": {},
+            "layouts": {
+                "cards": { "label": "Tarjetas", "slots": [] },
+                "list": { "label": "Índice editorial", "slots": [] },
+                "bento": { "label": "Bento", "slots": [] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "cards" },
+                "eyebrow": { "kind": "string", "label": "Antetítulo", "max": 80, "default": "EMPIEZA AQUÍ" },
+                "title": { "kind": "text", "label": "Título", "max": 200, "default": "CONOCE MI PERSPECTIVA." }
+            },
+            "styleGroups": ["section", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        },
+        "gallery": {
+            "label": "Galería",
+            "icon": "Images",
+            "version": 1,
+            "description": "Fotografías de la biblioteca en grid, bento, masonry o carrusel.",
+            "slots": {},
+            "layouts": {
+                "grid": { "label": "Grid", "slots": [] },
+                "bento": { "label": "Bento", "slots": [] },
+                "masonry": { "label": "Masonry", "slots": [] },
+                "carousel": { "label": "Carrusel", "slots": [] },
+                "spotlight": { "label": "Fotografía protagonista", "slots": [] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "grid" },
+                "eyebrow": { "kind": "string", "label": "Antetítulo", "max": 80, "default": "" },
+                "title": { "kind": "text", "label": "Título", "max": 200, "default": "" },
+                "source": { "kind": "enum", "label": "Origen", "options": { "manual": "Fotografías elegidas", "post": "Galería de la publicación" }, "default": "manual" },
+                "items": {
+                    "kind": "list",
+                    "label": "Fotografías",
+                    "max": 30,
+                    "itemLabel": "Fotografía",
+                    "showWhen": { "source": ["manual"] },
+                    "item": {
+                        "media": { "kind": "media", "label": "Imagen", "mediaType": "image", "default": null },
+                        "caption": { "kind": "string", "label": "Pie de foto", "max": 200, "default": "" }
+                    },
+                    "default": []
+                }
+            },
+            "styleGroups": ["section", "grid", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        },
+        "timeline": {
+            "label": "Timeline",
+            "icon": "GitCommitVertical",
+            "version": 1,
+            "description": "Historia en el tiempo: entradas del CMS o capítulos manuales.",
+            "slots": {},
+            "layouts": {
+                "vertical": { "label": "Vertical", "slots": [] },
+                "alternating": { "label": "Alterno", "slots": [] },
+                "chapters": { "label": "Capítulos visuales", "slots": [] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "vertical" },
+                "eyebrow": { "kind": "string", "label": "Antetítulo", "max": 80, "default": "" },
+                "title": { "kind": "text", "label": "Título", "max": 200, "default": "" },
+                "source": { "kind": "enum", "label": "Origen", "options": { "entries": "Entradas de una página del CMS", "manual": "Capítulos manuales" }, "default": "entries" },
+                "page": { "kind": "page", "label": "Página con entradas", "default": "mi-proceso", "showWhen": { "source": ["entries"] } },
+                "items": {
+                    "kind": "list",
+                    "label": "Capítulos",
+                    "max": 40,
+                    "itemLabel": "Capítulo",
+                    "showWhen": { "source": ["manual"] },
+                    "item": {
+                        "label": { "kind": "string", "label": "Fecha o etiqueta", "max": 60, "default": "" },
+                        "title": { "kind": "string", "label": "Título", "max": 160, "default": "" },
+                        "text": { "kind": "text", "label": "Texto", "max": 1200, "default": "" },
+                        "media": { "kind": "media", "label": "Imagen", "mediaType": "image", "default": null }
+                    },
+                    "default": []
+                }
+            },
+            "styleGroups": ["section", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        },
+        "cta": {
+            "label": "Llamada a la acción",
+            "icon": "Megaphone",
+            "version": 1,
+            "description": "Bloque de cierre con mensaje y botones.",
+            "slots": {
+                "content": { "label": "Contenido", "accepts": ["eyebrow", "heading", "text", "buttons", "quote", "question", "social-links", "spacer", "post-meta", "share"] },
+                "media": { "label": "Multimedia", "accepts": ["image", "video"] }
+            },
+            "layouts": {
+                "band": { "label": "Banda", "slots": ["content"] },
+                "card": { "label": "Tarjeta", "slots": ["content"] },
+                "split": { "label": "Split con imagen", "slots": ["content", "media"] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "card" }
+            },
+            "styleGroups": ["section", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        },
+        "social": {
+            "label": "Redes sociales",
+            "icon": "Share2",
+            "version": 1,
+            "description": "Redes visibles administradas en el CMS.",
+            "slots": {},
+            "layouts": {
+                "cards": { "label": "Tarjetas", "slots": [] },
+                "list": { "label": "Lista", "slots": [] },
+                "pills": { "label": "Píldoras", "slots": [] }
+            },
+            "props": {
+                "layout": { "kind": "layout", "label": "Composición", "default": "cards" },
+                "eyebrow": { "kind": "string", "label": "Antetítulo", "max": 80, "default": "REDES" },
+                "title": { "kind": "text", "label": "Título", "max": 200, "default": "" }
+            },
+            "styleGroups": ["section", "visibility"],
+            "defaults": { "tone": "ink", "spacing": "balanced" }
+        }
+    },
+    "elements": {
+        "eyebrow": {
+            "label": "Antetítulo",
+            "icon": "Minus",
+            "version": 1,
+            "props": {
+                "text": { "kind": "string", "label": "Texto", "max": 80, "default": "ANTETÍTULO", "inline": true }
+            },
+            "styleGroups": ["typography", "box", "position", "visibility"]
+        },
+        "heading": {
+            "label": "Título",
+            "icon": "Heading",
+            "version": 1,
+            "props": {
+                "text": { "kind": "text", "label": "Texto", "max": 300, "default": "Un titular con intención.", "inline": true, "showWhen": { "bind": ["none"] } },
+                "level": { "kind": "enum", "label": "Nivel (SEO)", "options": { "h1": "H1", "h2": "H2", "h3": "H3", "h4": "H4" }, "default": "h2" },
+                "size": { "kind": "enum", "label": "Tamaño base", "options": { "xl": "Extra", "lg": "Grande", "md": "Mediano", "title": "Título" }, "default": "lg" },
+                "bind": { "kind": "enum", "label": "Contenido", "options": { "none": "Texto propio", "title": "Título de la página (CMS)" }, "default": "none" },
+                "bindPage": { "kind": "page", "label": "Página", "default": "", "showWhen": { "bind": ["title"] } }
+            },
+            "styleGroups": ["typography", "box", "position", "visibility"]
+        },
+        "text": {
+            "label": "Texto",
+            "icon": "Pilcrow",
+            "version": 1,
+            "props": {
+                "text": { "kind": "text", "label": "Texto", "max": 3000, "default": "Escribe aquí un párrafo editorial. Deja una línea en blanco para separar párrafos.", "inline": true, "showWhen": { "bind": ["none"] } },
+                "size": { "kind": "enum", "label": "Tamaño base", "options": { "lead": "Entrada", "body": "Cuerpo", "small": "Pequeño" }, "default": "body" },
+                "bind": { "kind": "enum", "label": "Contenido", "options": { "none": "Texto propio", "intro": "Introducción de la página (CMS)" }, "default": "none" },
+                "bindPage": { "kind": "page", "label": "Página", "default": "", "showWhen": { "bind": ["intro"] } }
+            },
+            "styleGroups": ["typography", "box", "position", "visibility"]
+        },
+        "buttons": {
+            "label": "Botones",
+            "icon": "MousePointerClick",
+            "version": 1,
+            "props": {
+                "items": {
+                    "kind": "list",
+                    "label": "Botones",
+                    "max": 3,
+                    "itemLabel": "Botón",
+                    "item": {
+                        "label": { "kind": "string", "label": "Texto", "max": 40, "default": "Leer más" },
+                        "link": { "kind": "link", "label": "Destino", "default": { "type": "page", "value": "/tips", "newTab": false } },
+                        "variant": { "kind": "enum", "label": "Estilo", "options": { "primary": "Principal", "secondary": "Secundario", "link": "Enlace" }, "default": "primary" }
+                    },
+                    "default": [{ "label": "Leer los tips", "link": { "type": "page", "value": "/tips", "newTab": false }, "variant": "primary" }]
+                },
+                "stackOnMobile": { "kind": "bool", "label": "Apilar en móvil", "default": true }
+            },
+            "styleGroups": ["box", "position", "visibility"]
+        },
+        "image": {
+            "label": "Imagen",
+            "icon": "Image",
+            "version": 1,
+            "props": {
+                "media": { "kind": "media", "label": "Fotografía", "mediaType": "image", "default": null, "showWhen": { "bind": ["none"] } },
+                "bind": { "kind": "enum", "label": "Origen", "options": { "none": "Biblioteca", "cover": "Portada de la página (CMS)" }, "default": "none" },
+                "bindPage": { "kind": "page", "label": "Página", "default": "", "showWhen": { "bind": ["cover"] } },
+                "alt": { "kind": "string", "label": "Texto alternativo", "max": 200, "default": "" },
+                "caption": { "kind": "string", "label": "Pie de foto", "max": 200, "default": "" },
+                "link": { "kind": "link", "label": "Enlace", "default": null, "nullable": true },
+                "priority": { "kind": "bool", "label": "Carga prioritaria (hero)", "default": false, "tab": "advanced" }
+            },
+            "styleGroups": ["media", "box", "position", "visibility"]
+        },
+        "video": {
+            "label": "Video",
+            "icon": "Clapperboard",
+            "version": 1,
+            "props": {
+                "media": { "kind": "media", "label": "Video", "mediaType": "video", "default": null },
+                "poster": { "kind": "media", "label": "Portada", "mediaType": "image", "default": null },
+                "captions": { "kind": "media", "label": "Subtítulos (.vtt)", "mediaType": "captions", "default": null },
+                "title": { "kind": "string", "label": "Descripción accesible", "max": 160, "default": "" },
+                "controls": { "kind": "bool", "label": "Mostrar controles", "default": true },
+                "autoplay": { "kind": "bool", "label": "Reproducción automática (silenciada)", "default": false },
+                "loop": { "kind": "bool", "label": "Repetir", "default": false },
+                "muted": { "kind": "bool", "label": "Silenciado", "default": false }
+            },
+            "styleGroups": ["media", "box", "position", "visibility"]
+        },
+        "quote": {
+            "label": "Cita destacada",
+            "icon": "Quote",
+            "version": 1,
+            "props": {
+                "text": { "kind": "text", "label": "Cita", "max": 600, "default": "Lo que repites cada día termina por definirte.", "inline": true },
+                "author": { "kind": "string", "label": "Autor", "max": 120, "default": "" },
+                "variant": { "kind": "enum", "label": "Estilo", "options": { "classic": "Clásica", "large": "Gran formato", "bordered": "Con filete" }, "default": "classic" }
+            },
+            "styleGroups": ["typography", "box", "position", "visibility"]
+        },
+        "question": {
+            "label": "Pregunta al lector",
+            "icon": "MessageCircleQuestion",
+            "version": 1,
+            "props": {
+                "label": { "kind": "string", "label": "Etiqueta", "max": 40, "default": "Pregunta para ti" },
+                "text": { "kind": "text", "label": "Pregunta", "max": 300, "default": "¿Qué hábito pequeño cambiaría tu semana?", "inline": true }
+            },
+            "styleGroups": ["typography", "box", "position", "visibility"]
+        },
+        "divider": {
+            "label": "Divisor",
+            "icon": "SeparatorHorizontal",
+            "version": 1,
+            "props": {
+                "variant": { "kind": "enum", "label": "Estilo", "options": { "line": "Línea", "ornament": "Ornamento", "short": "Filete corto" }, "default": "line" }
+            },
+            "styleGroups": ["box", "position", "visibility"]
+        },
+        "spacer": {
+            "label": "Espacio",
+            "icon": "MoveVertical",
+            "version": 1,
+            "props": {},
+            "styleGroups": ["spacer", "visibility"]
+        },
+        "social-links": {
+            "label": "Iconos de redes",
+            "icon": "AtSign",
+            "version": 1,
+            "props": {
+                "variant": { "kind": "enum", "label": "Estilo", "options": { "icons": "Iconos", "labels": "Iconos y nombre" }, "default": "icons" }
+            },
+            "styleGroups": ["box", "position", "visibility"]
+        },
+        "page-body": {
+            "label": "Contenido de página (CMS)",
+            "icon": "FileText",
+            "version": 1,
+            "props": {
+                "page": { "kind": "page", "label": "Página", "default": "" }
+            },
+            "styleGroups": ["box", "position", "visibility"]
+        },
+        "post-meta": {
+            "label": "Datos de la publicación",
+            "icon": "Info",
+            "version": 1,
+            "props": {
+                "showCategory": { "kind": "bool", "label": "Mostrar categoría", "default": true },
+                "showDate": { "kind": "bool", "label": "Mostrar fecha", "default": true },
+                "showReadingTime": { "kind": "bool", "label": "Mostrar tiempo de lectura", "default": true }
+            },
+            "styleGroups": ["typography", "box", "position", "visibility"]
+        },
+        "share": {
+            "label": "Compartir",
+            "icon": "Share2",
+            "version": 1,
+            "props": {
+                "label": { "kind": "string", "label": "Texto", "max": 40, "default": "Compartir" }
+            },
+            "styleGroups": ["box", "position", "visibility"]
+        }
+    }
+}
