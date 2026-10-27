@@ -2,6 +2,12 @@
 
 namespace App\Services\Web;
 
+use App\Cms\Field;
+use App\Cms\Layout\DynamicBlocks;
+use App\Cms\Layout\Grid;
+use App\Cms\Layout\LayoutValidator;
+use App\Enums\MediaType;
+use App\Enums\MediaVariantType;
 use App\Enums\SiteSectionType;
 use App\Models\Faq;
 use App\Models\Media;
@@ -16,35 +22,68 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Compone la portada a partir de las secciones del CMS en su orden y
- * visibilidad guardados. Cada sección se resuelve con sus datos vivos
+ * Compone una página del editor visual (hoy, la portada) a partir de sus
+ * secciones: lienzo de bloques + datos vivos de los bloques dinámicos
  * (categorías publicadas, proyectos destacados, testimonios con
- * consentimiento, preguntas, política de visita activa).
+ * consentimiento, preguntas, política de visita activa) e imágenes
+ * responsivas de cada bloque.
+ *
+ * Sirve igual para lo publicado (site_sections), el borrador del editor y
+ * la vista previa: todo entra como "sección de snapshot".
  */
 class HomePage
 {
     public function __construct(private readonly Presenter $presenter) {}
 
     /**
+     * Secciones PUBLICADAS listas para el renderizador.
+     *
      * @return list<array<string, mixed>>
      */
-    public function sections(bool $includeHidden = false): array
+    public function sections(bool $includeHidden = false, string $page = 'home'): array
     {
-        $sections = SiteSection::query()->forPage('home')
+        $sections = SiteSection::query()->forPage($page)
             ->when(! $includeHidden, fn ($q) => $q->where('is_visible', true))
             ->get();
 
-        $mediaIds = $sections->flatMap(fn (SiteSection $s) => $s->schema()->mediaIds($s->content))->unique()->values()->all();
+        $out = $this->resolve(array_values($sections->map(fn (SiteSection $s) => $s->toSnapshot())->all()));
+
+        // Compatibilidad: el id numérico de la sección publicada.
+        $ids = $sections->pluck('id', 'key');
+        foreach ($out as $i => $section) {
+            $out[$i]['id'] = $ids->get($section['key']);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Resuelve secciones de snapshot (publicadas, borrador o versión).
+     * En modo edición se incluyen las ocultas y las listas vivas vacías.
+     *
+     * @param  list<array<string, mixed>>  $sections
+     * @return list<array<string, mixed>>
+     */
+    public function resolve(array $sections, bool $editing = false): array
+    {
+        $ids = [];
+        foreach ($sections as $section) {
+            $ids = [...$ids, ...LayoutValidator::mediaIds(is_array($section['layout'] ?? null) ? $section['layout'] : null)];
+        }
+
         /** @var Collection<int, Media> $media */
-        $media = $mediaIds !== []
-            ? Media::query()->with('variants')->whereIn('id', $mediaIds)->get()->keyBy('id')
+        $media = $ids !== []
+            ? Media::query()->with('variants')->whereIn('id', array_values(array_unique($ids)))->where('visibility', 'public')->get()->keyBy('id')
             : collect();
 
         $out = [];
         foreach ($sections as $section) {
-            $data = $this->resolve($section, $media);
-            if ($data !== null) {
-                $out[] = $data;
+            if (! $editing && ($section['isVisible'] ?? true) !== true) {
+                continue;
+            }
+            $resolved = $this->resolveSection($section, $media, $editing);
+            if ($resolved !== null) {
+                $out[] = $resolved;
             }
         }
 
@@ -52,42 +91,137 @@ class HomePage
     }
 
     /**
+     * @param  array<string, mixed>  $section
      * @param  Collection<int, Media>  $media
      * @return array<string, mixed>|null
      */
-    private function resolve(SiteSection $section, Collection $media): ?array
+    private function resolveSection(array $section, Collection $media, bool $editing): ?array
     {
-        $content = $section->content;
-        $image = function (string $key, string $sizes = Presenter::SIZES_WIDE) use ($content, $media): ?array {
-            $id = $content[$key] ?? null;
+        $type = SiteSectionType::tryFrom((string) ($section['type'] ?? '')) ?? SiteSectionType::Canvas;
+        /** @var array<string, mixed> $layout */
+        $layout = $section['layout'];
+        $settings = $layout['settings'] ?? [];
+        $fullBleed = ($settings['fullBleed'] ?? false) === true;
 
-            return is_int($id) ? ResponsiveImage::for($media->get($id), null, $sizes) : null;
-        };
+        $images = [];
+        $videos = [];
+        $data = [];
+        $blocks = [];
 
-        $base = ['id' => $section->id, 'type' => $section->type->value, 'content' => $content];
+        $bgId = $settings['background']['mediaId'] ?? null;
+        $background = is_int($bgId) && ($settings['background']['kind'] ?? null) === 'image'
+            ? ResponsiveImage::for($media->get($bgId), null, Presenter::SIZES_FULL)
+            : null;
+        if ($background !== null) {
+            $images[$bgId] = $background;
+        }
 
-        return match ($section->type) {
-            SiteSectionType::Hero => [...$base, 'image' => $image('media_id', Presenter::SIZES_FULL)],
-            SiteSectionType::Benefits, SiteSectionType::FinalCta => [...$base, 'image' => $image('media_id')],
-            SiteSectionType::HomeVisit => [...$base, 'image' => $image('media_id'), 'visit' => ($content['show_price'] ?? false) ? $this->visitPolicy() : null],
-            SiteSectionType::Categories => $this->withItems($base, $this->categories($content)),
-            SiteSectionType::FeaturedProjects => $this->withItems($base, $this->projects((int) ($content['limit'] ?? 3))),
-            SiteSectionType::Testimonials => $this->withItems($base, $this->testimonials((int) ($content['limit'] ?? 6))),
-            SiteSectionType::Faq => $this->withItems($base, $this->faqs($content)),
-            SiteSectionType::Process, SiteSectionType::PaymentOptions, SiteSectionType::Coverage => $base,
-        };
+        foreach ($layout['blocks'] ?? [] as $block) {
+            $id = $block['id'];
+            $props = $block['props'] ?? [];
+
+            if ($block['type'] === 'image' && is_int($props['mediaId'] ?? null)) {
+                $images[$props['mediaId']] ??= ResponsiveImage::for($media->get($props['mediaId']), null, $this->sizes((int) $block['w'], $fullBleed));
+            }
+            if ($block['type'] === 'video' && is_int($props['mediaId'] ?? null)) {
+                $video = $media->get($props['mediaId']);
+                if ($video instanceof Media && $video->type === MediaType::Video) {
+                    $videos[$props['mediaId']] = [
+                        'src' => $video->url(),
+                        'mime' => $video->mime_type,
+                        'poster' => $video->variantUrl(MediaVariantType::Poster->value),
+                        'width' => $video->width,
+                        'height' => $video->height,
+                    ];
+                }
+            }
+
+            if (DynamicBlocks::exists($block['type'])) {
+                $resolved = $this->dynamicData($block['type'], $props, $media, (int) $block['w'], $fullBleed);
+                $empty = DynamicBlocks::isLiveList($block['type']) && ($resolved['items'] ?? []) === [];
+
+                if ($empty && ! $editing) {
+                    // Una sección curada cuya lista viva está vacía se oculta
+                    // completa (su encabezado quedaría huérfano); en un
+                    // lienzo libre solo se omite el bloque.
+                    if (DynamicBlocks::sourceType($block['type']) === $type) {
+                        return null;
+                    }
+
+                    continue;
+                }
+                $data[$id] = [...$resolved, 'empty' => $empty];
+            }
+
+            $blocks[] = $block;
+        }
+
+        $layout['blocks'] = $blocks;
+
+        $out = [
+            'id' => null,
+            'key' => (string) $section['key'],
+            'type' => $type->value,
+            'isVisible' => ($section['isVisible'] ?? true) === true,
+            'content' => $section['content'] ?? [],
+            'layout' => $layout,
+            'images' => (object) $images,
+            'videos' => (object) $videos,
+            'data' => (object) $data,
+            // Compatibilidad con consumidores anteriores (SEO, pruebas): la
+            // imagen principal y los datos del primer bloque dinámico.
+            'image' => $background,
+        ];
+
+        foreach ($data as $resolved) {
+            if (array_key_exists('items', $resolved) && ! array_key_exists('items', $out)) {
+                $out['items'] = $resolved['items'];
+            }
+            if (array_key_exists('visit', $resolved) && ! array_key_exists('visit', $out)) {
+                $out['visit'] = $resolved['visit'];
+            }
+        }
+
+        return $out;
+    }
+
+    /** `sizes` de una imagen según las columnas que ocupa en escritorio. */
+    private function sizes(int $columns, bool $fullBleed): string
+    {
+        $ratio = max(1, $columns) / Grid::COLUMNS;
+        $desktop = $fullBleed ? ((int) round($ratio * 100)).'vw' : ((int) round($ratio * Grid::CONTENT_WIDTH)).'px';
+
+        return $columns >= 8 ? "(min-width: 1024px) $desktop, 100vw" : "(min-width: 1024px) $desktop, (min-width: 768px) 66vw, 100vw";
     }
 
     /**
-     * Secciones con listas vivas: si no hay elementos, la sección se oculta.
+     * Datos vivos de un bloque dinámico.
      *
-     * @param  array<string, mixed>  $base
-     * @param  list<array<string, mixed>>  $items
-     * @return array<string, mixed>|null
+     * @param  array<string, mixed>  $props
+     * @param  Collection<int, Media>  $media
+     * @return array<string, mixed>
      */
-    private function withItems(array $base, array $items): ?array
+    private function dynamicData(string $type, array $props, Collection $media, int $columns, bool $fullBleed): array
     {
-        return $items === [] ? null : [...$base, 'items' => $items];
+        $image = function () use ($type, $props, $media, $columns, $fullBleed): ?array {
+            foreach (DynamicBlocks::schema($type)->fields() as $field) {
+                if ($field->kind === Field::MEDIA && is_int($props[$field->key] ?? null)) {
+                    return ResponsiveImage::for($media->get($props[$field->key]), null, $this->sizes($columns, $fullBleed));
+                }
+            }
+
+            return null;
+        };
+
+        return match ($type) {
+            'categories' => ['items' => $this->categories($props)],
+            'featured_projects' => ['items' => $this->projects((int) ($props['limit'] ?? 3))],
+            'testimonials' => ['items' => $this->testimonials((int) ($props['limit'] ?? 6))],
+            'faq' => ['items' => $this->faqs($props)],
+            'home_visit' => ['image' => $image(), 'visit' => ($props['show_price'] ?? false) ? $this->visitPolicy() : null],
+            'final_cta' => ['image' => $image()],
+            default => [],
+        };
     }
 
     /**

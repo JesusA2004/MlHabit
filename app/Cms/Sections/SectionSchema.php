@@ -156,6 +156,24 @@ abstract class SectionSchema
     }
 
     /**
+     * Esquema reducido a algunas claves: datos de un bloque dinámico del
+     * editor visual (conserva reglas extra y mensajes de esas claves).
+     *
+     * @param  list<string>  $keys
+     */
+    public function only(array $keys, ?string $label = null): SubsetSchema
+    {
+        $fields = array_values(array_filter($this->fields(), fn (Field $f) => in_array($f->key, $keys, true)));
+        $extra = array_filter(
+            $this->extraRules(),
+            fn (string $rule) => in_array(explode('.', $rule)[0], $keys, true),
+            ARRAY_FILTER_USE_KEY,
+        );
+
+        return new SubsetSchema($label ?? $this->label(), $this->description(), $fields, $extra, $this->messages());
+    }
+
+    /**
      * Descriptor para el editor del panel.
      *
      * @return array<string, mixed>

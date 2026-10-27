@@ -64,9 +64,9 @@ function submit() {
 <template>
     <Head title="Agenda tu asesoría" />
 
-    <section class="bg-background pb-16">
+    <section class="motion-calm bg-background pb-16">
         <div class="container-site pt-10 md:pt-16">
-            <div class="max-w-2xl">
+            <div class="max-w-2xl" data-motion="fade-up">
                 <p class="text-sm font-medium text-oak-ink">
                     Solicitud {{ lead.folio }}
                 </p>

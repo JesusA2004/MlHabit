@@ -28,6 +28,7 @@ use App\Services\Visits\VisitHoldExpirer;
 use App\Services\Visits\VisitNotifier;
 use App\Services\Visits\VisitPaymentHandler;
 use App\Services\Visits\VisitPresenter;
+use App\Services\Web\Seo;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
@@ -157,6 +158,7 @@ class VisitCheckoutController extends Controller
         }
 
         return Inertia::render('public/visita/Pago', [
+            'seo' => app(Seo::class)->private('Pago de la visita técnica'),
             ...$this->publicBase(),
             'visit' => VisitPresenter::forCustomer($visit),
             'payment' => $this->paymentProps($payment),
@@ -239,6 +241,7 @@ class VisitCheckoutController extends Controller
         }
 
         return Inertia::render('public/visita/Estado', [
+            'seo' => app(Seo::class)->private('Estado de tu visita técnica'),
             ...$this->publicBase(),
             'visit' => VisitPresenter::forCustomer($visit->fresh(['address', 'zone', 'technician', 'policy', 'customer']) ?? $visit),
             'payment' => $this->paymentProps($payment),
@@ -253,6 +256,7 @@ class VisitCheckoutController extends Controller
         $policy = VisitPolicy::current();
 
         return Inertia::render('public/visita/Agendar', [
+            'seo' => app(Seo::class)->private('Agenda tu visita técnica'),
             ...$this->publicBase(),
             'policy' => $policy ? VisitPresenter::policy($policy) : null,
             'prefill' => $lead ? $this->prefill($lead) : null,

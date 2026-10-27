@@ -1,0 +1,311 @@
+/* ---------------------------------------------------------------------- */
+/* Editor visual · cromo del lienzo (solo en /admin/sitio/editor)          */
+/* Selección eucalipto con halo blanco: se ve sobre fondos claros y        */
+/* oscuros. Las asas conservan su tamaño en pantalla con cualquier zoom.   */
+/* ---------------------------------------------------------------------- */
+
+.sb-editor {
+    --sb-sel: #2f7d66;
+    --sb-sel-soft: rgb(47 125 102 / 0.14);
+    --sb-guide: #d9480f;
+}
+
+.sb-editor-viewport {
+    background-color: #e9e5df;
+    background-image: radial-gradient(
+        rgb(35 30 26 / 0.09) 1px,
+        transparent 1px
+    );
+    background-size: 18px 18px;
+}
+
+.sb-editor-frame {
+    border-radius: 6px;
+}
+
+.sb-editor-section--hidden > .sb-section {
+    opacity: 0.38;
+    filter: grayscale(0.6);
+}
+
+.sb-editor-section--selected::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 calc(2px * var(--sb-inv-zoom, 1)) var(--sb-sel);
+    z-index: 940;
+}
+
+/* Bloques ------------------------------------------------------------- */
+.sb-ring {
+    border-radius: 3px;
+    box-shadow:
+        0 0 0 calc(1px * var(--sb-inv-zoom, 1)) rgb(255 255 255 / 0.85),
+        0 0 0 calc(2px * var(--sb-inv-zoom, 1)) rgb(47 125 102 / 0.55);
+    transition: opacity 120ms ease;
+}
+
+.sb-ring--selected {
+    opacity: 1;
+    box-shadow:
+        0 0 0 calc(1.5px * var(--sb-inv-zoom, 1)) var(--sb-sel),
+        0 0 0 calc(3px * var(--sb-inv-zoom, 1)) rgb(255 255 255 / 0.9);
+}
+
+.sb-block:focus-visible > .sb-ring {
+    opacity: 1;
+    box-shadow:
+        0 0 0 calc(2px * var(--sb-inv-zoom, 1)) var(--sb-sel),
+        0 0 0 calc(5px * var(--sb-inv-zoom, 1)) rgb(47 125 102 / 0.3);
+}
+
+.sb-dragging {
+    transition: none !important;
+    filter: drop-shadow(0 18px 30px rgb(35 30 26 / 0.22));
+    opacity: 0.94;
+}
+
+.sb-tag {
+    background: var(--sb-sel);
+    color: #fff;
+    z-index: 2;
+    scale: var(--sb-inv-zoom, 1);
+    transform-origin: bottom left;
+}
+
+.sb-handle {
+    position: absolute;
+    z-index: 3;
+    width: 11px;
+    height: 11px;
+    margin: -5.5px;
+    border-radius: 3px;
+    background: #fff;
+    border: 1.5px solid var(--sb-sel);
+    box-shadow: 0 1px 3px rgb(35 30 26 / 0.25);
+    scale: var(--sb-inv-zoom, 1);
+    touch-action: none;
+}
+
+.sb-handle::before {
+    /* Área táctil generosa (iPad) sin agrandar el asa visible. */
+    content: '';
+    position: absolute;
+    inset: -9px;
+}
+
+.sb-handle:hover {
+    background: var(--sb-sel);
+}
+
+.sb-handle--nw {
+    top: 0;
+    left: 0;
+}
+
+.sb-handle--n {
+    top: 0;
+    left: 50%;
+}
+
+.sb-handle--ne {
+    top: 0;
+    left: 100%;
+}
+
+.sb-handle--e {
+    top: 50%;
+    left: 100%;
+}
+
+.sb-handle--se {
+    top: 100%;
+    left: 100%;
+}
+
+.sb-handle--s {
+    top: 100%;
+    left: 50%;
+}
+
+.sb-handle--sw {
+    top: 100%;
+    left: 0;
+}
+
+.sb-handle--w {
+    top: 50%;
+    left: 0;
+}
+
+.sb-handle--n,
+.sb-handle--s {
+    width: 18px;
+    height: 7px;
+    margin: -3.5px -9px;
+    border-radius: 999px;
+}
+
+.sb-handle--e,
+.sb-handle--w {
+    width: 7px;
+    height: 18px;
+    margin: -9px -3.5px;
+    border-radius: 999px;
+}
+
+/* Retícula, sombra de destino y guías ---------------------------------- */
+.sb-grid-overlay {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 2cqi;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.sb-grid-overlay > span {
+    background: rgb(217 72 15 / 0.05);
+    box-shadow:
+        inset 1px 0 0 rgb(217 72 15 / 0.18),
+        inset -1px 0 0 rgb(217 72 15 / 0.18);
+}
+
+.sb-ghost {
+    position: relative;
+    z-index: 800;
+    pointer-events: none;
+    border-radius: 6px;
+    border: calc(1.5px * var(--sb-inv-zoom, 1)) dashed var(--sb-sel);
+    background: var(--sb-sel-soft);
+}
+
+.sb-guide {
+    position: absolute;
+    z-index: 990;
+    pointer-events: none;
+    background: var(--sb-guide);
+}
+
+.sb-guide--v {
+    top: 0;
+    bottom: 0;
+    width: calc(1px * var(--sb-inv-zoom, 1));
+}
+
+.sb-guide--h {
+    left: 0;
+    right: 0;
+    height: calc(1px * var(--sb-inv-zoom, 1));
+}
+
+.sb-empty-hint {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 220px;
+    border-radius: 18px;
+    border: 2px dashed rgb(176 125 79 / 0.45);
+    background: rgb(255 255 255 / 0.35);
+    color: var(--color-muted-foreground);
+    font-size: 15px;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.sb-tone-dark .sb-empty-hint {
+    color: rgb(255 255 255 / 0.7);
+    background: rgb(255 255 255 / 0.04);
+}
+
+/* Barra flotante de la sección ------------------------------------------ */
+.sb-section-bar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 950;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.96);
+    color: var(--color-foreground);
+    box-shadow:
+        0 1px 2px rgb(35 30 26 / 0.08),
+        0 8px 24px -8px rgb(35 30 26 / 0.25);
+    border: 1px solid var(--color-border);
+    scale: var(--sb-inv-zoom, 1);
+    transform-origin: top left;
+    font-size: 12px;
+}
+
+.sb-section-bar button {
+    display: inline-grid;
+    place-items: center;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 999px;
+    color: var(--color-muted-foreground);
+}
+
+.sb-section-bar button:hover:not(:disabled) {
+    background: var(--color-muted);
+    color: var(--color-foreground);
+}
+
+.sb-section-bar button:disabled {
+    opacity: 0.35;
+}
+
+.sb-section-bar button:focus-visible {
+    outline: 2px solid var(--sb-sel);
+    outline-offset: 1px;
+}
+
+.sb-section-bar .sb-section-bar__name {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding-inline: 10px 8px;
+    font-weight: 600;
+    color: var(--color-foreground);
+}
+
+.sb-section-bar__sep {
+    width: 1px;
+    height: 16px;
+    background: var(--color-border);
+    margin-inline: 2px;
+}
+
+.sb-add-between {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    z-index: 960;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    background: var(--sb-sel);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 6px 16px -6px rgb(35 30 26 / 0.45);
+    opacity: 0;
+    translate: -50% 50%;
+    scale: var(--sb-inv-zoom, 1);
+    transition: opacity 150ms ease;
+}
+
+.sb-add-between:hover,
+.sb-add-between:focus-visible {
+    opacity: 1;
+}

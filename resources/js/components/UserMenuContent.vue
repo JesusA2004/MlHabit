@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Palette, ShieldCheck, UserRound } from '@lucide/vue';
+import { LogOut, ShieldCheck, UserRound } from '@lucide/vue';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -11,13 +11,8 @@ import UserInfo from '@/components/UserInfo.vue';
 import { accountLinks } from '@/lib/navigation';
 import type { User } from '@/types';
 
-/** Contenido del menú de cuenta: perfil, seguridad, apariencia y salir. */
-const props = withDefaults(
-    defineProps<{ user: User; showAppearance?: boolean }>(),
-    {
-        showAppearance: true,
-    },
-);
+/** Contenido del menú de cuenta: perfil, seguridad y salir. */
+const props = defineProps<{ user: User }>();
 
 function handleLogout() {
     router.flushAll();
@@ -45,12 +40,6 @@ const itemClass =
             <Link :class="itemClass" :href="accountLinks.security" prefetch>
                 <ShieldCheck class="size-4" />
                 Seguridad
-            </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem v-if="props.showAppearance" as-child>
-            <Link :class="itemClass" :href="accountLinks.appearance" prefetch>
-                <Palette class="size-4" />
-                Apariencia
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>

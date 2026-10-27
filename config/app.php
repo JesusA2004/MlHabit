@@ -55,6 +55,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Redirección al dominio canónico (CanonicalHost, solo producción): http → https
+    | y www → dominio de APP_URL con 301. Ponla en false si el servidor web o
+    | el CDN ya hacen esa redirección.
+    */
+    'canonical_redirect' => (bool) env('APP_CANONICAL_REDIRECT', true),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

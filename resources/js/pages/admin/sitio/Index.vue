@@ -8,19 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PagesPanel from '@/components/web/admin/site/PagesPanel.vue';
 import type { PageRow } from '@/components/web/admin/site/PagesPanel.vue';
-import SectionsPanel from '@/components/web/admin/site/SectionsPanel.vue';
+import EditorLauncher from '@/components/web/admin/site/EditorLauncher.vue';
+import type { EditorSummary } from '@/components/web/admin/site/EditorLauncher.vue';
 import SettingsPanel from '@/components/web/admin/site/SettingsPanel.vue';
 import SocialPanel from '@/components/web/admin/site/SocialPanel.vue';
 import type { SocialLinkRow } from '@/components/web/admin/site/SocialPanel.vue';
 import TestimonialsPanel from '@/components/web/admin/site/TestimonialsPanel.vue';
 import type { TestimonialRow } from '@/components/web/admin/site/TestimonialsPanel.vue';
 import sitio from '@/routes/admin/sitio';
-import type {
-    AdminSection,
-    MediaRef,
-    Option,
-    VisitPolicyData,
-} from '@/types/web';
+import type { MediaRef, Option } from '@/types/web';
 
 type Tab =
     | 'portada'
@@ -34,7 +30,7 @@ type Tab =
 
 const props = defineProps<{
     tab: Tab;
-    sections: AdminSection[];
+    editor: EditorSummary;
     media: Record<string, MediaRef | null>;
     settings: {
         brand: Record<string, unknown>;
@@ -46,7 +42,6 @@ const props = defineProps<{
     testimonials: TestimonialRow[];
     pages: PageRow[];
     showcaseOptions: Option<number>[];
-    visitPolicy: VisitPolicyData | null;
     can: { publish: boolean };
 }>();
 
@@ -124,12 +119,7 @@ const mediaMap = computed(() => props.media);
             </div>
 
             <TabsContent value="portada">
-                <SectionsPanel
-                    :sections="props.sections"
-                    :media="mediaMap"
-                    :can-publish="props.can.publish"
-                    :visit-policy="props.visitPolicy"
-                />
+                <EditorLauncher :editor="props.editor" />
             </TabsContent>
 
             <TabsContent value="identidad">

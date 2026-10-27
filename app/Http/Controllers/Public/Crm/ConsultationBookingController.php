@@ -9,6 +9,7 @@ use App\Models\Consultation;
 use App\Models\Lead;
 use App\Services\Crm\ConsultationScheduler;
 use App\Services\Scheduling\SlotUnavailableException;
+use App\Services\Web\Seo;
 use App\Support\Crm\CrmLinks;
 use App\Support\Crm\Present;
 use Carbon\CarbonImmutable;
@@ -40,6 +41,7 @@ class ConsultationBookingController extends Controller
         [$from, $until] = $this->scheduler->window();
 
         return Inertia::render('public/asesoria/Create', [
+            'seo' => app(Seo::class)->private('Agenda tu asesoría'),
             'lead' => ['folio' => $lead->folio, 'firstName' => $lead->customer->first_name],
             'settings' => $settings->toArray(),
             'window' => ['min' => $from->toDateString(), 'max' => $until->toDateString()],
@@ -98,6 +100,7 @@ class ConsultationBookingController extends Controller
         $canChange = $consultation->status->isActive() && $consultation->starts_at->isFuture();
 
         return Inertia::render('public/asesoria/Show', [
+            'seo' => app(Seo::class)->private('Tu asesoría'),
             'consultation' => [
                 ...Present::consultation($consultation),
                 // El cliente solo ve el nombre de pila de su asesor.

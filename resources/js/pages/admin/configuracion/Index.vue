@@ -4,6 +4,7 @@ import {
     ArrowUpRight,
     BadgePercent,
     CalendarClock,
+    SearchCheck,
     ShieldCheck,
     UserRoundPlus,
 } from '@lucide/vue';
@@ -39,6 +40,10 @@ type Props = {
         };
         leads: { follow_up_hours: number };
         security: { require_2fa_for_staff: boolean };
+        seo: {
+            google_site_verification: string;
+            bing_site_verification: string;
+        };
     };
     channels: { value: string; label: string }[];
     links: { visitPolicy: string; site: string };
@@ -62,13 +67,15 @@ const consultation = useForm({
 });
 const leads = useForm({ ...props.settings.leads });
 const security = useForm({ ...props.settings.security });
+const seo = useForm({ ...props.settings.seo });
 
 const save = (
     form:
         | typeof commercial
         | typeof consultation
         | typeof leads
-        | typeof security,
+        | typeof security
+        | typeof seo,
     group: string,
 ) =>
     form.put(configuracion.update(group).url, {
@@ -459,6 +466,73 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                 >
                     <Spinner v-if="security.processing" />
                     {{ security.processing ? 'Guardando…' : 'Guardar' }}
+                </Button>
+            </template>
+        </SectionCard>
+        <!-- Buscadores -->
+        <SectionCard
+            title="Buscadores"
+            description="Verificación del sitio en Google Search Console y Bing Webmaster Tools."
+            :icon="SearchCheck"
+        >
+            <form
+                id="form-seo"
+                class="grid gap-5"
+                @submit.prevent="save(seo, 'seo')"
+            >
+                <div class="grid gap-2">
+                    <Label for="google_site_verification"
+                        >Código de verificación de Google</Label
+                    >
+                    <Input
+                        id="google_site_verification"
+                        v-model.trim="seo.google_site_verification"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="p. ej. 2Xk9…"
+                        aria-describedby="google_site_verification_help"
+                    />
+                    <p
+                        id="google_site_verification_help"
+                        class="text-sm text-muted-foreground"
+                    >
+                        En Search Console elige el método "Etiqueta HTML" y pega
+                        aquí la etiqueta completa o solo el valor de content. Si
+                        verificaste por DNS no hace falta.
+                    </p>
+                    <InputError
+                        :message="seo.errors.google_site_verification"
+                    />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="bing_site_verification"
+                        >Código de verificación de Bing</Label
+                    >
+                    <Input
+                        id="bing_site_verification"
+                        v-model.trim="seo.bing_site_verification"
+                        autocomplete="off"
+                        spellcheck="false"
+                        aria-describedby="bing_site_verification_help"
+                    />
+                    <p
+                        id="bing_site_verification_help"
+                        class="text-sm text-muted-foreground"
+                    >
+                        Opcional. Bing también permite importar el sitio
+                        directamente desde Search Console.
+                    </p>
+                    <InputError :message="seo.errors.bing_site_verification" />
+                </div>
+            </form>
+            <template #footer>
+                <Button
+                    type="submit"
+                    form="form-seo"
+                    :disabled="seo.processing || !seo.isDirty"
+                >
+                    <Spinner v-if="seo.processing" />
+                    {{ seo.processing ? 'Guardando…' : 'Guardar' }}
                 </Button>
             </template>
         </SectionCard>

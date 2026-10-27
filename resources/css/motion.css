@@ -1,0 +1,622 @@
+/* ====================================================================== */
+/* ML Habitat — sistema de movimiento                                      */
+/* Runtime: resources/js/lib/motion · Documentación: docs/design/MOTION.md  */
+/*                                                                        */
+/* Regla de oro: los estados ocultos SOLO existen bajo                     */
+/* `html.motion-ready .motion-scope`. Sin JS, sin IntersectionObserver o   */
+/* con `prefers-reduced-motion: reduce` todo se ve completo y quieto.      */
+/* ====================================================================== */
+
+:root {
+    --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --motion-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+    --motion-reveal: 900ms;
+    --motion-distance: 28px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 1. Revelados (`data-motion`)                                            */
+/* ---------------------------------------------------------------------- */
+
+/* Los desplazamientos de entrada nunca crean scroll horizontal. `clip` (no
+   `hidden`) no crea contenedor de scroll: `position: sticky` sigue igual. */
+.motion-scope {
+    overflow-x: clip;
+}
+
+.motion-ready .motion-scope [data-motion]:not([data-motion-done]) {
+    transition:
+        opacity calc(var(--motion-reveal) * 0.8) var(--motion-ease)
+            var(--motion-delay, 0ms),
+        transform var(--motion-reveal) var(--motion-ease)
+            var(--motion-delay, 0ms),
+        filter var(--motion-reveal) var(--motion-ease) var(--motion-delay, 0ms),
+        clip-path calc(var(--motion-reveal) * 1.15) var(--motion-ease)
+            var(--motion-delay, 0ms);
+}
+
+.motion-ready
+    .motion-scope
+    [data-motion]:not([data-motion='none']):not([data-motion='draw']):not(
+        [data-motion='split']
+    ):not([data-motion='settle']):not([data-motion='mask-reveal']):not(
+        [data-motion-in]
+    ) {
+    opacity: 0;
+}
+
+.motion-ready .motion-scope [data-motion='fade-up']:not([data-motion-in]) {
+    transform: translate3d(0, var(--motion-distance), 0);
+}
+
+.motion-ready .motion-scope [data-motion='zoom-in']:not([data-motion-in]) {
+    transform: scale(0.94);
+}
+
+.motion-ready .motion-scope [data-motion='slide-left']:not([data-motion-in]) {
+    transform: translate3d(calc(var(--motion-distance) * 1.6), 0, 0);
+}
+
+.motion-ready .motion-scope [data-motion='slide-right']:not([data-motion-in]) {
+    transform: translate3d(calc(var(--motion-distance) * -1.6), 0, 0);
+}
+
+.motion-ready .motion-scope [data-motion='blur-in']:not([data-motion-in]) {
+    filter: blur(14px);
+    transform: scale(1.02);
+}
+
+/* Máscara: la imagen "se descubre" de abajo hacia arriba. */
+.motion-ready .motion-scope [data-motion='mask-reveal']:not([data-motion-in]) {
+    clip-path: inset(100% 0 0 0 round var(--mask-radius, 0px));
+}
+
+.motion-ready .motion-scope [data-motion='mask-reveal'] {
+    clip-path: inset(0 0 0 0 round var(--mask-radius, 0px));
+}
+
+.motion-ready
+    .motion-scope
+    [data-motion='mask-reveal']:not([data-motion-done])
+    img {
+    transition: transform 1.3s var(--motion-ease) var(--motion-delay, 0ms);
+}
+
+.motion-ready
+    .motion-scope
+    [data-motion='mask-reveal']:not([data-motion-in])
+    img {
+    transform: scale(1.12);
+}
+
+/* Asentado: la imagen principal (LCP) se pinta al instante y solo se asienta. */
+.motion-ready .motion-scope [data-motion='settle']:not([data-motion-done]) img {
+    transition: transform 1.3s var(--motion-ease);
+}
+
+.motion-ready .motion-scope [data-motion='settle']:not([data-motion-in]) img {
+    transform: scale(1.06);
+}
+
+/* Texto dividido en palabras (componente SplitText). */
+.split-word {
+    display: inline-block;
+    overflow: clip;
+    overflow-clip-margin: 0.12em;
+    vertical-align: top;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+}
+
+.split-word > span {
+    display: inline-block;
+}
+
+.motion-ready .motion-scope [data-motion='split'] .split-word > span {
+    transition: transform 1s var(--motion-ease);
+    transition-delay: calc(var(--motion-delay, 0ms) + var(--i, 0) * 55ms);
+}
+
+.motion-ready
+    .motion-scope
+    [data-motion='split']:not([data-motion-in])
+    .split-word
+    > span {
+    transform: translate3d(0, 105%, 0);
+}
+
+/* Trazo dibujado (ilustraciones de línea): paths con pathLength="1". */
+.motion-ready .motion-scope [data-motion='draw'] [data-draw] {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1.8s var(--motion-ease-in-out);
+    transition-delay: calc(var(--motion-delay, 0ms) + var(--d, 0) * 1ms);
+}
+
+.motion-ready
+    .motion-scope
+    [data-motion='draw']:not([data-motion-in])
+    [data-draw] {
+    stroke-dashoffset: 1;
+}
+
+.motion-ready .motion-scope [data-motion='draw'] [data-fill] {
+    transition: opacity 0.9s var(--motion-ease);
+    transition-delay: calc(var(--motion-delay, 0ms) + 900ms);
+}
+
+.motion-ready
+    .motion-scope
+    [data-motion='draw']:not([data-motion-in])
+    [data-fill] {
+    opacity: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 2. Scroll: parallax y progreso                                          */
+/* ---------------------------------------------------------------------- */
+
+.motion-ready .motion-scope [data-parallax] {
+    transform: translate3d(0, var(--parallax-y, 0px), 0);
+    will-change: transform;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 3. Puntero: imán, inclinación, foco y lupa                              */
+/* ---------------------------------------------------------------------- */
+
+.motion-ready [data-magnetic] {
+    transform: translate3d(var(--mag-x, 0px), var(--mag-y, 0px), 0);
+    transition: transform 0.5s var(--motion-ease);
+}
+
+.motion-ready [data-magnetic][data-pointer-active] {
+    transition-duration: 0.15s;
+}
+
+.motion-ready [data-tilt] {
+    transform: perspective(1000px) rotateX(var(--tilt-rx, 0deg))
+        rotateY(var(--tilt-ry, 0deg));
+    transform-style: preserve-3d;
+    transition: transform 0.6s var(--motion-ease);
+}
+
+.motion-ready [data-tilt][data-pointer-active] {
+    transition-duration: 0.12s;
+}
+
+.motion-ready [data-tilt]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+        circle at var(--glare-x, 50%) var(--glare-y, 50%),
+        rgb(255 255 255 / 0.22),
+        transparent 55%
+    );
+    opacity: var(--glare-o, 0);
+    transition: opacity 0.4s var(--motion-ease);
+    mix-blend-mode: soft-light;
+}
+
+/* Base en capa: las utilidades (`absolute`, etc.) siguen mandando. */
+@layer base {
+    [data-tilt] {
+        position: relative;
+    }
+
+    [data-spotlight] {
+        position: relative;
+        isolation: isolate;
+    }
+}
+
+.motion-ready [data-spotlight]::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+        520px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+        rgb(176 125 79 / 0.2),
+        rgb(47 90 76 / 0.08) 40%,
+        transparent 70%
+    );
+    opacity: var(--spot-o, 0);
+    transition: opacity 0.5s var(--motion-ease);
+}
+
+.motion-ready [data-hover-zoom] img {
+    transform-origin: var(--zoom-x, 50%) var(--zoom-y, 50%);
+    transition:
+        transform 0.5s var(--motion-ease),
+        transform-origin 0.1s linear;
+}
+
+.motion-ready [data-hover-zoom][data-pointer-active] img {
+    transform: scale(1.75);
+}
+
+/* ---------------------------------------------------------------------- */
+/* 4. Transiciones de página                                               */
+/* ---------------------------------------------------------------------- */
+
+[data-site-header] {
+    view-transition-name: site-header;
+}
+
+[data-journey-rail] {
+    view-transition-name: journey-rail;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root) {
+        animation: vt-out 240ms var(--motion-ease-in) both;
+    }
+
+    ::view-transition-new(root) {
+        animation: vt-in 560ms var(--motion-ease) 60ms both;
+    }
+
+    [data-page-enter] {
+        animation: vt-in 560ms var(--motion-ease) both;
+    }
+}
+
+@keyframes vt-out {
+    to {
+        opacity: 0;
+        transform: translate3d(0, -10px, 0);
+    }
+}
+
+@keyframes vt-in {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 16px, 0);
+    }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 5. Microinteracciones reutilizables                                     */
+/* ---------------------------------------------------------------------- */
+
+@layer components {
+    /* Subrayado que se dibuja de izquierda a derecha. */
+    .link-underline {
+        background-image: linear-gradient(currentColor, currentColor);
+        background-size: 0% 1px;
+        background-position: 0 100%;
+        background-repeat: no-repeat;
+        transition: background-size 0.45s var(--motion-ease);
+        padding-bottom: 2px;
+    }
+
+    .link-underline:hover,
+    .link-underline:focus-visible,
+    .link-underline[aria-current='page'] {
+        background-size: 100% 1px;
+    }
+
+    /* Flecha que se adelanta al pasar el cursor (icono `.nudge`). */
+    .btn-nudge .nudge {
+        transition: transform 0.35s var(--motion-ease);
+    }
+
+    .btn-nudge:hover .nudge,
+    .btn-nudge:focus-visible .nudge {
+        transform: translate3d(4px, 0, 0);
+    }
+
+    .btn-nudge:hover .nudge-up,
+    .btn-nudge:focus-visible .nudge-up {
+        transform: translate3d(2px, -2px, 0);
+    }
+
+    /* Relleno que barre el botón desde abajo. */
+    .btn-sweep {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+    }
+
+    .btn-sweep::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--sweep, var(--primary-hover));
+        border-radius: inherit;
+        transform: translate3d(0, 101%, 0);
+        transition: transform 0.45s var(--motion-ease);
+    }
+
+    .btn-sweep:hover::before,
+    .btn-sweep:focus-visible::before {
+        transform: translate3d(0, 0, 0);
+    }
+
+    /* Antetítulo con regla que crece al revelarse. */
+    .eyebrow-rule {
+        display: inline-block;
+        height: 1px;
+        width: 1.5rem;
+        background: currentColor;
+        opacity: 0.7;
+        transform-origin: left;
+        transition: transform 1s var(--motion-ease) 0.2s;
+    }
+
+    .motion-ready
+        .motion-scope
+        [data-motion]:not([data-motion-in])
+        .eyebrow-rule {
+        transform: scaleX(0);
+    }
+
+    /* Cuadrícula de plano (cianotipo) muy tenue. */
+    .tex-blueprint {
+        background-image:
+            linear-gradient(
+                to right,
+                color-mix(in srgb, var(--foreground) 6%, transparent) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                color-mix(in srgb, var(--foreground) 6%, transparent) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to right,
+                color-mix(in srgb, var(--foreground) 3%, transparent) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                color-mix(in srgb, var(--foreground) 3%, transparent) 1px,
+                transparent 1px
+            );
+        background-size:
+            96px 96px,
+            96px 96px,
+            24px 24px,
+            24px 24px;
+        background-position: -1px -1px;
+    }
+
+    .tex-blueprint-dark {
+        background-image:
+            linear-gradient(
+                to right,
+                rgb(255 255 255 / 0.06) 1px,
+                transparent 1px
+            ),
+            linear-gradient(
+                to bottom,
+                rgb(255 255 255 / 0.06) 1px,
+                transparent 1px
+            );
+        background-size: 64px 64px;
+    }
+
+    /* Veta de madera en SVG en línea (≈600 bytes, sin peticiones). */
+    .tex-grain {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='60' viewBox='0 0 240 60'%3E%3Cg fill='none' stroke='%23B07D4F' stroke-opacity='.16' stroke-width='1'%3E%3Cpath d='M0 8c40-6 80 6 120 0s80-6 120 0'/%3E%3Cpath d='M0 22c50-8 70 8 120 2s70-10 120-2'/%3E%3Cpath d='M0 38c30-4 90 6 120 0s90-4 120 0'/%3E%3Cpath d='M0 52c60-6 60 6 120 2s60-8 120-2'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: 240px 60px;
+    }
+
+    /* Línea de cota (como en un plano): ─|────────|─ */
+    .dimension-line {
+        position: relative;
+        height: 1px;
+        background: currentColor;
+    }
+
+    .dimension-line::before,
+    .dimension-line::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        width: 1px;
+        height: 9px;
+        background: currentColor;
+    }
+
+    .dimension-line::before {
+        left: 0;
+    }
+
+    .dimension-line::after {
+        right: 0;
+    }
+}
+
+/* Marquesina continua: el contenido se duplica en el componente. */
+.marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+}
+
+@keyframes marquee {
+    to {
+        transform: translate3d(-50%, 0, 0);
+    }
+}
+
+/* Manchas de color cálidas que respiran muy despacio. */
+.blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(60px);
+    opacity: 0.55;
+    pointer-events: none;
+    animation: blob-drift var(--blob-duration, 22s) var(--motion-ease-in-out)
+        infinite alternate;
+}
+
+@keyframes blob-drift {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(6%, -8%, 0) scale(1.08);
+    }
+    100% {
+        transform: translate3d(-5%, 6%, 0) scale(0.96);
+    }
+}
+
+/* Chips de material que flotan. */
+.float-soft {
+    animation: float-soft var(--float-duration, 7s) var(--motion-ease-in-out)
+        infinite alternate;
+}
+
+@keyframes float-soft {
+    to {
+        transform: translate3d(0, -10px, 0) rotate(var(--float-rotate, 2deg));
+    }
+}
+
+/* Paneles de pasos (formularios): entrada al mostrarse con v-show. */
+.step-panel {
+    animation: step-in 480ms var(--motion-ease) both;
+}
+
+[data-direction='back'] .step-panel {
+    animation-name: step-in-back;
+}
+
+@keyframes step-in {
+    from {
+        opacity: 0;
+        transform: translate3d(28px, 0, 0);
+    }
+}
+
+@keyframes step-in-back {
+    from {
+        opacity: 0;
+        transform: translate3d(-28px, 0, 0);
+    }
+}
+
+/* Selección con "pop" (tarjetas de elección, horarios). */
+@keyframes select-pop {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(0.97);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes check-in {
+    from {
+        transform: scale(0.4) rotate(-20deg);
+        opacity: 0;
+    }
+}
+
+.motion-calm [role='radio'][aria-checked='true'],
+.motion-calm [data-state='checked'][role='radio'],
+.motion-calm [aria-pressed='true'] {
+    animation: select-pop 320ms var(--motion-ease);
+}
+
+.motion-calm [role='radiogroup'] > [role='radio'] {
+    animation: step-in 420ms var(--motion-ease) both;
+}
+
+.motion-calm [role='radiogroup'] > [role='radio']:nth-child(2) {
+    animation-delay: 30ms;
+}
+
+.motion-calm [role='radiogroup'] > [role='radio']:nth-child(3) {
+    animation-delay: 60ms;
+}
+
+.motion-calm [role='radiogroup'] > [role='radio']:nth-child(4) {
+    animation-delay: 90ms;
+}
+
+.motion-calm [role='radiogroup'] > [role='radio']:nth-child(n + 5) {
+    animation-delay: 120ms;
+}
+
+.check-in {
+    animation: check-in 360ms var(--motion-ease) both;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 6. Accesibilidad e impresión                                            */
+/* ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+        animation: none;
+        flex-wrap: wrap;
+        width: auto;
+    }
+
+    .marquee-track > ul {
+        flex-wrap: wrap;
+        flex-shrink: 1;
+        justify-content: center;
+    }
+
+    .marquee {
+        mask-image: none !important;
+    }
+
+    .marquee-track > [aria-hidden='true'],
+    .marquee-repeat {
+        display: none !important;
+    }
+
+    .blob,
+    .float-soft,
+    .step-panel,
+    .check-in,
+    .motion-calm [role='radio'],
+    .motion-calm [aria-pressed='true'] {
+        animation: none !important;
+    }
+
+    [data-site-header],
+    [data-journey-rail] {
+        view-transition-name: none;
+    }
+}
+
+@media print {
+    .motion-scope [data-motion] {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+        clip-path: none !important;
+    }
+
+    .marquee,
+    .blob,
+    [data-journey-rail],
+    [data-journey-cta] {
+        display: none !important;
+    }
+}

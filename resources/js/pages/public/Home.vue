@@ -1,57 +1,36 @@
 <script setup lang="ts">
-import type { Component } from 'vue';
-import BenefitsSection from '@/components/web/public/sections/BenefitsSection.vue';
-import CategoriesSection from '@/components/web/public/sections/CategoriesSection.vue';
-import CoverageSection from '@/components/web/public/sections/CoverageSection.vue';
-import FaqSection from '@/components/web/public/sections/FaqSection.vue';
-import FeaturedProjectsSection from '@/components/web/public/sections/FeaturedProjectsSection.vue';
-import FinalCtaSection from '@/components/web/public/sections/FinalCtaSection.vue';
-import HeroSection from '@/components/web/public/sections/HeroSection.vue';
-import HomeVisitSection from '@/components/web/public/sections/HomeVisitSection.vue';
-import PaymentOptionsSection from '@/components/web/public/sections/PaymentOptionsSection.vue';
-import ProcessSection from '@/components/web/public/sections/ProcessSection.vue';
-import TestimonialsSection from '@/components/web/public/sections/TestimonialsSection.vue';
+import { Eye } from '@lucide/vue';
+import PageRenderer from '@/components/site-builder/PageRenderer.vue';
+import type { RenderSection } from '@/components/site-builder/types';
 import SeoHead from '@/components/web/public/SeoHead.vue';
-import type {
-    HomeSection,
-    PublicSiteData,
-    ResponsiveImageData,
-    SeoData,
-} from '@/types/web';
+import type { PublicSiteData, ResponsiveImageData, SeoData } from '@/types/web';
 
 /**
- * Portada: renderiza las secciones del CMS en el orden y la visibilidad que
- * define el equipo en Administración → Sitio web.
+ * Portada: secciones armadas en el editor visual (Administración → Sitio
+ * web → Editor visual). El acomodo de escritorio lo decide el equipo; el
+ * de tableta y móvil se calcula solo.
  */
 const props = defineProps<{
     site: PublicSiteData;
     seo: SeoData;
-    sections: HomeSection[];
+    sections: RenderSection[];
     heroImage: ResponsiveImageData | null;
+    /** Vista previa firmada del borrador (no se indexa). */
+    preview?: boolean;
 }>();
-
-const registry: Record<HomeSection['type'], Component> = {
-    hero: HeroSection,
-    categories: CategoriesSection,
-    featured_projects: FeaturedProjectsSection,
-    process: ProcessSection,
-    benefits: BenefitsSection,
-    payment_options: PaymentOptionsSection,
-    home_visit: HomeVisitSection,
-    coverage: CoverageSection,
-    testimonials: TestimonialsSection,
-    faq: FaqSection,
-    final_cta: FinalCtaSection,
-};
 </script>
 
 <template>
     <SeoHead :seo="props.seo" :preload-image="props.heroImage" />
 
-    <component
-        :is="registry[section.type]"
-        v-for="section in props.sections"
-        :key="section.id"
-        :section="section"
-    />
+    <div
+        v-if="props.preview"
+        role="status"
+        class="fixed bottom-4 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-espresso px-4 py-2 text-sm text-white shadow-lg"
+    >
+        <Eye class="size-4 text-oak" aria-hidden="true" />
+        Vista previa del borrador · aún no está publicada
+    </div>
+
+    <PageRenderer :sections="props.sections" />
 </template>

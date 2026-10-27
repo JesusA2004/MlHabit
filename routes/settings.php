@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Cuenta (módulo platform): perfil, seguridad y apariencia.
+| Cuenta (módulo platform): perfil y seguridad.
 |--------------------------------------------------------------------------
 | El cambio de contraseña y la verificación en dos pasos usan las rutas de
 | Fortify (PUT /user/password, /user/two-factor-*). Las cuentas no se
@@ -27,6 +27,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/sessions', [SecurityController::class, 'destroyOtherSessions'])
         ->middleware('throttle:6,1')
         ->name('sessions.destroy-others');
-
-    Route::inertia('settings/appearance', 'settings/Appearance')->name('appearance.edit');
 });

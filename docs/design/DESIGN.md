@@ -39,7 +39,12 @@ natural, plantas de interior y estabilidad; transmite confianza sin el frío
 del azul corporativo. La terracota se confunde con los tonos de _peligro_ y
 _advertencia_ y es el acento por defecto de mil plantillas "cálidas".
 
-### Claro (sitio, portal, panel)
+### Paleta (única: no hay modo oscuro)
+
+Toda la aplicación —sitio, portal, panel, técnicos y cuenta— usa solo esta
+paleta clara (`color-scheme: light`). El modo oscuro se retiró por decisión
+del negocio: no hay clase `.dark`, variante `dark:` ni preferencia de
+apariencia.
 
 | Token                          | Hex       | Rol                                                                       |
 | ------------------------------ | --------- | ------------------------------------------------------------------------- |
@@ -58,20 +63,6 @@ _advertencia_ y es el acento por defecto de mil plantillas "cálidas".
 | `espresso`                     | `#2B2420` | Bloques oscuros de marketing (footer, banda CTA).                         |
 | `ring`                         | `#2F5A4C` | Anillo de foco.                                                           |
 
-### Oscuro (solo panel y portal; el sitio público es claro)
-
-| Token              | Hex                   | Rol                                              |
-| ------------------ | --------------------- | ------------------------------------------------ |
-| `background`       | `#141311`             | Lienzo.                                          |
-| `surface` / `card` | `#1C1A17`             | Superficies.                                     |
-| `muted`            | `#26231F`             | Zonas hundidas.                                  |
-| `foreground`       | `#EFEAE3`             | Texto. 15.5:1.                                   |
-| `muted-foreground` | `#A69E93`             | Secundario. 7.0:1.                               |
-| `border` / `input` | `#302C27` / `#3A352F` | Bordes.                                          |
-| `primary`          | `#8CC0AA`             | Eucalipto claro; texto encima `#0F1F19` (8.3:1). |
-| `primary-soft`     | `#1F2D27`             | Activo.                                          |
-| `oak`              | `#C99A6B`             | Acento material.                                 |
-
 ### Estados semánticos (`StatusBadge`, alertas, timeline)
 
 Cada tono tiene tres tokens: `--{tono}` (sólido / iconos), `--{tono}-soft`
@@ -86,10 +77,6 @@ Cada tono tiene tres tokens: `--{tono}` (sólido / iconos), `--{tono}-soft`
 | `neutral` | `#6B635A` | `#EFEBE5` | `#4A433C` | Borrador, cerrado, sin estado.            |
 | `brand`   | `#2F5A4C` | `#E5EEE9` | `#264A3F` | Destacado propio de ML Habitat.           |
 
-En oscuro los _soft_ son tintes profundos (`#1F2A23`, `#2E2416`, `#331D1A`,
-`#1A2531`, `#26231F`) y los _ink_ son claros (`#7FD1A0`, `#F2C27B`,
-`#F2A49A`, `#9CC4E6`, `#C9BFB3`).
-
 **Regla:** el color nunca es el único portador de significado; los chips
 llevan texto y, cuando aplica, icono.
 
@@ -100,7 +87,11 @@ llevan texto y, cuando aplica, icono.
 | **Familjen Grotesk** | Display: titulares de marketing, títulos de página, cifras grandes. Grotesca con remates de tinta y carácter escandinavo; firme sin ser fría. | 500, 600, 700      |
 | **Figtree**          | Texto e interfaz: cuerpo, formularios, tablas, navegación. Cálida, abierta, excelente en acentos del español.                                 | 400, 500, 600, 700 |
 
-Se cargan desde Bunny Fonts (compatible con GDPR) en `app.blade.php`.
+Se **autoalojan** (sin peticiones a terceros): WOFF2 variables en
+`resources/fonts/web` (`@font-face` en `app.css`, `font-display: swap`,
+precarga del subconjunto latin en `app.blade.php`). Los TTF estáticos de
+`resources/fonts` se usan para generar las imágenes de vista previa (Open
+Graph). Licencia SIL OFL 1.1 (`resources/fonts/OFL-*.txt`).
 
 **Escala** (`rem` / interlineado):
 

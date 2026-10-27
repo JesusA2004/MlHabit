@@ -321,9 +321,9 @@ const formError = computed(
 <template>
     <Head title="Agenda tu visita técnica" />
 
-    <section class="bg-background pb-20">
+    <section class="motion-calm bg-background pb-20">
         <div class="container-site pt-10 md:pt-16">
-            <div class="max-w-2xl">
+            <div class="max-w-2xl" data-motion="fade-up">
                 <p v-if="prefill" class="text-sm font-medium text-oak-ink">
                     Solicitud {{ prefill.leadFolio }}
                 </p>
@@ -395,7 +395,7 @@ const formError = computed(
                         <section
                             v-if="step === 'cp'"
                             aria-labelledby="step-title"
-                            class="space-y-5"
+                            class="step-panel space-y-5"
                         >
                             <h2
                                 id="step-title"
@@ -517,7 +517,7 @@ const formError = computed(
                         <section
                             v-else-if="step === 'fecha'"
                             aria-labelledby="step-title"
-                            class="space-y-5"
+                            class="step-panel space-y-5"
                         >
                             <div>
                                 <h2
@@ -583,7 +583,7 @@ const formError = computed(
                         <section
                             v-else-if="step === 'datos'"
                             aria-labelledby="step-title"
-                            class="space-y-6"
+                            class="step-panel space-y-6"
                         >
                             <h2
                                 id="step-title"
@@ -838,7 +838,7 @@ const formError = computed(
                         <section
                             v-else
                             aria-labelledby="step-title"
-                            class="space-y-6"
+                            class="step-panel space-y-6"
                         >
                             <h2
                                 id="step-title"

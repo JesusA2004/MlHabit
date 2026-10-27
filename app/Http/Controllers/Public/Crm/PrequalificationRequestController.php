@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\SubmitPrequalificationRequest;
 use App\Models\Lead;
 use App\Services\Crm\PrequalificationService;
+use App\Services\Web\Seo;
 use App\Support\Crm\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
@@ -27,6 +28,7 @@ class PrequalificationRequestController extends Controller
         $current = $service->current($lead);
 
         return Inertia::render('public/precalificacion/Create', [
+            'seo' => app(Seo::class)->private('Precalificación'),
             'lead' => ['folio' => $lead->folio, 'firstName' => $lead->customer->first_name],
             'prequalification' => $current ? [
                 'folio' => $current->folio,

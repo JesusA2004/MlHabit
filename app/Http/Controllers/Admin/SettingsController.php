@@ -19,7 +19,7 @@ use Inertia\Response;
 class SettingsController extends Controller
 {
     /** Grupos editables desde esta pantalla. */
-    public const GROUPS = ['commercial', 'consultation', 'leads', 'security'];
+    public const GROUPS = ['commercial', 'consultation', 'leads', 'security', 'seo'];
 
     public function index(): Response
     {
@@ -40,6 +40,11 @@ class SettingsController extends Controller
                 'consultation' => Settings::group('consultation'),
                 'leads' => Settings::group('leads'),
                 'security' => Settings::group('security'),
+                // Solo la verificación de buscadores; título y descripción viven en /admin/sitio.
+                'seo' => [
+                    'google_site_verification' => (string) (Settings::get('seo.google_site_verification') ?? ''),
+                    'bing_site_verification' => (string) (Settings::get('seo.bing_site_verification') ?? ''),
+                ],
             ],
             'channels' => [
                 ['value' => 'video', 'label' => 'Videollamada'],

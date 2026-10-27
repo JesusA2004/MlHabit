@@ -62,6 +62,10 @@ final class Settings
                 'title' => 'ML Habitat — Cocinas integrales, clósets y muebles a la medida',
                 'description' => 'Diseñamos, fabricamos e instalamos cocinas integrales, clósets, recámaras y muebles a la medida. Agenda una asesoría y una visita técnica a domicilio.',
                 'twitter_handle' => null,
+                // Contenido de <meta name="google-site-verification"> (Search Console).
+                'google_site_verification' => null,
+                // Contenido de <meta name="msvalidate.01"> (Bing Webmaster Tools).
+                'bing_site_verification' => null,
             ],
             'footer' => [
                 'text' => null,

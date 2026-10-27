@@ -70,7 +70,7 @@ const year = new Date().getFullYear();
 
                 <div class="ml-auto flex items-center gap-1 md:ml-0">
                     <NotificationsMenu />
-                    <AccountMenu :show-appearance="false" />
+                    <AccountMenu />
                 </div>
             </div>
         </header>

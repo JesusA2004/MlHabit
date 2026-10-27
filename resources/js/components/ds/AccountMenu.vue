@@ -10,10 +10,6 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 import UserAvatar from './UserAvatar.vue';
 
 /** Botón de avatar con el menú de cuenta (layouts de técnicos y portal). */
-const props = withDefaults(defineProps<{ showAppearance?: boolean }>(), {
-    showAppearance: true,
-});
-
 const page = usePage();
 const user = computed(() => page.props.auth?.user ?? null);
 </script>
@@ -35,10 +31,7 @@ const user = computed(() => page.props.auth?.user ?? null);
             align="end"
             :side-offset="6"
         >
-            <UserMenuContent
-                :user="user"
-                :show-appearance="props.showAppearance"
-            />
+            <UserMenuContent :user="user" />
         </DropdownMenuContent>
     </DropdownMenu>
 </template>

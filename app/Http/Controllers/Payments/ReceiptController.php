@@ -8,6 +8,7 @@ use App\Models\SiteVisit;
 use App\Models\User;
 use App\Notifications\Visits\VisitText;
 use App\Services\PublicSiteDataService;
+use App\Services\Web\Seo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -42,6 +43,7 @@ class ReceiptController extends Controller
         $visit = $payment->site_visit_id ? SiteVisit::query()->with('address')->find($payment->site_visit_id) : null;
 
         return Inertia::render('public/pagos/Comprobante', [
+            'seo' => app(Seo::class)->private('Comprobante de pago'),
             ...$this->publicBase(),
             'receipt' => [
                 'folio' => $payment->folio,

@@ -20,6 +20,7 @@ const props = withDefaults(
 
 <template>
     <div
+        data-motion="fade-up"
         :class="
             cn(
                 'max-w-2xl',
@@ -37,7 +38,7 @@ const props = withDefaults(
                 )
             "
         >
-            <span aria-hidden="true" class="h-px w-6 bg-current opacity-70" />
+            <span aria-hidden="true" class="eyebrow-rule" />
             {{ props.eyebrow }}
         </p>
         <component :is="props.as" :id="props.id" class="text-display-lg">

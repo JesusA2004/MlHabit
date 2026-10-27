@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Page;
+use App\Services\Web\OgImage;
 use App\Services\Web\PublicPage;
 use App\Services\Web\Seo;
 use Inertia\Response;
@@ -14,7 +15,7 @@ use Inertia\Response;
  */
 class LegalPageController extends Controller
 {
-    public function __invoke(Page $page, PublicPage $render, Seo $seo): Response
+    public function __invoke(Page $page, PublicPage $render, Seo $seo, OgImage $og): Response
     {
         abort_unless($page->is_published, 404);
 
@@ -32,6 +33,7 @@ class LegalPageController extends Controller
             $page->summary ?: $page->body,
             jsonLd: [$seo->breadcrumbs([['Inicio', '/'], [$page->title, '/legal/'.$page->slug]])],
             canonical: url('/legal/'.$page->slug),
+            og: $og->page($page->slug, $page->title, 'Información legal'),
         ));
     }
 }

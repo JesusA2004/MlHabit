@@ -14,8 +14,10 @@ import {
 } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import ChoiceCards from '@/components/crm/ChoiceCards.vue';
+import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
+import { illustrationFor } from '@/components/web/visual/illustrations';
+import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import FilePicker from '@/components/crm/FilePicker.vue';
-import FinishSwatches from '@/components/ds/FinishSwatches.vue';
 import FormStatus from '@/components/ds/FormStatus.vue';
 import ProgressSteps from '@/components/ds/ProgressSteps.vue';
 import type { ProgressStep } from '@/components/ds/ProgressSteps.vue';
@@ -131,6 +133,9 @@ const form = useForm({
 });
 
 const current = ref(props.preselected.length > 0 ? 1 : 0);
+/** Sentido de la última transición entre pasos (anima a izquierda/derecha). */
+const direction = ref<'forward' | 'back'>('forward');
+const progressRatio = computed(() => (current.value + 1) / steps.length);
 const clientErrors = ref<Record<string, string>>({});
 const stepHeading = ref<HTMLElement | null>(null);
 
@@ -300,17 +305,20 @@ function next() {
         return;
     }
 
+    direction.value = 'forward';
     current.value = Math.min(current.value + 1, steps.length - 1);
     void focusStep();
 }
 
 function back() {
+    direction.value = 'back';
     current.value = Math.max(current.value - 1, 0);
     void focusStep();
 }
 
 function goTo(index: number) {
     if (index < current.value) {
+        direction.value = 'back';
         current.value = index;
         void focusStep();
     }
@@ -398,25 +406,37 @@ const contactOptions = computed(() =>
         />
     </Head>
 
-    <section class="bg-background pb-32 md:pb-20">
+    <section
+        class="motion-calm relative isolate overflow-hidden bg-background pb-32 md:pb-20"
+    >
+        <div
+            class="tex-blueprint pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 [mask-image:linear-gradient(to_bottom,#000,transparent)]"
+            aria-hidden="true"
+        />
         <div class="container-site pt-10 md:pt-16">
-            <div class="max-w-2xl">
-                <p class="text-sm font-medium text-oak-ink">
-                    Solicitud sin compromiso
-                </p>
-                <h1
-                    class="mt-2 text-display-md font-display tracking-tight text-foreground"
-                >
-                    Diseñemos un espacio hecho a tu medida
-                </h1>
-                <p class="mt-3 text-lg text-muted-foreground">
-                    Responde unas preguntas rápidas (unos 2 minutos). Un asesor
-                    revisará tu solicitud y te contactará.
-                </p>
+            <div class="flex items-end justify-between gap-8">
+                <div class="max-w-2xl" data-motion="fade-up">
+                    <p class="text-sm font-medium text-oak-ink">
+                        Solicitud sin compromiso
+                    </p>
+                    <h1
+                        class="mt-2 text-display-md font-display tracking-tight text-foreground"
+                    >
+                        Diseñemos un espacio hecho a tu medida
+                    </h1>
+                    <p class="mt-3 text-lg text-muted-foreground">
+                        Responde unas preguntas rápidas (unos 2 minutos). Un
+                        asesor revisará tu solicitud y te contactará.
+                    </p>
+                </div>
+                <LineIllustration
+                    name="blueprint"
+                    class="hidden w-44 shrink-0 text-foreground/70 lg:block"
+                />
             </div>
 
             <ProgressSteps
-                class="mt-8"
+                class="mt-8 hidden sm:flex"
                 :steps="steps"
                 :current="steps[current].key"
                 orientation="horizontal"
@@ -425,10 +445,20 @@ const contactOptions = computed(() =>
 
             <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
                 <form
-                    class="relative rounded-xl border bg-card p-5 shadow-xs sm:p-8"
+                    class="relative overflow-hidden rounded-xl border bg-card p-5 shadow-xs sm:p-8"
                     novalidate
+                    :data-direction="direction"
                     @submit.prevent="isLast ? submit() : next()"
                 >
+                    <span
+                        class="absolute inset-x-0 top-0 h-1 bg-muted"
+                        aria-hidden="true"
+                    >
+                        <span
+                            class="block h-full origin-left bg-primary transition-transform duration-700 ease-out"
+                            :style="{ transform: `scaleX(${progressRatio})` }"
+                        />
+                    </span>
                     <!-- Honeypot: invisible para personas. -->
                     <div
                         class="absolute -left-[9999px] h-px w-px overflow-hidden"
@@ -461,7 +491,7 @@ const contactOptions = computed(() =>
                         <h2
                             ref="stepHeading"
                             tabindex="-1"
-                            class="mt-1 font-display text-2xl font-semibold tracking-tight outline-none"
+                            class="mt-1 scroll-mt-28 font-display text-2xl font-semibold tracking-tight outline-none"
                         >
                             {{ stepCopy[current].title }}
                         </h2>
@@ -473,6 +503,7 @@ const contactOptions = computed(() =>
                     <!-- 1. Espacio -->
                     <fieldset
                         v-show="current === 0"
+                        class="step-panel"
                         aria-describedby="category_ids-error"
                     >
                         <legend class="sr-only">
@@ -491,50 +522,88 @@ const contactOptions = computed(() =>
                                 "
                                 :class="
                                     cn(
-                                        'group relative flex flex-col overflow-hidden rounded-lg border bg-card text-left transition-[border-color,box-shadow] duration-150',
-                                        'hover:shadow-sm focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none',
+                                        'group relative flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-[border-color,box-shadow,translate] duration-300 ease-out',
+                                        'hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none',
                                         form.category_ids.includes(category.id)
-                                            ? 'border-primary ring-1 ring-primary'
+                                            ? 'border-primary shadow-sm ring-1 ring-primary'
                                             : 'hover:border-primary/40',
                                     )
                                 "
                                 @click="toggleCategory(category.id)"
                             >
                                 <span
-                                    class="relative block aspect-[4/3] overflow-hidden bg-muted"
+                                    class="relative block aspect-[4/3] overflow-hidden bg-linen"
                                 >
                                     <img
                                         v-if="category.coverUrl"
                                         :src="category.coverUrl"
                                         :alt="category.name"
-                                        class="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                                        class="size-full object-cover transition-[scale] duration-700 ease-out group-hover:scale-[1.06]"
                                         loading="lazy"
                                     />
                                     <span
                                         v-else
-                                        class="flex size-full items-center justify-center p-3"
+                                        class="tex-blueprint flex size-full items-center justify-center p-4"
                                     >
-                                        <FinishSwatches
-                                            :labels="false"
-                                            class="w-28"
+                                        <LineIllustration
+                                            :name="
+                                                illustrationFor(
+                                                    category.slug,
+                                                    category.name,
+                                                )
+                                            "
+                                            class="w-full text-foreground/70"
                                         />
                                     </span>
+                                    <span
+                                        :class="
+                                            cn(
+                                                'absolute inset-0 bg-primary/0 transition-colors duration-300',
+                                                form.category_ids.includes(
+                                                    category.id,
+                                                ) && 'bg-primary/15',
+                                            )
+                                        "
+                                        aria-hidden="true"
+                                    />
                                     <span
                                         v-if="
                                             form.category_ids.includes(
                                                 category.id,
                                             )
                                         "
-                                        class="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
+                                        class="check-in absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md"
                                         aria-hidden="true"
                                     >
-                                        <Check class="size-4" />
+                                        <Check
+                                            class="size-4"
+                                            :stroke-width="2.5"
+                                        />
                                     </span>
                                 </span>
-                                <span class="block px-3 py-2.5">
+                                <span class="block px-3 py-3">
                                     <span
-                                        class="block text-sm font-medium text-foreground"
-                                        >{{ category.name }}</span
+                                        class="flex items-center gap-2 text-sm font-medium text-foreground"
+                                        ><component
+                                            :is="
+                                                categoryIcon(
+                                                    category.slug,
+                                                    category.name,
+                                                )
+                                            "
+                                            :class="
+                                                cn(
+                                                    'size-4 shrink-0 transition-[color,rotate] duration-300 group-hover:-rotate-12',
+                                                    form.category_ids.includes(
+                                                        category.id,
+                                                    )
+                                                        ? 'text-primary'
+                                                        : 'text-oak-ink',
+                                                )
+                                            "
+                                            :stroke-width="ICON_STROKE"
+                                            aria-hidden="true"
+                                        />{{ category.name }}</span
                                     >
                                     <span
                                         v-if="category.tagline"
@@ -551,6 +620,30 @@ const contactOptions = computed(() =>
                             Aún no hay categorías publicadas. Cuéntanos tu idea
                             en el último paso.
                         </p>
+                        <Transition
+                            enter-active-class="transition duration-300 ease-out"
+                            enter-from-class="opacity-0 translate-y-1"
+                            leave-active-class="transition duration-150 ease-in"
+                            leave-to-class="opacity-0"
+                        >
+                            <p
+                                v-if="selectedNames.length"
+                                class="mt-4 inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1.5 text-sm text-primary"
+                                aria-live="polite"
+                            >
+                                <Check
+                                    class="size-4"
+                                    :stroke-width="2.25"
+                                    aria-hidden="true"
+                                />
+                                {{ selectedNames.length }}
+                                {{
+                                    selectedNames.length === 1
+                                        ? 'espacio elegido'
+                                        : 'espacios elegidos'
+                                }}
+                            </p>
+                        </Transition>
                         <InputError
                             id="category_ids-error"
                             class="mt-3"
@@ -559,7 +652,7 @@ const contactOptions = computed(() =>
                     </fieldset>
 
                     <!-- 2. Ubicación -->
-                    <div v-show="current === 1" class="space-y-5">
+                    <div v-show="current === 1" class="step-panel space-y-5">
                         <div class="max-w-xs space-y-2">
                             <Label for="postal_code">Código postal</Label>
                             <Input
@@ -667,7 +760,7 @@ const contactOptions = computed(() =>
                     </div>
 
                     <!-- 3. Presupuesto -->
-                    <div v-show="current === 2" class="space-y-7">
+                    <div v-show="current === 2" class="step-panel space-y-7">
                         <div class="space-y-3">
                             <p id="budget-label" class="text-sm font-medium">
                                 Presupuesto aproximado
@@ -716,7 +809,7 @@ const contactOptions = computed(() =>
                     </div>
 
                     <!-- 4. Contacto -->
-                    <div v-show="current === 3" class="space-y-5">
+                    <div v-show="current === 3" class="step-panel space-y-5">
                         <div class="grid gap-5 sm:grid-cols-2">
                             <div class="space-y-2">
                                 <Label for="first_name">Nombre</Label>
@@ -837,7 +930,7 @@ const contactOptions = computed(() =>
                     </div>
 
                     <!-- 5. Detalles -->
-                    <div v-show="current === 4" class="space-y-6">
+                    <div v-show="current === 4" class="step-panel space-y-6">
                         <div class="space-y-2">
                             <p class="text-sm font-medium">
                                 Fotos del espacio
@@ -955,14 +1048,15 @@ const contactOptions = computed(() =>
                         <Button
                             v-if="!isLast"
                             type="submit"
-                            class="ml-auto h-11 flex-1 md:flex-none md:px-8"
+                            class="btn-nudge ml-auto h-11 flex-1 md:flex-none md:px-8"
                         >
-                            Continuar <ArrowRight aria-hidden="true" />
+                            Continuar
+                            <ArrowRight class="nudge" aria-hidden="true" />
                         </Button>
                         <Button
                             v-else
                             type="submit"
-                            class="ml-auto h-11 flex-1 md:flex-none md:px-8"
+                            class="btn-nudge ml-auto h-11 flex-1 md:flex-none md:px-8"
                             :disabled="form.processing"
                         >
                             <Loader2

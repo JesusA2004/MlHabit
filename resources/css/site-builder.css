@@ -1,0 +1,284 @@
+/* ---------------------------------------------------------------------- */
+/* Editor visual · renderizador de lienzos (sitio público y editor)        */
+/*                                                                        */
+/* Responsivo por CONTENEDOR (no por viewport): la página (`sbpage`) es el */
+/* contenedor de referencia, así el editor puede mostrar tableta y móvil   */
+/* dentro de un marco sin cambiar el tamaño de la ventana.                 */
+/*   - ≥ 1024 px: retícula exacta de 12 columnas.                          */
+/*   - 768–1023 px: 8 columnas (posición calculada en grid.ts).           */
+/*   - < 768 px: una columna en orden de lectura.                          */
+/* Las filas miden 2cqi del lienzo: 24 px cuando el contenido mide 1200 px */
+/* y crecen solas si el texto necesita más alto.                          */
+/* ---------------------------------------------------------------------- */
+
+.sb-page {
+    container: sbpage / inline-size;
+    --sb-ink: var(--color-foreground);
+    --sb-ink-muted: var(--color-muted-foreground);
+}
+
+.sb-section {
+    position: relative;
+    isolation: isolate;
+    color: var(--sb-ink);
+}
+
+.sb-tone-dark {
+    --sb-ink: #ffffff;
+    --sb-ink-muted: rgb(255 255 255 / 0.76);
+}
+
+.sb-tone-light {
+    --sb-ink: var(--color-foreground);
+    --sb-ink-muted: var(--color-muted-foreground);
+}
+
+.sb-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.sb-bg > picture,
+.sb-bg > .sb-bg-media {
+    position: absolute;
+    inset: 0;
+}
+
+.sb-bg-overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.sb-inner {
+    display: flex;
+    flex-direction: column;
+    justify-content: var(--sb-valign, flex-start);
+    min-height: var(--sb-min-h, auto);
+    padding-block: var(--sb-pad-top, 0) var(--sb-pad-bottom, 0);
+}
+
+.sb-canvas {
+    container: sbcanvas / inline-size;
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4cqi, 40px);
+}
+
+.sb-canvas--bleed {
+    max-width: none;
+    padding-inline: 0;
+}
+
+.sb-panel {
+    container: sbcanvas / inline-size;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 2rem;
+    padding: clamp(24px, 5cqi, 64px) clamp(20px, 5cqi, 56px);
+}
+
+/* Retícula de escritorio ----------------------------------------------- */
+.sb-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--sb-rows, 1), minmax(2cqi, auto));
+    column-gap: 2cqi;
+    row-gap: 0;
+}
+
+.sb-block {
+    position: relative;
+    grid-area: var(--sb-area);
+    z-index: var(--sb-z, 1);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: var(--sb-justify, flex-start);
+    align-items: var(--sb-items, stretch);
+    text-align: var(--sb-text-align, left);
+}
+
+.sb-block[data-sb-stretch] {
+    align-items: stretch;
+}
+
+/* Tableta ------------------------------------------------------------- */
+@container sbpage (min-width: 768px) and (max-width: 1023.98px) {
+    .sb-grid {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    .sb-block {
+        grid-area: var(--sb-area-t);
+    }
+
+    .sb-block[data-hide-tablet] {
+        display: none;
+    }
+}
+
+/* Móvil --------------------------------------------------------------- */
+@container sbpage (max-width: 767.98px) {
+    .sb-grid {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        grid-auto-rows: auto;
+        row-gap: 18px;
+    }
+
+    .sb-block {
+        grid-area: auto;
+        grid-row: var(--sb-m-row);
+        grid-column: 1;
+        align-self: var(--sb-m-align, stretch);
+    }
+
+    .sb-block[data-hide-mobile] {
+        display: none;
+    }
+
+    /* Marcos visuales conservan la proporción de escritorio. */
+    .sb-block[data-sb-frame] {
+        aspect-ratio: var(--sb-aspect);
+        max-height: 82svh;
+    }
+
+    .sb-block[data-sb-frame][data-sb-role='backdrop'] {
+        max-height: none;
+        min-height: 100%;
+    }
+
+    .sb-block[data-sb-role='overlay'] {
+        padding: 20px;
+    }
+
+    .sb-block[data-sb-kind='spacer'] {
+        height: calc(var(--sb-h) * 10px);
+    }
+
+    .sb-block[data-sb-kind='shape'][data-sb-role='single'] {
+        max-height: 240px;
+    }
+}
+
+/* Tipografía de bloques (escala de la marca, relativa al lienzo) ------- */
+.sb-heading {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+}
+
+.sb-heading--xl {
+    font-size: clamp(2.6rem, 1.55rem + 4.3cqi, 4.75rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+}
+
+.sb-heading--lg {
+    font-size: clamp(2rem, 1.45rem + 2.4cqi, 3.25rem);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+}
+
+.sb-heading--md {
+    font-size: clamp(1.55rem, 1.35rem + 0.9cqi, 2.125rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.sb-heading--sm {
+    font-size: 1.375rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+}
+
+.sb-text {
+    text-wrap: pretty;
+}
+
+.sb-text--lead {
+    font-size: clamp(1.0625rem, 1rem + 0.3cqi, 1.25rem);
+    line-height: 1.6;
+}
+
+.sb-text--base {
+    font-size: 1.0625rem;
+    line-height: 1.65;
+}
+
+.sb-text--sm {
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.sb-text p + p,
+.sb-text p + ul,
+.sb-text p + ol,
+.sb-text ul + p,
+.sb-text ol + p {
+    margin-top: 0.75em;
+}
+
+.sb-text ul {
+    list-style: disc;
+    padding-left: 1.25em;
+}
+
+.sb-text ol {
+    list-style: decimal;
+    padding-left: 1.25em;
+}
+
+.sb-text a {
+    color: inherit;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.sb-text strong,
+.sb-text b {
+    font-weight: 600;
+}
+
+.sb-stat-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.25rem, 1.6rem + 2.6cqi, 3.75rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Edición en línea ----------------------------------------------------- */
+.sb-editable {
+    outline: none;
+    cursor: text;
+    caret-color: var(--color-oak);
+}
+
+.sb-editable:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.45;
+}
+
+/* Imagen con encuadre (punto focal + acercamiento) ---------------------- */
+.sb-img img {
+    object-fit: var(--sb-fit, cover);
+    object-position: var(--sb-fx, 50%) var(--sb-fy, 50%);
+    transform: scale(var(--sb-zoom, 1));
+    transform-origin: var(--sb-fx, 50%) var(--sb-fy, 50%);
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.sb-video {
+    object-fit: cover;
+}

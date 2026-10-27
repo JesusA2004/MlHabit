@@ -1,11 +1,62 @@
 @import 'tailwindcss';
 
 @import 'tw-animate-css';
+@import './motion.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-@custom-variant dark (&:is(.dark *));
+/* ---------------------------------------------------------------------- */
+/* Fuentes autoalojadas (OFL, ver resources/fonts/OFL-*.txt). Variables,   */
+/* subconjuntos latin y latin-ext, font-display: swap.                     */
+/* ---------------------------------------------------------------------- */
+@font-face {
+    font-family: 'Familjen Grotesk';
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url('../fonts/web/familjen-grotesk-latin.woff2') format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Familjen Grotesk';
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url('../fonts/web/familjen-grotesk-latin-ext.woff2') format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: 'Figtree';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('../fonts/web/figtree-latin.woff2') format('woff2');
+    unicode-range:
+        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+        U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Figtree';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('../fonts/web/figtree-latin-ext.woff2') format('woff2');
+    unicode-range:
+        U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+        U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+        U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 /* ====================================================================== */
 /* ML Habitat — tokens de diseño                                           */
@@ -118,7 +169,7 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Claro — lino, piedra, espresso y eucalipto ---------------------------- */
+/* Paleta única (solo modo claro) — lino, piedra, espresso y eucalipto ----- */
 :root {
     --radius: 0.625rem;
 
@@ -192,76 +243,6 @@
     --duration-slow: 320ms;
 
     color-scheme: light;
-}
-
-/* Oscuro — solo panel, técnicos y ajustes -------------------------------- */
-.dark {
-    --background: #141311;
-    --foreground: #efeae3;
-    --surface: #1c1a17;
-    --card: #1c1a17;
-    --card-foreground: #efeae3;
-    --popover: #201d1a;
-    --popover-foreground: #efeae3;
-    --muted: #26231f;
-    --muted-foreground: #a69e93;
-    --secondary: #26231f;
-    --secondary-foreground: #efeae3;
-    --accent: #2a2622;
-    --accent-foreground: #efeae3;
-    --border: #302c27;
-    --input: #3a352f;
-    --ring: #8cc0aa;
-
-    --primary: #8cc0aa;
-    --primary-foreground: #0f1f19;
-    --primary-hover: #a3cfbc;
-    --primary-soft: #1f2d27;
-
-    --oak: #c99a6b;
-    --oak-ink: #d9b28b;
-    --linen: #1c1a17;
-    --stone: #26231f;
-    --espresso: #0f0e0d;
-    --espresso-foreground: #efeae3;
-
-    --success: #5fb884;
-    --success-foreground: #0f1f16;
-    --success-soft: #1f2a23;
-    --success-ink: #7fd1a0;
-    --warning: #e0a548;
-    --warning-foreground: #241a08;
-    --warning-soft: #2e2416;
-    --warning-ink: #f2c27b;
-    --danger: #f0846f;
-    --danger-foreground: #2a0f0b;
-    --danger-soft: #331d1a;
-    --danger-ink: #f2a49a;
-    --info: #7fb2dd;
-    --info-foreground: #0d1a26;
-    --info-soft: #1a2531;
-    --info-ink: #9cc4e6;
-    --neutral: #a69e93;
-    --neutral-foreground: #141311;
-    --neutral-soft: #26231f;
-    --neutral-ink: #c9bfb3;
-
-    --chart-1: #8cc0aa;
-    --chart-2: #c99a6b;
-    --chart-3: #5f8577;
-    --chart-4: #8a7560;
-    --chart-5: #efeae3;
-
-    --sidebar: #181614;
-    --sidebar-foreground: #ddd6cd;
-    --sidebar-primary: #8cc0aa;
-    --sidebar-primary-foreground: #0f1f19;
-    --sidebar-accent: #26231f;
-    --sidebar-accent-foreground: #efeae3;
-    --sidebar-border: #2a2622;
-    --sidebar-ring: #8cc0aa;
-
-    color-scheme: dark;
 }
 
 @layer base {

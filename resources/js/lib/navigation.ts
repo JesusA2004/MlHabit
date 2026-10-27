@@ -305,7 +305,6 @@ export const portalNavigation: TabNavItem[] = [
 export const accountLinks = {
     profile: '/settings/profile',
     security: '/settings/security',
-    appearance: '/settings/appearance',
     logout: '/logout',
 } as const;
 

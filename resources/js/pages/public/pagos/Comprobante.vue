@@ -37,7 +37,7 @@ function print() {
 <template>
     <Head :title="`Comprobante ${receipt.folio}`" />
 
-    <section class="bg-background pb-20 print:bg-white print:pb-0">
+    <section class="motion-calm bg-background pb-20 print:bg-white print:pb-0">
         <div class="container-site max-w-2xl pt-10 md:pt-16 print:pt-0">
             <div
                 class="mb-6 flex items-center justify-between gap-4 print:hidden"

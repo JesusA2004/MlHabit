@@ -1,5 +1,4 @@
-import { createInertiaApp, router } from '@inertiajs/vue3';
-import { initializeTheme, updateTheme } from '@/composables/useAppearance';
+import { createInertiaApp } from '@inertiajs/vue3';
 import AccountLayout from '@/layouts/AccountLayout.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
@@ -8,35 +7,25 @@ import PublicLayout from '@/layouts/PublicLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import TechnicianLayout from '@/layouts/TechnicianLayout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
-import type { Appearance } from '@/types';
 
 const appName = import.meta.env.VITE_APP_NAME || 'ML Habitat';
 
-/** El sitio público y el portal de clientes siempre se ven en claro. */
-const isLightOnly = (component: string) =>
-    component.startsWith('public/') || component.startsWith('portal/');
-
-function applyThemeFor(component: string): void {
-    if (isLightOnly(component)) {
-        document.documentElement.classList.remove('dark');
-
-        return;
-    }
-
-    let stored: Appearance | null = null;
-
-    try {
-        stored = localStorage.getItem('appearance') as Appearance | null;
-    } catch {
-        stored = null;
-    }
-
-    updateTheme(stored ?? 'system');
-}
-
 void createInertiaApp({
+    // "Página | ML Habitat". Las páginas públicas ya traen el título completo
+    // (`seo.fullTitle`, ≤ 60 caracteres) y no se le vuelve a añadir la marca.
     title: (title) =>
-        title && title !== appName ? `${title} · ${appName}` : appName,
+        !title || title === appName
+            ? appName
+            : title.endsWith(`| ${appName}`)
+              ? title
+              : `${title} | ${appName}`,
+    // Etiquetas SEO/Open Graph que el servidor ya imprimió en el HTML
+    // (`seo.head`): Inertia las conserva y actualiza al navegar.
+    serverHead: (page) => {
+        const seo = page.props.seo as { head?: unknown } | undefined;
+
+        return Array.isArray(seo?.head) ? (seo.head as string[]) : [];
+    },
     layout: (name) => {
         switch (true) {
             case name.startsWith('errors/'):
@@ -71,33 +60,6 @@ void createInertiaApp({
         showSpinner: false,
     },
 });
-
-/** Componente de la primera página (Inertia lo serializa en el HTML inicial). */
-function initialComponent(): string {
-    try {
-        const script = document.querySelector('script[data-page]');
-        const raw =
-            script?.textContent ||
-            document.getElementById('app')?.dataset.page ||
-            '{}';
-
-        return (JSON.parse(raw) as { component?: string }).component ?? '';
-    } catch {
-        return '';
-    }
-}
-
-// Modo claro/oscuro desde la preferencia guardada (cookie + localStorage).
-initializeTheme();
-
-// Fuerza el modo claro en sitio público y portal, también al navegar.
-if (typeof window !== 'undefined') {
-    applyThemeFor(initialComponent());
-
-    router.on('navigate', (event) => {
-        applyThemeFor(event.detail.page.component);
-    });
-}
 
 // Toasts enviados por el backend (`flash.toast`).
 initializeFlashToast();

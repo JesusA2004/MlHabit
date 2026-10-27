@@ -48,6 +48,12 @@ export type SeoData = {
     twitter: string | null;
     robots: string;
     jsonLd: string | null;
+    imageWidth?: number | null;
+    imageHeight?: number | null;
+    imageType?: string | null;
+    imageAlt?: string | null;
+    /** Etiquetas de <head> ya escritas por el servidor (ver Seo::tags). */
+    head?: string[];
 };
 
 export type PriceRange = { from: string; to: string | null; currency: string };

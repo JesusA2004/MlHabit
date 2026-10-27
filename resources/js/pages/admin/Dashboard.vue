@@ -448,7 +448,7 @@ const today = computed(() =>
                                 href="/admin/pagos?estado=failed"
                             />
                             <div
-                                class="flex min-w-0 flex-col gap-1 rounded-lg bg-muted/60 p-4 dark:bg-muted/50"
+                                class="flex min-w-0 flex-col gap-1 rounded-lg bg-muted/60 p-4"
                             >
                                 <span
                                     class="text-xs font-medium text-muted-foreground"
@@ -578,7 +578,7 @@ const today = computed(() =>
                                 v-for="row in props.operations.incidents
                                     .bySeverity"
                                 :key="row.severity"
-                                class="flex flex-col gap-1.5 rounded-lg bg-muted/60 p-3 dark:bg-muted/50"
+                                class="flex flex-col gap-1.5 rounded-lg bg-muted/60 p-3"
                             >
                                 <StatusBadge
                                     :tone="asTone(row.tone)"

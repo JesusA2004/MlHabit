@@ -3,6 +3,7 @@
 namespace App\Enums;
 
 use App\Cms\Sections\BenefitsSection;
+use App\Cms\Sections\CanvasSection;
 use App\Cms\Sections\CategoriesSection;
 use App\Cms\Sections\CoverageSection;
 use App\Cms\Sections\FaqSection;
@@ -32,15 +33,29 @@ enum SiteSectionType: string
     case Testimonials = 'testimonials';
     case Faq = 'faq';
     case FinalCta = 'final_cta';
+    case Canvas = 'canvas';
 
     public function label(): string
     {
         return $this->schema()->label();
     }
 
+    /** Tipos con datos propios (las 11 secciones curadas de la portada). */
+    public function isCurated(): bool
+    {
+        return $this !== self::Canvas;
+    }
+
+    /** @return list<self> */
+    public static function curated(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $t) => $t->isCurated()));
+    }
+
     public function schema(): SectionSchema
     {
         return match ($this) {
+            self::Canvas => new CanvasSection,
             self::Hero => new HeroSection,
             self::Categories => new CategoriesSection,
             self::FeaturedProjects => new FeaturedProjectsSection,

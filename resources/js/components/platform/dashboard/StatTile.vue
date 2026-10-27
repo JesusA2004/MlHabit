@@ -66,7 +66,7 @@ const deltaInfo = computed(() => {
         :href="props.href"
         :class="
             cn(
-                'group flex min-w-0 flex-col gap-1 rounded-lg bg-muted/60 p-4 transition-colors dark:bg-muted/50',
+                'group flex min-w-0 flex-col gap-1 rounded-lg bg-muted/60 p-4 transition-colors',
                 props.href &&
                     'hover:bg-primary-soft focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none',
             )

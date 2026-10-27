@@ -36,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
 
         if (app()->isProduction()) {
             URL::forceHttps();
+            // URLs absolutas (canónicas, sitemap, Open Graph) siempre con el host de APP_URL.
+            URL::forceRootUrl((string) config('app.url'));
         }
 
         Password::defaults(fn (): ?Password => app()->isProduction()

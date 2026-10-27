@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Public;
 use App\Enums\FaqTopic;
 use App\Http\Controllers\Controller;
 use App\Models\Faq;
+use App\Services\Web\OgImage;
 use App\Services\Web\Presenter;
 use App\Services\Web\PublicPage;
 use App\Services\Web\Seo;
@@ -15,7 +16,7 @@ use Inertia\Response;
  */
 class FaqPageController extends Controller
 {
-    public function __invoke(Presenter $presenter, PublicPage $page, Seo $seo): Response
+    public function __invoke(Presenter $presenter, PublicPage $page, Seo $seo, OgImage $og): Response
     {
         $faqs = Faq::query()->published()->ordered()->get();
 
@@ -41,6 +42,7 @@ class FaqPageController extends Controller
                 $seo->breadcrumbs([['Inicio', '/'], ['Preguntas frecuentes', '/preguntas-frecuentes']]),
             ])),
             canonical: url('/preguntas-frecuentes'),
+            og: $og->page('preguntas-frecuentes', 'Preguntas frecuentes', 'Proceso, visita, pagos y garantía'),
         ));
     }
 }

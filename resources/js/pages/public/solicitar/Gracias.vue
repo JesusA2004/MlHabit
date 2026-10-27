@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import {
-    CalendarClock,
-    CircleCheck,
-    Home,
-    MessageCircle,
-    Ruler,
-    Video,
-} from '@lucide/vue';
+import { CalendarClock, Home, MessageCircle, Ruler, Video } from '@lucide/vue';
 import { computed } from 'vue';
 import FinishSwatches from '@/components/ds/FinishSwatches.vue';
 import Timeline from '@/components/ds/Timeline.vue';
+import SuccessMark from '@/components/web/visual/SuccessMark.vue';
 import type { TimelineEvent } from '@/components/ds/Timeline.vue';
 import { Button } from '@/components/ui/button';
 
@@ -82,16 +76,16 @@ const nextSteps = computed<TimelineEvent[]>(() => [
 <template>
     <Head title="Recibimos tu solicitud" />
 
-    <section class="bg-background">
+    <section class="motion-calm relative isolate overflow-hidden bg-background">
+        <div
+            class="tex-blueprint pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 [mask-image:linear-gradient(to_bottom,#000,transparent)]"
+            aria-hidden="true"
+        />
         <div
             class="container-site grid gap-10 py-12 md:py-20 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16"
         >
-            <div>
-                <span
-                    class="inline-flex size-12 items-center justify-center rounded-full bg-success-soft text-success-ink"
-                >
-                    <CircleCheck class="size-6" aria-hidden="true" />
-                </span>
+            <div data-motion-stagger="110" data-motion="fade-up">
+                <SuccessMark />
                 <h1
                     class="mt-5 text-display-md font-display tracking-tight text-foreground"
                 >

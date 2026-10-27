@@ -22,7 +22,7 @@ it('renders the home with CMS sections in order and hides empty live sections', 
         ->where('sections.0.type', 'hero')
         ->where('overlay', true)
         ->has('site.name')
-        ->where('seo.canonical', url('/'))
+        ->where('seo.canonical', rtrim(url('/'), '/').'/')
         ->where('sections', fn ($sections) => collect($sections)->pluck('type')->doesntContain('testimonials')
             && collect($sections)->pluck('type')->doesntContain('categories')
             && collect($sections)->pluck('type')->contains('process')));

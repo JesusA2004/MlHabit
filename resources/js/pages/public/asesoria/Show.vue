@@ -115,7 +115,7 @@ function cancel(): Promise<void> {
 <template>
     <Head title="Tu asesoría" />
 
-    <section class="bg-background pb-16">
+    <section class="motion-calm bg-background pb-16">
         <div class="container-site max-w-3xl pt-10 md:pt-16">
             <p class="text-sm font-medium text-oak-ink">
                 Asesoría {{ consultation.folio }}

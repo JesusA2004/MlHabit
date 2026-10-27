@@ -17,7 +17,7 @@ const props = defineProps<{ items: { label: string; href?: string }[] }>();
                 <Link
                     v-if="item.href && i < props.items.length - 1"
                     :href="item.href"
-                    class="rounded hover:text-foreground"
+                    class="link-underline rounded transition-colors hover:text-foreground"
                     >{{ item.label }}</Link
                 >
                 <span v-else aria-current="page" class="text-foreground">{{

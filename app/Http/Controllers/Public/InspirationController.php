@@ -7,11 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
 use App\Models\Testimonial;
+use App\Services\Web\OgImage;
 use App\Services\Web\Paginated;
 use App\Services\Web\Presenter;
 use App\Services\Web\PublicPage;
 use App\Services\Web\Seo;
-use App\Support\ResponsiveImage;
 use Illuminate\Http\Request;
 use Inertia\Response;
 
@@ -25,6 +25,7 @@ class InspirationController extends Controller
         private readonly Presenter $presenter,
         private readonly PublicPage $page,
         private readonly Seo $seo,
+        private readonly OgImage $og,
     ) {}
 
     public function index(Request $request): Response
@@ -55,6 +56,7 @@ class InspirationController extends Controller
             jsonLd: [$this->seo->breadcrumbs([['Inicio', '/'], ['Inspiración', '/inspiracion']])],
             canonical: url('/inspiracion'),
             noindex: $origin !== null || $categorySlug !== null || $projects->currentPage() > 1,
+            og: $this->og->page('inspiracion', 'Inspiración: proyectos y propuestas', 'Proyectos entregados y renders'),
         ));
     }
 
@@ -89,10 +91,13 @@ class InspirationController extends Controller
         ], $this->seo->page(
             $showcase->seo_title ?: $showcase->title,
             $showcase->seo_description ?: ($showcase->summary ?: $showcase->story),
-            ResponsiveImage::largeUrl($showcase->cover),
-            'article',
-            [$this->seo->breadcrumbs([['Inicio', '/'], ['Inspiración', '/inspiracion'], [$showcase->title, '/inspiracion/'.$showcase->slug]])],
-            url('/inspiracion/'.$showcase->slug),
+            type: 'article',
+            jsonLd: [
+                $this->seo->breadcrumbs([['Inicio', '/'], ['Inspiración', '/inspiracion'], [$showcase->title, '/inspiracion/'.$showcase->slug]]),
+                $this->seo->imageGallery($showcase->title, url('/inspiracion/'.$showcase->slug), [$showcase->cover, ...$showcase->media->all()]),
+            ],
+            canonical: url('/inspiracion/'.$showcase->slug),
+            og: $this->og->showcase($showcase),
         ));
     }
 }

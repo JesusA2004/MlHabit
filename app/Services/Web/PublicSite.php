@@ -21,7 +21,7 @@ class PublicSite
     private const CACHE_KEY = 'web.public_site.v1';
 
     /** Claves de caché que dependen del contenido editable. */
-    private const KEYS = [self::CACHE_KEY, 'web.home.v1', 'web.sitemap.v1'];
+    private const KEYS = [self::CACHE_KEY, 'web.home.v1', 'web.sitemap.v1', 'web.sitemap.v2'];
 
     public static function flush(): void
     {

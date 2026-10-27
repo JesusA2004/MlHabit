@@ -7,10 +7,7 @@
     <title>Volvemos en un momento — ML Habitat</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <style>
-        :root { --bg: #F7F5F2; --surface: #FFFFFF; --fg: #231E1A; --muted: #6B635A; --border: #E3DDD4; --primary: #2F5A4C; --linen: #E9E2D6; --oak: #B07D4F; --eucalyptus: #2F5A4C; --espresso: #2B2420; }
-        @media (prefers-color-scheme: dark) {
-            :root { --bg: #141311; --surface: #1C1A17; --fg: #EFEAE3; --muted: #A69E93; --border: #302C27; --primary: #8CC0AA; }
-        }
+        :root { --bg: #F7F5F2; --surface: #FFFFFF; --fg: #231E1A; --muted: #6B635A; --border: #E3DDD4; --primary: #2F5A4C; --linen: #E9E2D6; --oak: #B07D4F; --eucalyptus: #2F5A4C; --espresso: #2B2420; color-scheme: light; }
         * { box-sizing: border-box; }
         html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); }
         body { font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: grid; place-items: center; min-height: 100vh; padding: 24px 16px; }
@@ -22,7 +19,6 @@
         h1 { font-size: clamp(1.625rem, 4vw, 2.125rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
         p { line-height: 1.6; color: var(--muted); margin: 0 0 24px; }
         a.button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 10px; background: var(--primary); color: #fff; text-decoration: none; font-weight: 600; }
-        @media (prefers-color-scheme: dark) { a.button { color: #0F1F19; } }
         a.button:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 40%, transparent); outline-offset: 2px; }
     </style>
 </head>

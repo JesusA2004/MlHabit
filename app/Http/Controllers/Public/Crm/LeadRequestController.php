@@ -13,6 +13,8 @@ use App\Models\Media;
 use App\Services\CoverageService;
 use App\Services\Crm\ConsultationSettings;
 use App\Services\Crm\LeadIntakeService;
+use App\Services\Web\OgImage;
+use App\Services\Web\Seo;
 use App\Support\Crm\Attribution;
 use App\Support\Crm\CrmLinks;
 use App\Support\Crm\Options;
@@ -35,6 +37,7 @@ class LeadRequestController extends Controller
         $preselected = collect($categories)->firstWhere('slug', (string) $request->query('categoria'));
 
         return Inertia::render('public/solicitar/Create', [
+            'seo' => app(Seo::class)->page('Solicita tu propuesta a la medida', 'Cuéntanos qué mueble necesitas: cocina integral, clóset, recámara o centro de entretenimiento. Te contactamos para una asesoría sin compromiso.', canonical: url('/solicitar'), og: app(OgImage::class)->page('solicitar', 'Solicita tu propuesta a la medida', 'Asesoría sin compromiso')),
             'categories' => $categories,
             'preselected' => $preselected ? [$preselected['id']] : [],
             'options' => [
@@ -85,6 +88,7 @@ class LeadRequestController extends Controller
         $acceptsVisits = $coverage->acceptsVisits($lead->postal_code);
 
         return Inertia::render('public/solicitar/Gracias', [
+            'seo' => app(Seo::class)->private('Recibimos tu solicitud'),
             'lead' => [
                 'folio' => $lead->folio,
                 'firstName' => $lead->customer->first_name,

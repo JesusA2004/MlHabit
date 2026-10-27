@@ -2,9 +2,7 @@
 
 use App\Cms\Sections\PaymentOptionsSection;
 use App\Enums\SiteSectionType;
-use App\Enums\UserRole;
 use App\Models\Media;
-use App\Models\SiteSection;
 use App\Services\Web\PublicSite;
 use Illuminate\Validation\ValidationException;
 use Tests\Feature\Web\WebFixtures;
@@ -18,7 +16,7 @@ it('validates the default content of every section type', function (SiteSectionT
 
     expect($schema->validate($schema->defaults()))->toBe($schema->normalize($schema->defaults()))
         ->and($schema->fields())->not->toBeEmpty();
-})->with(SiteSectionType::cases());
+})->with(SiteSectionType::curated());
 
 it('rejects invalid hero content and unsafe links', function () {
     $schema = SiteSectionType::Hero->schema();
@@ -59,67 +57,24 @@ it('validates list items and drops unknown keys', function () {
         ->and($clean['steps'])->toBe([['title' => 'Uno', 'body' => 'Dos']]);
 });
 
-it('updates a section through the panel and logs the change', function () {
-    WebFixtures::sections();
-    $hero = SiteSection::query()->where('type', 'hero')->firstOrFail();
-    $user = WebFixtures::staff(['content.manage']);
-
-    $this->actingAs($user)
-        ->put(route('admin.sitio.secciones.update', $hero), ['content' => [...$hero->content, 'title' => 'Tu cocina, a tu medida']])
-        ->assertSessionHasNoErrors()
-        ->assertRedirect();
-
-    expect($hero->refresh()->content['title'])->toBe('Tu cocina, a tu medida');
-    $this->assertDatabaseHas('activity_logs', ['action' => 'sitio.seccion_actualizada', 'subject_id' => $hero->id]);
-
-    $this->actingAs($user)
-        ->put(route('admin.sitio.secciones.update', $hero), ['content' => [...$hero->content, 'title' => '']])
-        ->assertSessionHasErrors('content.title');
-});
-
-it('reorders sections and the public home follows the saved order', function () {
-    WebFixtures::sections();
-    $ids = SiteSection::query()->orderByDesc('sort')->pluck('id')->all();
-
-    $this->actingAs(WebFixtures::staff(['content.manage']))
-        ->put(route('admin.sitio.secciones.orden'), ['ids' => $ids])
-        ->assertRedirect();
-
-    expect(SiteSection::query()->orderBy('sort')->pluck('id')->all())->toBe($ids);
-});
-
-it('requires content.publish to show or hide a section', function () {
-    WebFixtures::sections();
-    $faq = SiteSection::query()->where('type', 'faq')->firstOrFail();
-
-    $this->actingAs(WebFixtures::staff(['content.manage']))
-        ->patch(route('admin.sitio.secciones.visibilidad', $faq), ['is_visible' => false])
-        ->assertForbidden();
-
-    $this->actingAs(WebFixtures::staff(['content.manage', 'content.publish'], UserRole::Quality))
-        ->patch(route('admin.sitio.secciones.visibilidad', $faq), ['is_visible' => false])
-        ->assertRedirect();
-
-    expect($faq->refresh()->is_visible)->toBeFalse();
-});
-
-it('forbids the site editor to staff without content permissions', function () {
-    WebFixtures::sections();
-    $hero = SiteSection::query()->where('type', 'hero')->firstOrFail();
+it('forbids the site settings to staff without content permissions', function () {
     $user = WebFixtures::staff(['dashboard.view', 'leads.view']);
 
     $this->actingAs($user)->get(route('admin.sitio.index'))->assertForbidden();
-    $this->actingAs($user)->put(route('admin.sitio.secciones.update', $hero), ['content' => $hero->content])->assertForbidden();
+    $this->actingAs($user)->get(route('admin.sitio.editor.edit'))->assertForbidden();
 });
 
-it('renders the site editor with every section schema', function () {
+it('renders the site settings with the visual editor summary', function () {
+    WebFixtures::sections();
+
     $this->actingAs(WebFixtures::admin())
         ->get(route('admin.sitio.index', ['pestana' => 'identidad']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('admin/sitio/Index')
             ->where('tab', 'identidad')
-            ->has('sections', 11)
-            ->has('sections.0.schema.fields'));
+            ->where('editor.sections', 11)
+            ->where('editor.hasChanges', false)
+            ->where('editor.lastVersion', null));
 });
 
 it('saves contact settings and hides empty values on the public site', function () {

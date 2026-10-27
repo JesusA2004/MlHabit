@@ -10,10 +10,10 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
 use App\Models\SiteSection;
+use App\Services\Web\OgImage;
 use App\Services\Web\Presenter;
 use App\Services\Web\PublicPage;
 use App\Services\Web\Seo;
-use App\Support\ResponsiveImage;
 use Inertia\Response;
 
 /**
@@ -26,6 +26,7 @@ class CatalogController extends Controller
         private readonly Presenter $presenter,
         private readonly PublicPage $page,
         private readonly Seo $seo,
+        private readonly OgImage $og,
     ) {}
 
     public function index(): Response
@@ -42,7 +43,7 @@ class CatalogController extends Controller
             'categories' => $categories->map(fn (ProductCategory $c, int $i) => $this->presenter->categoryCard($c, $i === 0 ? Presenter::SIZES_WIDE : Presenter::SIZES_CARD))->values(),
         ], $this->seo->page($title, $description, jsonLd: [
             $this->seo->breadcrumbs([['Inicio', '/'], ['Catálogo', '/catalogo']]),
-        ], canonical: url('/catalogo')));
+        ], canonical: url('/catalogo'), og: $this->og->page('catalogo', $title, 'Cocinas, clósets, recámaras y más')));
     }
 
     public function category(ProductCategory $category): Response
@@ -72,12 +73,12 @@ class CatalogController extends Controller
         ], $this->seo->page(
             $title,
             $description,
-            ResponsiveImage::largeUrl($category->cover),
             jsonLd: array_values(array_filter([
                 $this->seo->breadcrumbs([['Inicio', '/'], ['Catálogo', '/catalogo'], [$category->name, '/catalogo/'.$category->slug]]),
                 $this->seo->faqPage($faqs),
             ])),
             canonical: url('/catalogo/'.$category->slug),
+            og: $this->og->category($category),
         ));
     }
 
@@ -121,14 +122,14 @@ class CatalogController extends Controller
         ], $this->seo->page(
             $title,
             $description,
-            ResponsiveImage::largeUrl($product->cover),
-            'product',
-            array_values(array_filter([
+            type: 'product',
+            jsonLd: array_values(array_filter([
                 $this->seo->product($product),
                 $this->seo->breadcrumbs([['Inicio', '/'], ['Catálogo', '/catalogo'], [$category->name, '/catalogo/'.$category->slug], [$product->name, '/catalogo/'.$category->slug.'/'.$product->slug]]),
                 $this->seo->faqPage($faqs),
             ])),
-            url('/catalogo/'.$category->slug.'/'.$product->slug),
+            canonical: url('/catalogo/'.$category->slug.'/'.$product->slug),
+            og: $this->og->product($product),
         ));
     }
 }

@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Cms\Layout\LayoutValidator;
 use App\Models\Finish;
 use App\Models\Media;
 use App\Models\MediaAttachment;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
+use App\Models\SitePageDraft;
 use App\Models\SiteSection;
 use App\Models\Testimonial;
 use App\Support\Settings;
@@ -62,8 +64,18 @@ class MediaUsageService
         }
 
         foreach (SiteSection::query()->get() as $section) {
-            if (in_array($id, $section->schema()->mediaIds($section->content), true)) {
-                $usages[] = ['type' => 'Portada del sitio', 'label' => $section->schema()->label(), 'href' => '/admin/sitio'];
+            if (in_array($id, $section->mediaIds(), true)) {
+                $usages[] = ['type' => 'Portada del sitio', 'label' => $section->schema()->label(), 'href' => '/admin/sitio/editor'];
+            }
+        }
+
+        // Borradores del editor visual: aún no publicados, pero en uso.
+        foreach (SitePageDraft::query()->get() as $draft) {
+            foreach ($draft->snapshot['sections'] as $section) {
+                if (in_array($id, LayoutValidator::mediaIds(is_array($section['layout'] ?? null) ? $section['layout'] : null), true)) {
+                    $usages[] = ['type' => 'Borrador del editor visual', 'label' => 'Portada (sin publicar)', 'href' => '/admin/sitio/editor'];
+                    break 2;
+                }
             }
         }
 

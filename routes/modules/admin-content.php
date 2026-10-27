@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\Web\MediaController;
 use App\Http\Controllers\Admin\Web\PageController;
 use App\Http\Controllers\Admin\Web\ProductController;
 use App\Http\Controllers\Admin\Web\ShowcaseController;
+use App\Http\Controllers\Admin\Web\SiteBuilderController;
 use App\Http\Controllers\Admin\Web\SiteController;
 use App\Http\Controllers\Admin\Web\SocialLinkController;
 use App\Http\Controllers\Admin\Web\TestimonialController;
@@ -24,10 +25,15 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.')->group(function () {
     // Sitio web
     Route::get('sitio', [SiteController::class, 'index'])->name('sitio.index');
-    Route::put('sitio/secciones/{section}', [SiteController::class, 'updateSection'])->name('sitio.secciones.update');
-    Route::post('sitio/secciones/{section}/restablecer', [SiteController::class, 'resetSection'])->name('sitio.secciones.restablecer');
-    Route::patch('sitio/secciones/{section}/visibilidad', [SiteController::class, 'toggleSection'])->name('sitio.secciones.visibilidad');
-    Route::put('sitio/secciones-orden', [SiteController::class, 'reorderSections'])->name('sitio.secciones.orden');
+
+    // Editor visual de la portada (borrador → publicar, con historial)
+    Route::get('sitio/editor', [SiteBuilderController::class, 'edit'])->name('sitio.editor.edit');
+    Route::put('sitio/editor/borrador', [SiteBuilderController::class, 'saveDraft'])->middleware('throttle:240,1')->name('sitio.editor.borrador');
+    Route::post('sitio/editor/publicar', [SiteBuilderController::class, 'publish'])->name('sitio.editor.publicar');
+    Route::post('sitio/editor/descartar', [SiteBuilderController::class, 'discard'])->name('sitio.editor.descartar');
+    Route::post('sitio/editor/versiones/{version}/restaurar', [SiteBuilderController::class, 'restore'])->name('sitio.editor.versiones.restaurar');
+    Route::get('sitio/editor/vista-previa', [SiteBuilderController::class, 'preview'])->middleware('signed')->name('sitio.editor.vista-previa');
+
     Route::put('sitio/ajustes/{group}', [SiteController::class, 'updateSettings'])->whereIn('group', ['brand', 'contact', 'seo', 'footer'])->name('sitio.ajustes.update');
 
     Route::post('sitio/redes', [SocialLinkController::class, 'store'])->name('sitio.redes.store');

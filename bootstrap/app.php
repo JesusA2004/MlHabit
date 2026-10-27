@@ -1,11 +1,11 @@
 <?php
 
 use App\Exceptions\ErrorPageRenderer;
+use App\Http\Middleware\CanonicalHost;
 use App\Http\Middleware\CaptureLeadAttribution;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\EnsureTwoFactorForStaff;
-use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackPageView;
@@ -23,7 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['sidebar_state']);
+
+        // Dominio canónico + https (solo producción; ver docs/SEO.md).
+        $middleware->prepend(CanonicalHost::class);
 
         $middleware->alias([
             'staff' => EnsureStaff::class,
@@ -31,7 +34,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
-            HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             TrackPageView::class,

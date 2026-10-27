@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Palette, ShieldCheck, UserRound } from '@lucide/vue';
+import { ShieldCheck, UserRound } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
 import PageContainer from '@/components/ds/PageContainer.vue';
 import PageHeader from '@/components/ds/PageHeader.vue';
@@ -27,12 +27,6 @@ const items: SettingsNavItem[] = [
         href: accountLinks.security,
         icon: ShieldCheck,
     },
-    {
-        title: 'Apariencia',
-        hint: 'Tema claro u oscuro',
-        href: accountLinks.appearance,
-        icon: Palette,
-    },
 ];
 
 const page = usePage();
@@ -43,7 +37,7 @@ const active = (href: string) => isActivePath(page.url, { href });
     <PageContainer width="wide">
         <PageHeader
             title="Tu cuenta"
-            description="Datos personales, seguridad de acceso y cómo se ve la aplicación en este dispositivo."
+            description="Datos personales y seguridad de acceso."
         />
 
         <div class="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">

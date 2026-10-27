@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Services\Web\HomePage;
 use App\Services\Web\PublicPage;
-use App\Services\Web\PublicSite;
 use App\Services\Web\Seo;
 use Inertia\Response;
 
@@ -24,12 +23,13 @@ class HomeController extends Controller
             'sections' => $sections,
             'heroImage' => $heroImage,
         ], $seo->page(
-            image: is_array($heroImage) ? url((string) $heroImage['src']) : null,
             jsonLd: [
                 $seo->organization(),
-                ['@type' => 'WebSite', '@id' => url('/').'#sitio', 'name' => PublicSite::name(), 'url' => url('/'), 'inLanguage' => 'es-MX'],
+                $seo->website(),
+                $seo->localBusiness(),
             ],
             canonical: url('/'),
+            preload: is_array($heroImage) ? $heroImage : null,
         ), overlay: is_array($first) && $first['type'] === 'hero');
     }
 }

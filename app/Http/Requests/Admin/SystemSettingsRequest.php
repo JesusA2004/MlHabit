@@ -21,6 +21,9 @@ class SystemSettingsRequest extends FormRequest
 
     private const DECIMAL = 'regex:/^\d{1,9}(\.\d{1,2})?$/';
 
+    /** Códigos de verificación de buscadores (letras, números, - y _). */
+    private const TOKEN = 'regex:/^[A-Za-z0-9_\-]+$/';
+
     public function authorize(): bool
     {
         return $this->user()?->can('settings.manage') ?? false;
@@ -54,12 +57,28 @@ class SystemSettingsRequest extends FormRequest
             'security' => [
                 'require_2fa_for_staff' => ['required', 'boolean'],
             ],
+            'seo' => [
+                'google_site_verification' => ['nullable', 'string', 'max:120', self::TOKEN],
+                'bing_site_verification' => ['nullable', 'string', 'max:120', self::TOKEN],
+            ],
             default => [],
         };
     }
 
     protected function prepareForValidation(): void
     {
+        // Se acepta la etiqueta <meta …> completa: se conserva solo `content`.
+        foreach (['google_site_verification', 'bing_site_verification'] as $field) {
+            $value = $this->input($field);
+            if (is_string($value)) {
+                $value = trim($value);
+                if (preg_match('/content\s*=\s*["\']([^"\']*)["\']/i', $value, $m) === 1) {
+                    $value = trim($m[1]);
+                }
+                $this->merge([$field => $value === '' ? null : $value]);
+            }
+        }
+
         foreach (['deposit_percent', 'tax_rate', 'price'] as $field) {
             $value = $this->input($field);
             if (is_int($value) || is_float($value)) {
@@ -109,6 +128,8 @@ class SystemSettingsRequest extends FormRequest
             'channels' => 'canales',
             'follow_up_hours' => 'horas para el primer contacto',
             'require_2fa_for_staff' => 'verificación en dos pasos obligatoria',
+            'google_site_verification' => 'código de verificación de Google',
+            'bing_site_verification' => 'código de verificación de Bing',
         ];
     }
 
@@ -121,6 +142,8 @@ class SystemSettingsRequest extends FormRequest
             'deposit_percent.regex' => 'Escribe un porcentaje con máximo dos decimales.',
             'tax_rate.regex' => 'Escribe un porcentaje con máximo dos decimales.',
             'price.regex' => 'Escribe un monto con máximo dos decimales.',
+            'google_site_verification.regex' => 'Pega el código tal como lo da Google (letras, números, guiones).',
+            'bing_site_verification.regex' => 'Pega el código tal como lo da Bing (letras, números, guiones).',
         ];
     }
 
@@ -154,6 +177,10 @@ class SystemSettingsRequest extends FormRequest
             ],
             'security' => [
                 'require_2fa_for_staff' => (bool) $data['require_2fa_for_staff'],
+            ],
+            'seo' => [
+                'google_site_verification' => $data['google_site_verification'] ?? null,
+                'bing_site_verification' => $data['bing_site_verification'] ?? null,
             ],
             default => [],
         };

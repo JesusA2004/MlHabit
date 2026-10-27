@@ -87,7 +87,7 @@ const urgent = computed(
 <template>
     <Head title="Paga tu visita técnica" />
 
-    <section class="bg-background pb-20">
+    <section class="motion-calm bg-background pb-20">
         <div class="container-site pt-10 md:pt-16">
             <div class="max-w-2xl">
                 <p class="text-sm font-medium text-oak-ink">

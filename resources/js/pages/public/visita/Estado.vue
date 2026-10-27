@@ -90,7 +90,7 @@ onBeforeUnmount(() => clearTimeout(timer));
         :title="state === 'paid' ? 'Visita confirmada' : 'Estado de tu pago'"
     />
 
-    <section class="bg-background pb-20">
+    <section class="motion-calm bg-background pb-20">
         <div class="container-site max-w-2xl pt-12 md:pt-20">
             <!-- Pagado -->
             <div v-if="state === 'paid'" class="space-y-6">

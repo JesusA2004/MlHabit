@@ -31,7 +31,7 @@ final class WebFixtures
     /** Las 11 secciones de la portada con su contenido sugerido. */
     public static function sections(): void
     {
-        foreach (SiteSectionType::cases() as $i => $type) {
+        foreach (SiteSectionType::curated() as $i => $type) {
             SiteSection::factory()->type($type)->create(['sort' => ($i + 1) * 10]);
         }
     }
