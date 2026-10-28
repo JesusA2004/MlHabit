@@ -38,13 +38,13 @@ const headingId = useId();
     >
         <header
             v-if="props.title || $slots.header || $slots.actions"
-            class="flex items-center justify-between gap-4 border-b bg-linear-to-b from-muted/35 to-transparent px-4 py-3.5 sm:px-5"
+            class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b bg-linear-to-b from-muted/35 to-transparent px-4 py-3.5 sm:px-5"
         >
             <slot name="header">
                 <div
                     :class="
                         cn(
-                            'flex min-w-0 gap-3',
+                            'flex min-w-0 flex-1 basis-56 gap-3',
                             props.description ? 'items-start' : 'items-center',
                         )
                     "
@@ -78,7 +78,7 @@ const headingId = useId();
             </slot>
             <div
                 v-if="$slots.actions"
-                class="-my-1 flex shrink-0 items-center gap-1.5"
+                class="-my-1 flex shrink-0 flex-wrap items-center justify-end gap-1.5"
             >
                 <slot name="actions" />
             </div>

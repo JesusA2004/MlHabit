@@ -765,7 +765,7 @@ function historyHref(row: HistoryRow): string {
                         :aria-pressed="editForm.zone_ids.includes(zone.value)"
                         :class="
                             cn(
-                                'h-9 rounded-full border px-3 text-sm transition-colors pointer-coarse:h-11',
+                                'h-9 rounded-full border px-3 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] pointer-coarse:h-11',
                                 editForm.zone_ids.includes(zone.value)
                                     ? 'border-primary bg-primary-soft text-primary'
                                     : 'hover:bg-muted',

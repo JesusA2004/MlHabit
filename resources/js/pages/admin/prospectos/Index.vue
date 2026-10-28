@@ -426,7 +426,7 @@ const optionalSelects = computed(() => [
                         :aria-pressed="vista === view.value"
                         :class="
                             cn(
-                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors',
+                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 vista === view.value
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',
@@ -889,7 +889,7 @@ const optionalSelects = computed(() => [
                         :aria-pressed="form.category_ids.includes(c.value)"
                         :class="
                             cn(
-                                'h-9 rounded-full border px-3.5 text-sm transition-colors',
+                                'h-9 rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 form.category_ids.includes(c.value)
                                     ? 'border-primary bg-primary-soft text-primary'
                                     : 'bg-card hover:bg-muted',

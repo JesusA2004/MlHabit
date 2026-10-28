@@ -98,7 +98,7 @@ const columns: DataColumn<Row>[] = [
                 :key="q.value"
                 type="button"
                 :aria-pressed="estado === q.value"
-                class="h-9 shrink-0 rounded-full border px-3.5 text-sm font-medium transition-colors pointer-coarse:h-11"
+                class="h-9 shrink-0 rounded-full border px-3.5 text-sm font-medium transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] pointer-coarse:h-11"
                 :class="
                     estado === q.value
                         ? 'border-primary bg-primary text-primary-foreground'

@@ -429,7 +429,7 @@ function invite() {
                         :aria-pressed="form.zone_ids.includes(z.value)"
                         :class="
                             cn(
-                                'h-9 rounded-full border px-3 text-sm transition-colors pointer-coarse:h-11',
+                                'h-9 rounded-full border px-3 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] pointer-coarse:h-11',
                                 form.zone_ids.includes(z.value)
                                     ? 'border-primary bg-primary-soft text-primary'
                                     : 'hover:bg-muted',

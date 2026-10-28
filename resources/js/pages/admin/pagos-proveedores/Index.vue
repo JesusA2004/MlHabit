@@ -256,7 +256,7 @@ const hasFilters = computed(() => !!status.value || !!search.value);
                         :aria-pressed="status === option.value"
                         :class="
                             cn(
-                                'h-9 rounded-full border px-3 text-sm transition-colors',
+                                'h-9 rounded-full border px-3 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 status === option.value
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',

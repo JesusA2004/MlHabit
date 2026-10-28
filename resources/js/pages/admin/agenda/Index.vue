@@ -495,7 +495,7 @@ const kindLabel = computed(() =>
                 </Select>
             </div>
 
-            <div v-if="person" class="flex items-center gap-2">
+            <div v-if="person" class="flex flex-wrap items-center gap-2">
                 <Button
                     variant="outline"
                     size="icon"
@@ -550,7 +550,9 @@ const kindLabel = computed(() =>
 
         <template v-else>
             <section aria-labelledby="week-heading" class="grid gap-3">
-                <div class="flex items-baseline justify-between gap-3">
+                <div
+                    class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                >
                     <h2
                         id="week-heading"
                         class="font-display text-lg font-semibold"

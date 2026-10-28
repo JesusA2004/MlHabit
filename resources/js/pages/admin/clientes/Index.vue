@@ -102,7 +102,7 @@ const showUrl = (uuid: string) => `/admin/clientes/${uuid}`;
                         :aria-pressed="tipo === tab.value"
                         :class="
                             cn(
-                                'flex h-9 items-center rounded-full border px-3.5 text-sm transition-colors',
+                                'flex h-9 items-center rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 tipo === tab.value
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',

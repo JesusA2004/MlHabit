@@ -214,7 +214,7 @@ function submit() {
                         type="button"
                         :class="
                             cn(
-                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors',
+                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 status === null
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',
@@ -232,7 +232,7 @@ function submit() {
                         type="button"
                         :class="
                             cn(
-                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors',
+                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 status === option.value
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',

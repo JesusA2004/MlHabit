@@ -155,7 +155,7 @@ const emptyTitle = computed(() =>
                 :aria-current="filters.vista === view.key ? 'page' : undefined"
                 :class="
                     cn(
-                        'inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors pointer-coarse:h-11',
+                        'inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96] pointer-coarse:h-11',
                         filters.vista === view.key
                             ? 'border-primary bg-primary text-primary-foreground'
                             : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',

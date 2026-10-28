@@ -214,7 +214,7 @@ const lockedNotice = computed(() =>
                 :aria-current="v.id === rateCard.id ? 'page' : undefined"
                 :class="
                     cn(
-                        'inline-flex h-9 items-center gap-2 rounded-full border px-3 text-sm transition-colors',
+                        'inline-flex h-9 items-center gap-2 rounded-full border px-3 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                         v.id === rateCard.id
                             ? 'border-primary bg-primary-soft text-primary'
                             : 'hover:bg-muted',

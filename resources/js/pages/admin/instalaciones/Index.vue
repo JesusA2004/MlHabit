@@ -301,7 +301,7 @@ const itemErrors = computed(() =>
                         type="button"
                         :class="
                             cn(
-                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors',
+                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 activeTab === null
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',
@@ -319,7 +319,7 @@ const itemErrors = computed(() =>
                         type="button"
                         :class="
                             cn(
-                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-colors',
+                                'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 activeTab === tab.key
                                     ? 'border-foreground bg-foreground text-background'
                                     : 'bg-card hover:bg-muted',
@@ -341,7 +341,7 @@ const itemErrors = computed(() =>
                         type="button"
                         :class="
                             cn(
-                                'h-8 rounded-full border px-3 text-xs transition-colors',
+                                'h-8 rounded-full border px-3 text-xs transition-[color,background-color,border-color,scale] duration-150 active:scale-[0.96]',
                                 status === option.value
                                     ? 'border-primary bg-primary-soft text-primary'
                                     : 'bg-card hover:bg-muted',
