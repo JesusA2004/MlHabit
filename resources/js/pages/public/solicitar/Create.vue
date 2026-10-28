@@ -436,7 +436,7 @@ const contactOptions = computed(() =>
             </div>
 
             <ProgressSteps
-                class="mt-8 hidden sm:flex"
+                class="mt-8 hidden max-w-3xl sm:block"
                 :steps="steps"
                 :current="steps[current].key"
                 orientation="horizontal"

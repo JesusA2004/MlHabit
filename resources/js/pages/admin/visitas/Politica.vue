@@ -368,9 +368,17 @@ const texts = [
                 <Input
                     id="fee_amount"
                     v-model="form.fee_amount"
+                    type="number"
+                    min="1"
+                    step="0.01"
                     inputmode="decimal"
-                    placeholder="0.00"
+                    placeholder="500.00"
+                    aria-describedby="fee_amount_help"
                 />
+                <p id="fee_amount_help" class="text-xs text-muted-foreground">
+                    Toda visita se cobra con tarjeta antes de confirmarse;
+                    la tarifa mínima es de $1.00.
+                </p>
                 <InputError :message="form.errors.fee_amount" />
             </div>
 

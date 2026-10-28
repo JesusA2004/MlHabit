@@ -115,7 +115,7 @@ Graph). Licencia SIL OFL 1.1 (`resources/fonts/OFL-*.txt`).
 ## 4. Espacio y layout
 
 - Escala base de 4 px (la de Tailwind). Ritmo habitual: 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96.
-- **Panel:** padding de página 16 px (móvil) / 24 px / 32 px (≥1024). Ancho de contenido máximo 1280 px (`max-w-7xl`).
+- **Panel:** padding de página 16 px (móvil) / 24 px / 32 px (≥1024). El panel usa todo el ancho disponible (`PageContainer` `fluid`, tope 1920 px); los formularios usan `narrow`. Portal y cuenta: máximo 1280 px (`max-w-7xl`).
 - **Marketing:** contenedor `container-site` de 1200 px con gutter `clamp(16px, 4vw, 40px)`; separación entre secciones `clamp(64px, 10vw, 128px)`.
 - Alineación a la izquierda por defecto; centrado solo en estados vacíos, error y CTA final.
 - Objetivos táctiles de 44 px en móvil (botones `h-11`, filas de navegación `min-h-11`).

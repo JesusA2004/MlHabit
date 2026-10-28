@@ -38,8 +38,8 @@ it('incluye solicitudes sin cuenta hechas con el mismo correo verificado', funct
     $lead = Lead::factory()->create(['customer_id' => $guest->id]);
 
     // Una ficha con el mismo correo pero ligada a OTRA cuenta no se mezcla.
-    [$bob] = Fixtures::client();
-    $other = Customer::factory()->create(['user_id' => $bob->id, 'email' => $alice->email]);
+    [, $other] = Fixtures::client();
+    $other->forceFill(['email' => $alice->email])->save();
     Lead::factory()->create(['customer_id' => $other->id]);
 
     $this->actingAs($alice)->get(route('portal.solicitudes.index'))
