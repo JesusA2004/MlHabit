@@ -18,6 +18,9 @@ const props = defineProps<{
     defaultOpen?: string[];
 }>();
 
+/** Abiertas (opcional, controlado): permite "Abrir todas" y abrir coincidencias. */
+const open = defineModel<string[]>('open');
+
 function normalize(text: string): string {
     return text
         .normalize('NFD')
@@ -62,7 +65,11 @@ function parts(text: string): { text: string; match: boolean }[] {
 <template>
     <Accordion
         type="multiple"
-        :default-value="props.defaultOpen"
+        :default-value="open === undefined ? props.defaultOpen : undefined"
+        :model-value="open"
+        @update:model-value="
+            (v) => (open = Array.isArray(v) ? v.map(String) : [])
+        "
         class="divide-y divide-border border-y border-border"
     >
         <AccordionItem
