@@ -1,0 +1,306 @@
+/* ====================================================================== */
+/* Portal del cliente — movimiento y lienzo (lo importa PortalLayout.vue)  */
+/* Solo transform/opacity/clip; todo se apaga con prefers-reduced-motion. */
+/* ====================================================================== */
+
+.portal-shell {
+    --p-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --p-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --p-shadow-lift:
+        0 14px 30px -14px rgb(35 30 26 / 0.22), 0 3px 8px rgb(35 30 26 / 0.06);
+}
+
+/* Lienzo: velo muy tenue de eucalipto y roble arriba. */
+.portal-canvas {
+    background-image:
+        radial-gradient(
+            56rem 20rem at 0% 0%,
+            color-mix(in srgb, var(--primary) 7%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            40rem 16rem at 100% 0%,
+            color-mix(in srgb, var(--oak) 7%, transparent),
+            transparent 70%
+        );
+    background-repeat: no-repeat;
+}
+
+/* Tarjeta "hero" oscura del inicio. */
+.portal-hero {
+    background:
+        radial-gradient(
+            38rem 22rem at 100% 0%,
+            color-mix(in srgb, var(--oak) 30%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            30rem 18rem at 0% 100%,
+            color-mix(in srgb, var(--primary) 55%, transparent),
+            transparent 70%
+        ),
+        var(--espresso, #2b2420);
+}
+
+.portal-grid-lines {
+    background-image:
+        linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(to bottom left, black, transparent 70%);
+}
+
+/* Elevación en hover (solo con puntero fino). */
+.portal-lift {
+    transition:
+        transform 220ms var(--p-ease),
+        box-shadow 220ms var(--p-ease),
+        border-color 160ms ease,
+        background-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .portal-lift:hover {
+        transform: translate3d(0, -3px, 0);
+        box-shadow: var(--p-shadow-lift);
+    }
+}
+
+.portal-lift:active {
+    transform: translate3d(0, 0, 0);
+}
+
+/* Indicador del elemento activo de la navegación lateral. */
+.portal-nav-link {
+    position: relative;
+}
+
+.portal-nav-link::before {
+    content: '';
+    position: absolute;
+    inset-block: 8px;
+    left: -12px;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--primary);
+    transform: scaleY(0);
+    transition: transform 260ms var(--p-ease);
+}
+
+.portal-nav-link[aria-current='page']::before {
+    transform: scaleY(1);
+}
+
+/* Esqueletos */
+.portal-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--muted);
+}
+
+/* Barra de progreso de navegación (arriba). */
+.portal-progress {
+    transform-origin: left;
+}
+
+@keyframes portal-rise {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 14px, 0);
+    }
+}
+
+@keyframes portal-fade {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes portal-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+}
+
+@keyframes portal-grow-x {
+    from {
+        transform: scaleX(0);
+    }
+}
+
+@keyframes portal-ring {
+    from {
+        stroke-dashoffset: var(--ring-circumference);
+    }
+}
+
+@keyframes portal-shimmer {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes portal-loading {
+    0% {
+        transform: scaleX(0);
+    }
+
+    60% {
+        transform: scaleX(0.7);
+    }
+
+    100% {
+        transform: scaleX(0.92);
+    }
+}
+
+@keyframes portal-pulse-ring {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(2.2);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    /* Entrada de página: bloques en cascada (backwards = sin transformación residual). */
+    .portal-enter > * {
+        animation: portal-rise 520ms var(--p-ease) backwards;
+    }
+
+    .portal-enter > :nth-child(2) {
+        animation-delay: 60ms;
+    }
+
+    .portal-enter > :nth-child(3) {
+        animation-delay: 120ms;
+    }
+
+    .portal-enter > :nth-child(4) {
+        animation-delay: 180ms;
+    }
+
+    .portal-enter > :nth-child(n + 5) {
+        animation-delay: 230ms;
+    }
+
+    /* Rejillas y listas escalonadas. */
+    .portal-stagger > * {
+        animation: portal-rise 460ms var(--p-ease) backwards;
+        animation-delay: calc(var(--stagger-base, 140ms) + 400ms);
+    }
+
+    .portal-stagger > :nth-child(1) {
+        animation-delay: var(--stagger-base, 140ms);
+    }
+
+    .portal-stagger > :nth-child(2) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 50ms);
+    }
+
+    .portal-stagger > :nth-child(3) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 100ms);
+    }
+
+    .portal-stagger > :nth-child(4) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 150ms);
+    }
+
+    .portal-stagger > :nth-child(5) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 200ms);
+    }
+
+    .portal-stagger > :nth-child(6) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 250ms);
+    }
+
+    .portal-stagger > :nth-child(7) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 300ms);
+    }
+
+    .portal-stagger > :nth-child(8) {
+        animation-delay: calc(var(--stagger-base, 140ms) + 350ms);
+    }
+
+    .portal-pop {
+        animation: portal-pop 420ms var(--p-ease) backwards;
+        animation-delay: var(--pop-delay, 200ms);
+    }
+
+    .portal-bar {
+        transform-origin: left;
+        animation: portal-grow-x 1100ms var(--p-ease) backwards;
+        animation-delay: var(--bar-delay, 300ms);
+    }
+
+    .portal-ring-value {
+        animation: portal-ring 1300ms var(--p-ease) backwards;
+        animation-delay: 250ms;
+    }
+
+    .portal-skeleton::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgb(255 255 255 / 0.55),
+            transparent
+        );
+        animation: portal-shimmer 1.4s ease-in-out infinite;
+    }
+
+    .portal-progress {
+        animation: portal-loading 2.4s var(--p-ease) forwards;
+    }
+
+    .portal-live-dot::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: currentColor;
+        animation: portal-pulse-ring 1.8s var(--p-ease) infinite;
+    }
+
+    .portal-fade-enter-active {
+        transition:
+            opacity 260ms var(--p-ease),
+            transform 260ms var(--p-ease);
+    }
+
+    .portal-fade-leave-active {
+        transition: opacity 120ms ease;
+    }
+
+    .portal-fade-enter-from {
+        opacity: 0;
+        transform: translate3d(0, 6px, 0);
+    }
+
+    .portal-fade-leave-to {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .portal-lift,
+    .portal-nav-link::before {
+        transition: none;
+    }
+
+    .portal-lift:hover {
+        transform: none;
+    }
+}
