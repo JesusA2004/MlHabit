@@ -341,7 +341,7 @@ function historyHref(row: HistoryRow): string {
 <template>
     <Head :title="supplier.name" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="supplier.name">
             <template #meta>
                 <StatusBadge

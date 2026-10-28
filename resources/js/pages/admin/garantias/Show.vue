@@ -183,7 +183,7 @@ function attachClaimEvidence(claim: WarrantyClaimRow, media: { id: number }[]) {
 <template>
     <Head :title="`${warranty.folio} · Garantía`" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="`Garantía de ${warranty.type.label.toLowerCase()}`">
             <template #meta>
                 <div

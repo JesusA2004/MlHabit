@@ -86,7 +86,7 @@ const columns: DataColumn<Row>[] = [
 <template>
     <Head title="Diseño" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Diseño"
             description="Versiones de diseño de todos los proyectos. Fabricación solo arranca con la aprobación técnica."

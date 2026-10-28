@@ -228,7 +228,7 @@ const TYPE_HINT: Record<string, string> = {
 <template>
     <Head title="Garantías" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Garantías"
             description="Garantías registradas por proyecto y reclamos en atención."

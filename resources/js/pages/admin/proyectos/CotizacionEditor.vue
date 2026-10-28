@@ -256,7 +256,7 @@ const title = computed(() =>
 <template>
     <Head :title="`${title} · ${project.folio}`" />
 
-    <PageContainer class="flex flex-col gap-6 pb-28">
+    <PageContainer>
         <PageHeader :title="title">
             <template #breadcrumbs>
                 <Link
@@ -690,11 +690,9 @@ const title = computed(() =>
 
             <div
                 v-if="!locked"
-                class="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 backdrop-blur md:left-[var(--sidebar-width,0px)]"
+                class="sticky bottom-3 z-20 rounded-xl border bg-card/95 shadow-lg backdrop-blur md:bottom-4"
             >
-                <div
-                    class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6"
-                >
+                <div class="flex items-center justify-between gap-3 px-4 py-3">
                     <p class="text-sm text-muted-foreground">
                         <span v-if="form.isDirty">Cambios sin guardar</span>
                         <span v-else-if="quote">Todo guardado</span>

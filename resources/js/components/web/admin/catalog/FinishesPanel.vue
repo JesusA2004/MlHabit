@@ -99,7 +99,7 @@ function remove(): Promise<void> {
 
         <ul
             v-if="props.finishes.length"
-            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
         >
             <li
                 v-for="row in props.finishes"

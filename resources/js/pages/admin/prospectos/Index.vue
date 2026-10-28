@@ -663,7 +663,7 @@ const optionalSelects = computed(() => [
                 <div
                     v-for="column in columnsState"
                     :key="column.status.value"
-                    class="flex w-[85vw] max-w-80 shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72"
+                    class="flex w-[85vw] max-w-80 shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72 xl:w-auto xl:max-w-none xl:min-w-72 xl:flex-1 xl:basis-0"
                 >
                     <header
                         class="flex items-center justify-between gap-2 border-b px-3 py-2.5"

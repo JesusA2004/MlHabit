@@ -152,7 +152,7 @@ function invite() {
 <template>
     <Head title="Técnicos" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Técnicos e instaladores"
             description="Quién mide, quién instala, en qué zonas y con cuánta carga de trabajo."
@@ -207,7 +207,7 @@ function invite() {
 
         <div
             v-if="loading"
-            class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+            class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
             aria-busy="true"
         >
             <Skeleton v-for="n in 6" :key="n" class="h-40 rounded-xl" />
@@ -240,7 +240,10 @@ function invite() {
             </template>
         </EmptyState>
 
-        <ul v-else class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul
+            v-else
+            class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+        >
             <li v-for="t in technicians.data" :key="t.id">
                 <Link
                     :href="tecnicos.show(t.id).url"

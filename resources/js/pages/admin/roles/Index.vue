@@ -212,7 +212,7 @@ const lockCopy = {
 <template>
     <Head title="Roles y permisos" />
 
-    <PageContainer width="wide" class="pb-28">
+    <PageContainer>
         <PageHeader
             title="Roles y permisos"
             description="Decide qué puede ver y hacer cada rol. Los cambios aplican de inmediato para todas las personas con ese rol y quedan en la bitácora."
@@ -458,35 +458,42 @@ const lockCopy = {
                 </AccordionContent>
             </AccordionItem>
         </Accordion>
-    </PageContainer>
 
-    <!-- Barra de guardado (escritorio) -->
-    <div
-        v-if="dirtyRoles.length > 0"
-        class="fixed inset-x-0 bottom-0 z-30 hidden border-t bg-card/95 px-6 py-3 backdrop-blur lg:block"
-        role="region"
-        aria-label="Cambios sin guardar"
-    >
-        <div
-            class="mx-auto flex max-w-[96rem] items-center justify-between gap-4"
-        >
-            <p class="text-sm">
-                Cambios sin guardar en:
-                <span class="font-medium">{{
-                    dirtyRoles.map((r) => r.label).join(', ')
-                }}</span>
-            </p>
-            <div class="flex gap-2">
-                <Button variant="outline" :disabled="saving" @click="resetState"
-                    >Descartar</Button
-                >
-                <Button :disabled="saving" @click="saveAll">
-                    <Spinner v-if="saving" />
-                    {{ saving ? 'Guardando…' : 'Guardar cambios' }}
-                </Button>
+        <!-- Barra de guardado (escritorio): flota al pie del contenido -->
+        <Transition name="float-bar">
+            <div
+                v-if="dirtyRoles.length > 0"
+                class="sticky bottom-4 z-30 hidden items-center justify-between gap-4 rounded-xl border bg-card/95 px-5 py-3 shadow-lg backdrop-blur lg:flex"
+                role="region"
+                aria-label="Cambios sin guardar"
+            >
+                <p class="flex min-w-0 items-center gap-2 text-sm">
+                    <span
+                        class="size-2 shrink-0 animate-pulse rounded-full bg-warning"
+                        aria-hidden="true"
+                    />
+                    <span class="truncate">
+                        Cambios sin guardar en:
+                        <span class="font-medium">{{
+                            dirtyRoles.map((r) => r.label).join(', ')
+                        }}</span>
+                    </span>
+                </p>
+                <div class="flex shrink-0 gap-2">
+                    <Button
+                        variant="outline"
+                        :disabled="saving"
+                        @click="resetState"
+                        >Descartar</Button
+                    >
+                    <Button :disabled="saving" @click="saveAll">
+                        <Spinner v-if="saving" />
+                        {{ saving ? 'Guardando…' : 'Guardar cambios' }}
+                    </Button>
+                </div>
             </div>
-        </div>
-    </div>
+        </Transition>
+    </PageContainer>
 
     <ConfirmDialog
         v-model:open="resetOpen"

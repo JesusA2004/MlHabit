@@ -175,7 +175,7 @@ const statusLabel = computed(
 <template>
     <Head :title="p ? p.name : 'Nuevo producto'" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="p ? p.name : 'Nuevo producto'">
             <template #breadcrumbs>
                 <Link

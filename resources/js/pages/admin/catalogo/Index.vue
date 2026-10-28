@@ -102,7 +102,7 @@ const columns: DataColumn<ProductRow>[] = [
 <template>
     <Head title="Catálogo" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Catálogo"
             description="Categorías, productos y acabados que se muestran en el sitio. Solo lo publicado es visible."

@@ -181,7 +181,7 @@ const typeLabel = (t: string) =>
 <template>
     <Head title="Multimedia" />
 
-    <PageContainer width="wide" class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Multimedia"
             description="Biblioteca de imágenes, videos y documentos del sitio. Las imágenes se optimizan automáticamente en varios tamaños."
@@ -328,7 +328,7 @@ const typeLabel = (t: string) =>
         <template v-if="view === 'cuadricula'">
             <ul
                 v-if="props.media.data.length"
-                class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+                class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8"
             >
                 <li v-for="item in props.media.data" :key="item.id">
                     <button

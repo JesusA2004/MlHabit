@@ -77,7 +77,7 @@ const deltaLabel = computed(() => {
 <template>
     <Head title="Estadísticas" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Estadísticas del sitio"
             description="Visitas al sitio público de ML Habitat. Datos anónimos y agregados: sin cookies ni seguimiento personal. No se cuentan las visitas del personal con sesión iniciada."

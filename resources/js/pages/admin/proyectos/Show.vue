@@ -79,7 +79,7 @@ const badges = computed<Record<string, number>>(() => ({
 <template>
     <Head :title="`${project.folio} · ${project.name}`" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="project.name">
             <template #breadcrumbs>
                 <Link

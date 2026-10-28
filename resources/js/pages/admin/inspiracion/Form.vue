@@ -110,7 +110,7 @@ function destroy(): Promise<void> {
 <template>
     <Head :title="p ? p.title : 'Nuevo proyecto'" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="p ? p.title : 'Nuevo proyecto de inspiración'">
             <template #breadcrumbs>
                 <Link

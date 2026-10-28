@@ -213,7 +213,7 @@ function deleteDoc() {
 <template>
     <Head :title="technician.name" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="technician.name">
             <template #meta>
                 <UserAvatar :name="technician.name" size="sm" />

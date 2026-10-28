@@ -138,7 +138,7 @@ function submit() {
 <template>
     <Head title="Proveedores" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Proveedores"
             description="Fabricantes e instaladores con los que trabajamos: contactos, zonas, documentos y desempeño."

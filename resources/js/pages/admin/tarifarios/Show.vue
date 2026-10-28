@@ -156,7 +156,7 @@ const lockedNotice = computed(() =>
 <template>
     <Head :title="`${rateCard.name} · v${rateCard.version}`" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="rateCard.name">
             <template #meta>
                 <StatusBadge

@@ -86,7 +86,7 @@ const mediaMap = computed(() => props.media);
 <template>
     <Head title="Sitio web" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Sitio web"
             description="Edita la portada, la identidad de la marca, los datos de contacto y las páginas legales del sitio público."

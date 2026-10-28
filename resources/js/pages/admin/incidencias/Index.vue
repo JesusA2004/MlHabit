@@ -248,7 +248,7 @@ const NONE = '__ninguno__';
 <template>
     <Head title="Incidencias" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Incidencias"
             description="Faltantes, daños y errores por resolver. Lo crítico va primero."

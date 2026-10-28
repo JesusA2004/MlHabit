@@ -71,7 +71,7 @@ const columns: DataColumn<Row>[] = [
 <template>
     <Head title="Cotizaciones" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Cotizaciones"
             description="Todas las cotizaciones vigentes de los proyectos. Se crean desde el detalle de cada proyecto."

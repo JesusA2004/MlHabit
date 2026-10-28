@@ -150,7 +150,7 @@ function remove(): Promise<void> {
 <template>
     <Head title="Preguntas frecuentes" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Preguntas frecuentes"
             description="Agrupadas por tema. Arrastra o usa las flechas para ordenarlas dentro de cada tema."

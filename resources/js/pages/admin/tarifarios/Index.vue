@@ -111,7 +111,7 @@ function olderVersions(group: Group): RateCardRow[] {
 <template>
     <Head title="Tarifarios" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Tarifarios de instalación"
             description="Precios por módulo que se congelan en cada orden. Las versiones vigentes no se editan: crea una nueva versión para cambiar precios."
@@ -144,7 +144,7 @@ function olderVersions(group: Group): RateCardRow[] {
             </template>
         </EmptyState>
 
-        <ul v-else class="grid gap-4 lg:grid-cols-2">
+        <ul v-else class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             <li
                 v-for="group in groups"
                 :key="group.name"

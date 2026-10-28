@@ -251,7 +251,7 @@ const ACTIONS: Record<string, string> = {
 <template>
     <Head :title="`${incident.folio} · Incidencia`" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader :title="incident.title">
             <template #meta>
                 <div

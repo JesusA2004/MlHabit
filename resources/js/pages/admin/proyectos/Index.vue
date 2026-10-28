@@ -137,7 +137,7 @@ const emptyTitle = computed(() =>
 <template>
     <Head title="Proyectos" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Proyectos"
             description="Cada proyecto reúne medición, diseño, cotización, contrato y operación. Se crean desde un prospecto, una visita o un cliente."

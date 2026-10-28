@@ -70,7 +70,10 @@ defineOptions({
                 description="Cuando el cliente responda a la evidencia de una instalación, aparecerá aquí."
             />
 
-            <ol v-else class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <ol
+                v-else
+                class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+            >
                 <li v-for="row in queue" :key="row.id">
                     <Link
                         :href="calidad.show(row.id).url"

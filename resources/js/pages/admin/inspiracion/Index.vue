@@ -87,7 +87,7 @@ const columns: DataColumn<ProjectRow>[] = [
 <template>
     <Head title="Inspiración" />
 
-    <PageContainer class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             title="Inspiración"
             description="Proyectos entregados y renders conceptuales. El sitio siempre indica de cuál se trata."
