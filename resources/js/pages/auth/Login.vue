@@ -100,7 +100,29 @@ defineProps<{
         </Button>
     </Form>
 
-    <p class="mt-10 text-sm leading-relaxed text-muted-foreground">
+    <div class="mt-8 rounded-xl border border-border bg-muted/50 p-4">
+        <p class="text-sm font-medium text-foreground">
+            Un solo acceso para todos
+        </p>
+        <p class="mt-1 text-sm text-muted-foreground">
+            Al entrar te llevamos a tu área según tu cuenta:
+        </p>
+        <ul class="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+            <li
+                v-for="area in [
+                    'Clientes → Mi proyecto',
+                    'Técnicos → Mi agenda',
+                    'Equipo → Panel',
+                ]"
+                :key="area"
+                class="rounded-full bg-card px-3 py-1.5 text-foreground ring-1 ring-border"
+            >
+                {{ area }}
+            </li>
+        </ul>
+    </div>
+
+    <p class="mt-6 text-sm leading-relaxed text-muted-foreground">
         ¿Eres cliente y aún no tienes acceso? Te enviamos una invitación por
         correo cuando confirmas tu proyecto.
     </p>

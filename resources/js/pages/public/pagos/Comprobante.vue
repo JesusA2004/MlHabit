@@ -41,7 +41,7 @@ function print() {
         <div class="container-site pt-10 md:pt-16 print:pt-0">
             <div class="max-w-2xl">
                 <div
-                    class="mb-6 flex items-center justify-between gap-4 print:hidden"
+                    class="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden"
                 >
                     <h1 class="text-display-md font-display tracking-tight">
                         Comprobante de pago
