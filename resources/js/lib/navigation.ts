@@ -337,3 +337,35 @@ export const defaultSiteNavigation: SiteNavLink[] = [
     { label: 'Cómo funciona', href: '/#como-funciona' },
     { label: 'Preguntas frecuentes', href: '/preguntas-frecuentes' },
 ];
+
+/** Ruta de inicio de sesión (Fortify). */
+export const loginPath = '/login';
+
+export type AccountArea = { href: string; label: string; short: string };
+
+/**
+ * Área propia de la persona autenticada. El backend comparte
+ * `auth.user.homePath` (UserRole::homePath); si no viniera, se deduce del rol.
+ */
+export function accountArea(user: {
+    role?: string;
+    homePath?: unknown;
+}): AccountArea {
+    const href =
+        typeof user.homePath === 'string' && user.homePath.startsWith('/')
+            ? user.homePath
+            : user.role === 'cliente'
+              ? '/portal'
+              : user.role === 'tecnico'
+                ? '/tecnico'
+                : '/admin';
+
+    if (href.startsWith('/portal')) {
+        return { href, label: 'Ir a mi proyecto', short: 'Mi proyecto' };
+    }
+    if (href.startsWith('/tecnico')) {
+        return { href, label: 'Ir a mi agenda', short: 'Mi agenda' };
+    }
+
+    return { href, label: 'Ir a mi panel', short: 'Mi panel' };
+}

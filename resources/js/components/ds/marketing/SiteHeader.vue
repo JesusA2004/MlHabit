@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowRight,
     ArrowUpRight,
     ChevronDown,
+    LogIn,
     Menu,
     Phone,
     X,
@@ -25,12 +26,17 @@ import {
     watch,
 } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
+import SiteAccount from '@/components/ds/marketing/SiteAccount.vue';
+import { getInitials } from '@/composables/useInitials';
 import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import { illustrationFor } from '@/components/web/visual/illustrations';
 import {
+    accountArea,
+    accountLinks,
     defaultSiteNavigation,
     isActivePath,
+    loginPath,
     normalizePath,
 } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -76,6 +82,14 @@ const links = computed(() =>
 );
 
 const categories = computed(() => props.site?.categories ?? []);
+
+const user = computed(() => page.props.auth?.user ?? null);
+const area = computed(() => (user.value ? accountArea(user.value) : null));
+
+function logout() {
+    menuOpen.value = false;
+    router.flushAll();
+}
 
 const transparent = computed(
     () =>
@@ -269,7 +283,7 @@ const megaFeatures = [
         <div
             :class="
                 cn(
-                    'container-site flex items-center gap-6 transition-[height] duration-500 ease-out',
+                    'container-site flex items-center gap-4 transition-[height] duration-500 ease-out xl:gap-6',
                     scrolled ? 'h-16' : 'h-16 md:h-[76px]',
                 )
             "
@@ -336,8 +350,8 @@ const megaFeatures = [
                             "
                             :class="
                                 cn(
-                                    'relative inline-flex h-10 items-center rounded-full px-4 text-[0.9375rem] font-medium transition-colors',
-                                    hasMega(link) && 'pr-9',
+                                    'relative inline-flex h-10 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors xl:px-4 xl:text-[0.9375rem]',
+                                    hasMega(link) && 'pr-9 xl:pr-10',
                                     transparent
                                         ? 'text-white/85 hover:text-white'
                                         : 'text-muted-foreground hover:text-foreground',
@@ -388,32 +402,21 @@ const megaFeatures = [
                 </ul>
             </nav>
 
-            <div class="ml-auto flex items-center gap-2 lg:ml-0">
-                <a
-                    v-if="phone && phoneHref"
-                    :href="phoneHref"
-                    :class="
-                        cn(
-                            'group hidden h-10 items-center gap-2 rounded-full px-3 text-sm font-medium xl:inline-flex',
-                            transparent
-                                ? 'text-white/85 hover:text-white'
-                                : 'text-muted-foreground hover:text-foreground',
-                        )
-                    "
-                >
-                    <Phone
-                        class="size-4 transition-transform duration-500 group-hover:-rotate-12"
-                        :stroke-width="ICON_STROKE"
-                        aria-hidden="true"
-                    />
-                    {{ phone }}
-                </a>
+            <!--
+                Acciones: acceso (icono bajo xl) + CTA principal + menú.
+                Sin teléfono en la barra: no cabe junto a la navegación sin
+                encimarse; vive en el menú móvil y en el pie.
+            -->
+            <div class="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
+                <div class="hidden sm:flex">
+                    <SiteAccount :transparent="transparent" />
+                </div>
                 <Link
                     :href="props.ctaHref"
                     data-magnetic="0.25"
                     :class="
                         cn(
-                            'btn-nudge btn-sweep hidden h-11 items-center gap-2 rounded-full px-5 text-[0.9375rem] font-medium shadow-xs transition-colors sm:inline-flex',
+                            'btn-nudge btn-sweep hidden h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[0.9375rem] font-medium whitespace-nowrap shadow-xs transition-colors sm:inline-flex xl:px-5',
                             transparent
                                 ? 'bg-white text-espresso [--sweep:var(--stone)]'
                                 : 'bg-primary text-primary-foreground [--sweep:var(--primary-hover)]',
@@ -422,7 +425,7 @@ const megaFeatures = [
                 >
                     {{ props.ctaLabel }}
                     <ArrowRight
-                        class="nudge size-4"
+                        class="nudge size-4 lg:max-xl:hidden"
                         :stroke-width="1.75"
                         aria-hidden="true"
                     />
@@ -694,6 +697,55 @@ const megaFeatures = [
                             />
                             Llamar al {{ phone }}
                         </a>
+                        <!-- Acceso único: cada rol llega a su área -->
+                        <div
+                            v-if="user && area"
+                            class="mt-2 flex items-center gap-3 rounded-2xl border border-border bg-card p-2 pl-3"
+                        >
+                            <span
+                                class="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+                                aria-hidden="true"
+                                >{{ getInitials(user.name) }}</span
+                            >
+                            <span class="min-w-0 flex-1">
+                                <span
+                                    class="block truncate text-sm font-medium"
+                                    >{{ user.name }}</span
+                                >
+                                <Link
+                                    :href="accountLinks.logout"
+                                    method="post"
+                                    as="button"
+                                    class="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                                    @click="logout"
+                                    >Cerrar sesión</Link
+                                >
+                            </span>
+                            <Link
+                                :href="area.href"
+                                class="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-espresso px-4 text-sm font-medium text-espresso-foreground"
+                                @click="menuOpen = false"
+                            >
+                                {{ area.short }}
+                                <ArrowUpRight
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                        </div>
+                        <Link
+                            v-else
+                            :href="loginPath"
+                            class="inline-flex h-12 items-center justify-center gap-2 rounded-full text-base font-medium text-foreground underline-offset-4 hover:underline"
+                            @click="menuOpen = false"
+                        >
+                            <LogIn
+                                class="size-4"
+                                :stroke-width="ICON_STROKE"
+                                aria-hidden="true"
+                            />
+                            Iniciar sesión
+                        </Link>
                     </div>
                 </DialogContent>
             </DialogPortal>
