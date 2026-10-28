@@ -40,6 +40,7 @@ const stepInfo = computed(() => {
 
 <template>
     <section
+        data-journey-hide
         :class="cn('pb-16 sm:pb-24', props.class)"
         aria-label="Siguiente paso"
     >

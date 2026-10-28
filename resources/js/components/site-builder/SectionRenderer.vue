@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, inject, provide } from 'vue';
 import ResponsiveImage from '@/components/web/public/ResponsiveImage.vue';
+import { usePage } from '@inertiajs/vue3';
+import Marquee from '@/components/web/visual/Marquee.vue';
+import type { MarqueeItem } from '@/components/web/visual/Marquee.vue';
+import { categoryIcon } from '@/components/web/visual/icons';
 import BlockRenderer from './BlockRenderer.vue';
+import SectionDecor from './SectionDecor.vue';
+import { composeForSite } from './compose';
 import { editorBridgeKey, sectionContextKey } from './context';
 import type { SectionContext } from './context';
 import { computeResponsive } from './grid';
@@ -25,13 +31,17 @@ const props = withDefaults(
 
 const settings = computed(() => props.section.layout.settings);
 /** La foto de fondo de la primera sección es la imagen LCP: se asienta, nunca se oculta. */
-const settle =
-    inject(editorBridgeKey, null) === null && props.index === 0
-        ? 'settle'
-        : undefined;
+const bridge = inject(editorBridgeKey, null);
+const settle = bridge === null && props.index === 0 ? 'settle' : undefined;
 const dark = computed(() => isDarkSection(settings.value));
+// En el sitio público los botones contiguos y la columna de texto junto a un
+// bloque alto se componen (compose.ts); el editor ve los bloques sueltos.
 const responsive = computed(() =>
-    computeResponsive(props.section.layout.blocks),
+    computeResponsive(
+        bridge === null
+            ? composeForSite(props.section.layout.blocks)
+            : props.section.layout.blocks,
+    ),
 );
 const rows = computed(() =>
     Math.max(1, responsive.value.rows + props.extraRows),
@@ -77,6 +87,23 @@ const innerStyle = computed(() => {
 });
 
 const panel = computed(() => settings.value.surface === 'panel');
+
+/** Portada pública: banda de líneas (categorías publicadas) al pie del hero. */
+const page = usePage();
+const heroBand = computed<MarqueeItem[]>(() => {
+    if (bridge !== null || props.index !== 0 || props.section.type !== 'hero') {
+        return [];
+    }
+    const site = page.props.site as
+        | { categories?: { label: string; href: string }[] }
+        | undefined;
+
+    return (site?.categories ?? []).map((c) => ({
+        label: c.label,
+        href: c.href,
+        icon: categoryIcon(c.label, c.href),
+    }));
+});
 
 /** Nombre accesible de la sección (región): su primer título, en orden de lectura. */
 const sectionLabel = computed(() => {
@@ -137,6 +164,12 @@ provide(sectionContextKey, context);
                 :style="{ background: overlay }"
             />
         </div>
+        <SectionDecor
+            v-if="bridge === null"
+            :type="props.section.type"
+            :dark="dark"
+            :has-image="backgroundImage !== null"
+        />
 
         <div class="sb-inner" :style="innerStyle">
             <div
@@ -185,6 +218,19 @@ provide(sectionContextKey, context);
                     <slot name="grid-end" :rows="rows" />
                 </div>
             </div>
+        </div>
+        <div
+            v-if="heroBand.length"
+            class="relative border-t border-white/10 py-5"
+            data-motion="fade-in"
+            data-motion-delay="500"
+        >
+            <Marquee
+                :items="heroBand"
+                tone="dark"
+                label="Líneas a la medida"
+                :duration="46"
+            />
         </div>
         <slot name="section-end" />
     </section>

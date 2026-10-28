@@ -282,3 +282,33 @@
 .sb-video {
     object-fit: cover;
 }
+
+/* Unidades compuestas del sitio público (compose.ts) ------------------- */
+/* Fila de botones: se acomodan solos; si no caben, bajan de renglón en   */
+/* lugar de recortarse o encimarse.                                       */
+.sb-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Columna de texto que se queda fija junto a un bloque alto. */
+.sb-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+@container sbpage (min-width: 768px) {
+    .sb-block[data-sb-composite='stack'] .sb-stack {
+        position: sticky;
+        top: calc(var(--sb-sticky-top, 104px));
+    }
+}
+
+/* Los botones nunca se desbordan de su celda: si el texto no cabe, se    */
+/* parte en dos renglones con altura flexible (antes se recortaba).       */
+.sb-block[data-sb-kind='button'] > div > a,
+.sb-button-row a {
+    max-width: 100%;
+}

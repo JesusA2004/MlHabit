@@ -29,6 +29,28 @@ class SiteBuilder
     /** Páginas editables con el editor visual. */
     public const PAGES = ['home' => 'Portada'];
 
+    /**
+     * Orden sugerido de la portada (instalación nueva): portada → por qué
+     * nosotros → qué hacemos → cómo funciona → proyectos → visita y
+     * cobertura → pagos → testimonios → preguntas → llamada final. El equipo
+     * puede reordenar todo en el editor visual.
+     *
+     * @var list<SiteSectionType>
+     */
+    public const RECOMMENDED_ORDER = [
+        SiteSectionType::Hero,
+        SiteSectionType::Benefits,
+        SiteSectionType::Categories,
+        SiteSectionType::Process,
+        SiteSectionType::FeaturedProjects,
+        SiteSectionType::HomeVisit,
+        SiteSectionType::Coverage,
+        SiteSectionType::PaymentOptions,
+        SiteSectionType::Testimonials,
+        SiteSectionType::Faq,
+        SiteSectionType::FinalCta,
+    ];
+
     public function __construct(private readonly ActivityLogger $activity) {}
 
     /** Borrador de la página; si no existe, nace de lo publicado. */
@@ -215,7 +237,7 @@ class SiteBuilder
             return;
         }
 
-        foreach (SiteSectionType::curated() as $index => $type) {
+        foreach (self::recommendedOrder() as $index => $type) {
             $content = $type->schema()->defaults();
             SiteSection::query()->create([
                 'page' => $page,
@@ -226,6 +248,19 @@ class SiteBuilder
                 'layout' => LegacyLayouts::for($type, $content),
             ]);
         }
+    }
+
+    /**
+     * Tipos curados en el orden sugerido (los que no estén en la lista van
+     * al final, por si se agregan tipos nuevos).
+     *
+     * @return list<SiteSectionType>
+     */
+    public static function recommendedOrder(): array
+    {
+        $rest = array_filter(SiteSectionType::curated(), fn (SiteSectionType $t) => ! in_array($t, self::RECOMMENDED_ORDER, true));
+
+        return [...self::RECOMMENDED_ORDER, ...array_values($rest)];
     }
 
     /** @param array<string, mixed> $snapshot */

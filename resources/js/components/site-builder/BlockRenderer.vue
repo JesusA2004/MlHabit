@@ -2,6 +2,8 @@
 import { Lock } from '@lucide/vue';
 import type { CSSProperties } from 'vue';
 import { computed, inject, ref } from 'vue';
+import CompositeBlock from './CompositeBlock.vue';
+import { compositeOf } from './compose';
 import { editorBridgeKey } from './context';
 import type { Placement } from './grid';
 import { BLOCKS } from './registry';
@@ -25,10 +27,20 @@ const bridge = inject(editorBridgeKey, null);
 const root = ref<HTMLElement | null>(null);
 
 const definition = computed(() => BLOCKS[props.block.type]);
+/** Unidad compuesta del sitio público (fila de botones o columna fija). */
+const composite = computed(() => (bridge ? null : compositeOf(props.block)));
+/** Formas decorativas flotan un poco con el scroll (solo sitio público). */
+const floats = computed(
+    () =>
+        !bridge &&
+        props.block.type === 'shape' &&
+        props.placement.role !== 'backdrop' &&
+        props.block.props.kind !== 'line',
+);
 /** Solo los elementos «en línea» se encogen a su contenido; el resto llena su área. */
 const INLINE = ['button', 'badge', 'icon'];
 const align = computed(() =>
-    INLINE.includes(props.block.type)
+    !composite.value && INLINE.includes(props.block.type)
         ? { start: 'flex-start', center: 'center', end: 'flex-end' }[
               props.block.style.align
           ]
@@ -134,8 +146,9 @@ function onFocus(event: FocusEvent) {
         v-if="!bridge"
         class="sb-block"
         :style="style"
-        :data-sb-kind="props.block.type"
-        :data-sb-frame="definition?.frame ? '' : undefined"
+        :data-sb-kind="composite ? composite.kind : props.block.type"
+        :data-sb-composite="composite?.kind"
+        :data-sb-frame="definition?.frame && !composite ? '' : undefined"
         :data-sb-role="props.placement.role"
         :data-hide-tablet="
             props.block.hideOn.includes('tablet') ? '' : undefined
@@ -156,9 +169,11 @@ function onFocus(event: FocusEvent) {
     >
         <div
             class="items-[inherit] flex min-h-0 flex-1 flex-col"
+            :data-parallax="floats ? '-0.07' : undefined"
             :style="blockVisualStyle(props.block)"
         >
-            <component :is="definition.component" :block="props.block" />
+            <CompositeBlock v-if="composite" :block="props.block" />
+            <component :is="definition.component" v-else :block="props.block" />
         </div>
     </div>
 

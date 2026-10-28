@@ -21,17 +21,17 @@ const testimonials = computed(
 <template>
     <ul
         v-if="testimonials.length"
-        class="-mx-4 scrollbar-none flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 @2xl/sbpage:mx-0 @2xl/sbpage:px-0"
+        class="-mx-4 scrollbar-none flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-2 pb-4 @2xl/sbpage:mx-0 @2xl/sbpage:px-0"
         aria-label="Testimonios"
     >
         <li
             v-for="item in testimonials"
             :key="item.id"
-            class="flex w-[85%] shrink-0 snap-start flex-col justify-between rounded-2xl bg-card p-7 text-foreground shadow-xs ring-1 ring-border @2xl/sbpage:w-[26rem]"
+            class="group flex w-[85%] shrink-0 snap-start flex-col justify-between rounded-2xl bg-card p-7 text-foreground shadow-xs ring-1 ring-border transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_18px_40px_-24px_rgb(35_30_26/0.35)] @2xl/sbpage:w-[26rem]"
         >
             <figure>
                 <span
-                    class="font-display text-6xl leading-none text-oak"
+                    class="inline-block font-display text-6xl leading-none text-oak transition-transform duration-500 ease-out group-hover:-translate-y-1 group-hover:-rotate-6"
                     aria-hidden="true"
                     >“</span
                 >

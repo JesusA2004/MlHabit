@@ -154,7 +154,44 @@ export function createRevealEngine(): RevealEngine {
         { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
     );
 
+    /**
+     * Red de seguridad: si por cualquier motivo el observador no disparó
+     * (elemento sin área, pestaña en segundo plano, salto a un ancla), todo
+     * lo que ya quedó por encima del borde inferior de la vista se revela.
+     * Nunca hay contenido escondido "para siempre".
+     */
+    let sweepTimer = 0;
+
+    function sweep(): void {
+        sweepTimer = 0;
+        const bottom = window.innerHeight;
+
+        document
+            .querySelectorAll<HTMLElement>(
+                `[${BOUND}][data-motion]:not([${IN}])`,
+            )
+            .forEach((el) => {
+                const rect = el.getBoundingClientRect();
+
+                if (
+                    rect.top < bottom ||
+                    (rect.width === 0 && rect.height === 0)
+                ) {
+                    observer.unobserve(sentinelFor(el));
+                    reveal(el);
+                }
+            });
+    }
+
+    function scheduleSweep(): void {
+        window.clearTimeout(sweepTimer);
+        sweepTimer = window.setTimeout(sweep, 2200);
+    }
+
+    window.addEventListener('scrollend', scheduleSweep, { passive: true });
+
     function scan(root: ParentNode): void {
+        scheduleSweep();
         root.querySelectorAll<HTMLElement>('[data-motion-stagger]').forEach(
             expandStagger,
         );
@@ -189,6 +226,10 @@ export function createRevealEngine(): RevealEngine {
     return {
         scan,
         revealAll,
-        destroy: () => observer.disconnect(),
+        destroy: () => {
+            observer.disconnect();
+            window.clearTimeout(sweepTimer);
+            window.removeEventListener('scrollend', scheduleSweep);
+        },
     };
 }

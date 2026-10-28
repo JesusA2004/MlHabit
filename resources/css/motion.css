@@ -162,6 +162,76 @@
     will-change: transform;
 }
 
+/* Progreso por elemento (`data-scroll-progress`, ver scroll.ts) --------- */
+/* `--p` es el progreso efectivo. Sin runtime (sin JS, movimiento reducido) */
+/* vale 1: líneas completas, pasos activos y nada desplazado.            */
+[data-scroll-progress] {
+    --p: 1;
+}
+
+.motion-ready .motion-scope [data-scroll-live] {
+    --p: var(--progress, 0);
+}
+
+/* Línea que se rellena (vertical u horizontal). */
+.scroll-fill-y {
+    transform-origin: top;
+    transform: scaleY(var(--p, 1));
+}
+
+.scroll-fill-x {
+    transform-origin: left;
+    transform: scaleX(var(--p, 1));
+}
+
+/* Deriva y giro ligados al scroll: `--move-x`, `--move-y`, `--spin` son la
+   amplitud total (de -½ a +½ mientras el bloque cruza la vista). */
+.motion-ready .motion-scope [data-scroll-live] .scroll-move,
+.motion-ready .motion-scope .scroll-move[data-scroll-live] {
+    transform: translate3d(
+            calc((var(--p) - 0.5) * var(--move-x, 0px)),
+            calc((var(--p) - 0.5) * var(--move-y, 0px)),
+            0
+        )
+        rotate(calc((var(--p) - 0.5) * var(--spin, 0deg)));
+    will-change: transform;
+}
+
+/* Pasos que se "encienden" al cruzar la línea de lectura. Sin runtime se
+   ven todos encendidos; nunca se ocultan, solo se atenúan. */
+.scroll-step-dot {
+    background-color: var(--dot-on-bg);
+    color: var(--dot-on-fg);
+    border-color: var(--dot-on-bd);
+    transition:
+        background-color 0.5s var(--motion-ease),
+        color 0.5s var(--motion-ease),
+        border-color 0.5s var(--motion-ease),
+        transform 0.6s var(--motion-ease);
+}
+
+.scroll-step-body {
+    transition: opacity 0.6s var(--motion-ease);
+}
+
+.motion-ready
+    .motion-scope
+    [data-scroll-live]
+    [data-scroll-step]:not([data-passed])
+    .scroll-step-body {
+    opacity: 0.55;
+}
+
+.motion-ready
+    .motion-scope
+    [data-scroll-live]
+    [data-scroll-step]:not([data-passed])
+    .scroll-step-dot {
+    background-color: var(--dot-off-bg);
+    color: var(--dot-off-fg);
+    border-color: var(--dot-off-bd);
+    transform: scale(0.86);
+}
 /* ---------------------------------------------------------------------- */
 /* 3. Puntero: imán, inclinación, foco y lupa                              */
 /* ---------------------------------------------------------------------- */
@@ -618,5 +688,13 @@
     [data-journey-rail],
     [data-journey-cta] {
         display: none !important;
+    }
+}
+
+/* Acordeones (preguntas frecuentes): sin animación de altura si se pidió
+   reducir el movimiento. */
+@media (prefers-reduced-motion: reduce) {
+    [data-slot='accordion-content'] {
+        animation: none !important;
     }
 }

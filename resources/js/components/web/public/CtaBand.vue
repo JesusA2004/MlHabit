@@ -37,6 +37,7 @@ const steps = [
 
 <template>
     <section
+        data-journey-hide
         class="pb-16 sm:pb-24"
         aria-labelledby="cta-band-title"
         data-journey="agenda"

@@ -69,6 +69,30 @@ Ejemplos:
 <p><span data-countup>15</span> años</p>
 ```
 
+### Efectos ligados al scroll (por elemento)
+
+| Atributo / clase                    | Efecto                                                                                                                                                                              |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-scroll-progress`              | Escribe `--progress` (0–1) mientras el elemento cruza la vista (`cover`). El CSS lo expone como `--p` (vale 1 sin runtime: todo completo y quieto).                                 |
+| `data-scroll-progress="track"`      | 0 → 1 mientras el elemento cruza la _línea de lectura_ (60 % de la vista). Cada `[data-scroll-step]` interno recibe `data-passed` al cruzarla (línea de tiempo de "Cómo funciona"). |
+| `.scroll-fill-y` / `.scroll-fill-x` | Línea que se rellena con `--p` (`scaleY`/`scaleX`).                                                                                                                                 |
+| `.scroll-move`                      | Deriva/giro dentro de un `data-scroll-progress`: `--move-x`, `--move-y`, `--spin` son la amplitud total. Solo `transform`.                                                          |
+| `.scroll-step-dot` / `-body`        | Punto y texto de un paso: encendido por defecto; atenuado (nunca oculto) mientras no se ha leído. Colores con `--dot-on-*` / `--dot-off-*`.                                         |
+
+Red de seguridad: ~2 s después de cada escaneo (y al terminar un scroll) todo
+`[data-motion]` que ya quedó por encima del borde inferior se revela aunque
+el IntersectionObserver no haya disparado. Ningún contenido queda oculto.
+
+### Portada (editor visual) en el sitio público
+
+`site-builder/compose.ts` ajusta el lienzo SOLO al publicarse (el editor ve
+los bloques sueltos): botones contiguos de una fila forman un grupo que se
+acomoda con `flex-wrap` (no se recortan ni se enciman) y el texto que
+acompaña a un bloque alto (línea de tiempo, preguntas, pagos) se vuelve una
+columna fija (`position: sticky`) desde 768 px. `SectionDecor.vue` añade
+ornamento por tipo de sección (dibujos de línea, aros, cotas, plano) que se
+mueve con el scroll; el hero suma una marquesina con las categorías.
+
 ### Directiva `v-reveal` (páginas propias)
 
 Se importa localmente (no hay registro global):

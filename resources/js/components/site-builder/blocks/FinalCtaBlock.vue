@@ -3,6 +3,7 @@ import { ArrowRight } from '@lucide/vue';
 import { computed } from 'vue';
 import ResponsiveImage from '@/components/web/public/ResponsiveImage.vue';
 import SmartLink from '@/components/web/public/SmartLink.vue';
+import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import type { Block } from '../types';
 import { useBlock } from './useBlock';
 
@@ -20,6 +21,8 @@ const linkTag = computed(() => (editing.value ? 'span' : SmartLink));
 
 <template>
     <div
+        data-journey-hide
+        :data-scroll-progress="editing ? undefined : ''"
         class="relative isolate overflow-hidden rounded-[2rem] bg-primary px-6 py-16 text-primary-foreground @2xl/sbpage:px-14 @2xl/sbpage:py-24"
     >
         <template v-if="image">
@@ -33,11 +36,24 @@ const linkTag = computed(() => (editing.value ? 'span' : SmartLink));
                 aria-hidden="true"
             />
         </template>
-        <div
-            v-else
-            class="pointer-events-none absolute -right-24 -bottom-24 -z-10 size-96 rounded-full border-[3rem] border-white/5"
-            aria-hidden="true"
-        />
+        <template v-else>
+            <div
+                class="scroll-move pointer-events-none absolute -right-24 -bottom-24 -z-10 size-96 rounded-full border-[3rem] border-white/5"
+                style="--spin: 70deg; --move-y: -60px"
+                aria-hidden="true"
+            />
+            <div
+                class="tex-blueprint-dark pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_left,#000,transparent_60%)]"
+                aria-hidden="true"
+            />
+            <div
+                class="scroll-move pointer-events-none absolute top-1/2 right-[4%] -z-10 hidden w-[30%] max-w-sm -translate-y-1/2 text-white opacity-30 @5xl/sbpage:block"
+                style="--move-y: -80px"
+                aria-hidden="true"
+            >
+                <LineIllustration name="kitchen" tone="dark" :stroke="1" />
+            </div>
+        </template>
         <div class="max-w-2xl">
             <p
                 v-if="str('eyebrow')"
@@ -49,7 +65,9 @@ const linkTag = computed(() => (editing.value ? 'span' : SmartLink));
             <p v-if="str('body')" class="sb-text sb-text--lead mt-4 opacity-85">
                 {{ str('body') }}
             </p>
-            <div class="mt-9 flex flex-col gap-3 @2xl/sbpage:flex-row">
+            <div
+                class="mt-9 flex flex-col gap-3 @2xl/sbpage:flex-row @2xl/sbpage:flex-wrap"
+            >
                 <component
                     :is="linkTag"
                     :href="editing ? undefined : primaryHref"

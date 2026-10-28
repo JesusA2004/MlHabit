@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Cms\Layout\LegacyLayouts;
-use App\Enums\SiteSectionType;
 use App\Models\SiteSection;
+use App\Services\Web\SiteBuilder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -18,7 +18,7 @@ class SiteSectionSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (SiteSectionType::curated() as $index => $type) {
+        foreach (SiteBuilder::recommendedOrder() as $index => $type) {
             $content = $type->schema()->defaults();
 
             $section = SiteSection::query()->firstOrCreate(
