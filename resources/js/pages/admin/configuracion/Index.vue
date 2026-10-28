@@ -4,10 +4,13 @@ import {
     ArrowUpRight,
     BadgePercent,
     CalendarClock,
+    CreditCard,
+    Lock,
     SearchCheck,
     ShieldCheck,
     UserRoundPlus,
 } from '@lucide/vue';
+import { computed } from 'vue';
 import PageContainer from '@/components/ds/PageContainer.vue';
 import PageHeader from '@/components/ds/PageHeader.vue';
 import SectionCard from '@/components/ds/SectionCard.vue';
@@ -18,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import configuracion from '@/routes/admin/configuracion';
 
 type Props = {
@@ -64,6 +68,17 @@ const commercial = useForm({ ...props.settings.commercial });
 const consultation = useForm({
     ...props.settings.consultation,
     channels: [...props.settings.consultation.channels],
+});
+// Toda asesoría tiene costo: aviso inmediato si el precio no es positivo (el backend también lo valida).
+const priceInvalid = computed(() => {
+    const value = Number(
+        String(consultation.price ?? '').replace(/[$,\s]/g, ''),
+    );
+
+    return (
+        String(consultation.price ?? '').trim() !== '' &&
+        (!Number.isFinite(value) || value <= 0)
+    );
 });
 const leads = useForm({ ...props.settings.leads });
 const security = useForm({ ...props.settings.security });
@@ -253,7 +268,7 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
         <!-- Asesorías -->
         <SectionCard
             title="Asesorías"
-            description="Cita remota inicial con un asesor."
+            description="Cita remota inicial con un asesor; siempre se paga al agendar."
             :icon="CalendarClock"
         >
             <form
@@ -276,6 +291,71 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                         id="consultation_enabled"
                         v-model="consultation.enabled"
                     />
+                </div>
+                <div
+                    :class="
+                        cn(
+                            'price-card grid gap-4 rounded-xl border p-4 transition-colors sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center',
+                            priceInvalid
+                                ? 'border-danger/40 bg-danger-soft/50'
+                                : 'bg-muted/40',
+                        )
+                    "
+                >
+                    <div class="flex gap-3">
+                        <span
+                            class="grid size-10 shrink-0 place-items-center rounded-full bg-card text-primary shadow-xs"
+                        >
+                            <CreditCard class="size-5" aria-hidden="true" />
+                        </span>
+                        <div class="grid gap-1">
+                            <Label for="price">Precio de la asesoría</Label>
+                            <p class="text-sm text-muted-foreground">
+                                Toda asesoría se cobra con tarjeta al agendar
+                                (videollamada, llamada o WhatsApp). El precio se
+                                congela en cada cita; mínimo $1.00.
+                            </p>
+                            <p
+                                class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                            >
+                                <Lock class="size-3" aria-hidden="true" />
+                                Cargo único con Openpay; no se guardan tarjetas.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="grid gap-1.5">
+                        <div class="relative">
+                            <span
+                                class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground"
+                                aria-hidden="true"
+                                >$</span
+                            >
+                            <Input
+                                id="price"
+                                v-model="consultation.price"
+                                inputmode="decimal"
+                                class="h-11 pr-14 pl-7 text-right text-lg font-semibold tabular-nums"
+                                :aria-invalid="
+                                    priceInvalid || !!consultation.errors.price
+                                "
+                                aria-describedby="price-error"
+                            />
+                            <span
+                                class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground"
+                                aria-hidden="true"
+                                >MXN</span
+                            >
+                        </div>
+                        <InputError
+                            id="price-error"
+                            :message="
+                                consultation.errors.price ??
+                                (priceInvalid
+                                    ? 'Debe ser mayor a cero: no hay asesorías gratuitas.'
+                                    : undefined)
+                            "
+                        />
+                    </div>
                 </div>
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div class="grid content-start gap-2">
@@ -307,18 +387,6 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                         <InputError
                             :message="consultation.errors.buffer_minutes"
                         />
-                    </div>
-                    <div class="grid content-start gap-2">
-                        <Label for="price">Precio (MXN)</Label>
-                        <Input
-                            id="price"
-                            v-model="consultation.price"
-                            inputmode="decimal"
-                        />
-                        <p class="text-sm text-muted-foreground">
-                            0 = asesoría gratuita.
-                        </p>
-                        <InputError :message="consultation.errors.price" />
                     </div>
                     <div class="grid content-start gap-2">
                         <Label for="booking_window_days"
@@ -379,7 +447,11 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                 <Button
                     type="submit"
                     form="form-consultation"
-                    :disabled="consultation.processing || !consultation.isDirty"
+                    :disabled="
+                        consultation.processing ||
+                        !consultation.isDirty ||
+                        priceInvalid
+                    "
                 >
                     <Spinner v-if="consultation.processing" />
                     {{ consultation.processing ? 'Guardando…' : 'Guardar' }}

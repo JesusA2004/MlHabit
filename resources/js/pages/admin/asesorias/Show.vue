@@ -5,11 +5,16 @@ import {
     CalendarClock,
     CalendarX,
     CheckCircle2,
+    CircleAlert,
     Copy,
+    CreditCard,
     ExternalLink,
+    Lock,
     Mail,
     MessageCircle,
     Phone,
+    Send,
+    Timer,
     UserX,
     Video,
 } from '@lucide/vue';
@@ -42,7 +47,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { todayDate } from '@/lib/dates';
-import { TIME_ZONE } from '@/lib/format';
+import { formatMoney, TIME_ZONE } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
@@ -70,6 +75,10 @@ type Consultation = {
     rescheduledTo: Ref;
     leadStatus: Option;
     customerPhone: string | null;
+    price: string;
+    holdExpiresAt: string | null;
+    paidAt: string | null;
+    attentionReason: string | null;
     lead: {
         uuid: string;
         folio: string;
@@ -83,8 +92,26 @@ type Consultation = {
     };
 };
 
+type ConsultationPayment = {
+    uuid: string;
+    folio: string;
+    amount: string;
+    status: Option;
+    paidAt: string | null;
+    description: string;
+    method: string;
+    cardBrand: string | null;
+    cardLast4: string | null;
+    authorization: string | null;
+    errorMessage: string | null;
+    refundedAmount: string;
+    url: string | null;
+};
+
 const props = defineProps<{
     consultation: Consultation;
+    payment: ConsultationPayment | null;
+    payUrl: string | null;
     leadUrl: string | null;
     customerManageUrl: string;
     options: {
@@ -274,7 +301,99 @@ async function copyManageLink() {
     }
 }
 
+const awaitingPayment = computed(
+    () => c.value.status.value === 'pending_payment',
+);
 const showActions = computed(() => props.can.update && c.value.isActive);
+
+// ------------------------------------------------------------ Pago
+const SETTLED = ['paid', 'partially_refunded', 'refunded', 'disputed'];
+const paymentSettled = computed(() =>
+    SETTLED.includes(props.payment?.status.value ?? ''),
+);
+const paymentTone = computed<Tone>(() => {
+    const p = props.payment;
+
+    if (!p) {
+        return 'neutral';
+    }
+
+    if (paymentSettled.value) {
+        return p.status.tone ?? 'success';
+    }
+
+    return p.status.value === 'failed' ? 'danger' : 'warning';
+});
+const when = (iso: string) =>
+    `${dateFmt.format(new Date(iso))}, ${timeFmt.format(new Date(iso))}`;
+const paymentItems = computed<KeyValueItem[]>(() => {
+    const p = props.payment;
+
+    if (!p) {
+        return [];
+    }
+
+    const items: KeyValueItem[] = [
+        { key: 'amount', label: 'Monto', value: formatMoney(p.amount) },
+        { key: 'folio', label: 'Folio de pago', value: p.folio },
+        {
+            key: 'card',
+            label: 'Método',
+            value: p.cardLast4
+                ? `${p.method} · ${p.cardBrand ?? 'tarjeta'} •••• ${p.cardLast4}`
+                : p.method,
+        },
+        {
+            key: 'paidAt',
+            label: 'Pagado',
+            value: p.paidAt ? when(p.paidAt) : null,
+        },
+        {
+            key: 'authorization',
+            label: 'Autorización',
+            value: p.authorization,
+        },
+    ];
+
+    return items.filter((item) => item.value !== null && item.value !== '');
+});
+const holdText = computed(() =>
+    c.value.holdExpiresAt ? when(c.value.holdExpiresAt) : null,
+);
+
+const linkBusy = ref(false);
+function resendPaymentLink() {
+    router.post(
+        `${base.value}/enlace-pago`,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (linkBusy.value = true),
+            onFinish: () => (linkBusy.value = false),
+            onError: (errors) =>
+                toast.error(
+                    Object.values(errors)[0] ??
+                        'No se pudo reenviar el enlace de pago.',
+                ),
+        },
+    );
+}
+
+async function copyPayLink() {
+    if (!props.payUrl) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(props.payUrl);
+        toast.success('Enlace de pago copiado', {
+            description:
+                'El cliente paga con tarjeta; no guardamos los datos de la tarjeta.',
+        });
+    } catch {
+        toast.error('No pudimos copiar el enlace.');
+    }
+}
 </script>
 
 <template>
@@ -344,6 +463,18 @@ const showActions = computed(() => props.can.update && c.value.isActive);
             >
                 Reprogramada desde {{ consultation.rescheduledFrom.folio }}
             </Link>
+        </div>
+
+        <div
+            v-if="consultation.attentionReason"
+            class="flex items-start gap-3 rounded-xl border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger-ink"
+            role="alert"
+        >
+            <CircleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <p>
+                <strong class="font-semibold">Requiere atención:</strong>
+                {{ consultation.attentionReason }}
+            </p>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -439,7 +570,7 @@ const showActions = computed(() => props.can.update && c.value.isActive);
                     </div>
 
                     <div
-                        v-if="showActions"
+                        v-if="showActions && !awaitingPayment"
                         class="mt-5 flex flex-wrap gap-2 border-t pt-4"
                     >
                         <Button
@@ -556,6 +687,153 @@ const showActions = computed(() => props.can.update && c.value.isActive);
             </div>
 
             <aside class="flex flex-col gap-6">
+                <section
+                    class="payment-card overflow-hidden rounded-xl border bg-card shadow-xs"
+                    aria-labelledby="payment-title"
+                >
+                    <div
+                        :class="
+                            cn(
+                                'flex items-center gap-3 border-b px-5 py-4',
+                                paymentSettled
+                                    ? 'bg-success-soft'
+                                    : awaitingPayment
+                                      ? 'bg-warning-soft'
+                                      : 'bg-muted/40',
+                            )
+                        "
+                    >
+                        <span
+                            :class="
+                                cn(
+                                    'grid size-10 shrink-0 place-items-center rounded-full bg-card shadow-xs',
+                                    paymentSettled
+                                        ? 'text-success-ink'
+                                        : 'text-warning-ink',
+                                )
+                            "
+                        >
+                            <CheckCircle2
+                                v-if="paymentSettled"
+                                class="size-5"
+                                aria-hidden="true"
+                            />
+                            <CreditCard
+                                v-else
+                                class="size-5"
+                                aria-hidden="true"
+                            />
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <h2
+                                id="payment-title"
+                                class="text-sm font-semibold"
+                            >
+                                Pago de la asesoría
+                            </h2>
+                            <p class="text-xs text-muted-foreground">
+                                {{
+                                    formatMoney(
+                                        payment?.amount ?? consultation.price,
+                                    )
+                                }}
+                                MXN · cargo único con tarjeta
+                            </p>
+                        </div>
+                        <StatusBadge
+                            v-if="payment"
+                            :tone="paymentTone"
+                            :label="
+                                payment.status.value === 'pending'
+                                    ? 'Por pagar'
+                                    : payment.status.label
+                            "
+                            size="sm"
+                        />
+                    </div>
+
+                    <div class="space-y-4 p-5">
+                        <p
+                            v-if="!payment"
+                            class="text-sm text-muted-foreground"
+                        >
+                            Asesoría registrada antes de que todas las asesorías
+                            tuvieran cobro en línea.
+                        </p>
+
+                        <template v-else>
+                            <div
+                                v-if="awaitingPayment && holdText"
+                                class="flex items-start gap-2 rounded-lg bg-warning-soft/60 p-3 text-xs text-warning-ink"
+                            >
+                                <Timer
+                                    class="mt-0.5 size-3.5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span
+                                    >Horario apartado hasta
+                                    <strong>{{ holdText }}</strong
+                                    >. Si no se paga, se libera solo.</span
+                                >
+                            </div>
+                            <p
+                                v-if="
+                                    payment.errorMessage &&
+                                    payment.status.value === 'failed'
+                                "
+                                class="rounded-lg bg-danger-soft p-3 text-xs text-danger-ink"
+                            >
+                                Último intento rechazado:
+                                {{ payment.errorMessage }}
+                            </p>
+
+                            <KeyValue :items="paymentItems" layout="stacked" />
+
+                            <div class="flex flex-col gap-2">
+                                <template v-if="awaitingPayment && payUrl">
+                                    <Button
+                                        v-if="can.update"
+                                        :disabled="linkBusy"
+                                        @click="resendPaymentLink"
+                                    >
+                                        <Spinner v-if="linkBusy" />
+                                        <Send v-else class="size-4" />
+                                        Reenviar enlace de pago
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        @click="copyPayLink"
+                                        ><Copy class="size-4" /> Copiar enlace
+                                        de pago</Button
+                                    >
+                                </template>
+                                <Button
+                                    v-if="payment.url"
+                                    as-child
+                                    variant="ghost"
+                                    class="justify-start"
+                                >
+                                    <Link :href="payment.url"
+                                        ><ExternalLink class="size-4" /> Ver en
+                                        Pagos (reembolso o pago manual)</Link
+                                    >
+                                </Button>
+                            </div>
+                        </template>
+
+                        <p
+                            class="flex items-start gap-1.5 text-xs text-muted-foreground"
+                        >
+                            <Lock
+                                class="mt-0.5 size-3 shrink-0"
+                                aria-hidden="true"
+                            />
+                            Solo se conservan marca y últimos 4 dígitos; nunca
+                            los datos completos de la tarjeta.
+                        </p>
+                    </div>
+                </section>
+
                 <SectionCard title="Cliente">
                     <KeyValue :items="contactItems" layout="stacked">
                         <template #value-phone="{ item }">
@@ -851,3 +1129,22 @@ const showActions = computed(() => props.can.update && c.value.isActive);
         </template>
     </FormSheet>
 </template>
+
+<style scoped>
+.payment-card {
+    animation: payment-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes payment-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .payment-card {
+        animation: none;
+    }
+}
+</style>

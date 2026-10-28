@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { CalendarClock, Phone, MessageCircle, Video } from '@lucide/vue';
+import {
+    CalendarClock,
+    CircleAlert,
+    CreditCard,
+    MessageCircle,
+    Phone,
+    Timer,
+    Video,
+} from '@lucide/vue';
 import type { Component } from 'vue';
 import { computed, ref, watch } from 'vue';
 import {
@@ -22,6 +30,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatMoney } from '@/lib/format';
 import type { BreadcrumbItem, LengthAwarePaginator } from '@/types';
 
 type Option = { value: string; label: string; tone?: Tone };
@@ -37,6 +46,16 @@ type ConsultationRow = {
     advisor: { id: number; name: string } | null;
     meetingUrl: string | null;
     isActive: boolean;
+    price: string;
+    holdExpiresAt: string | null;
+    needsAttention: boolean;
+    payment: {
+        uuid: string;
+        folio: string;
+        amount: string;
+        status: Option;
+        paidAt: string | null;
+    } | null;
     lead: {
         uuid: string;
         folio: string;
@@ -116,6 +135,7 @@ const columns: DataColumn<ConsultationRow>[] = [
     { key: 'channel', label: 'Medio' },
     { key: 'advisor', label: 'Asesor', hideOnMobile: true },
     { key: 'status', label: 'Estado' },
+    { key: 'payment', label: 'Pago' },
     { key: 'outcome', label: 'Resultado', hideOnMobile: true },
 ];
 
@@ -154,6 +174,32 @@ const timeFmt = new Intl.DateTimeFormat('es-MX', {
     timeZone: 'America/Mexico_City',
 });
 const time = (iso: string) => timeFmt.format(new Date(iso));
+
+const SETTLED = ['paid', 'partially_refunded', 'refunded', 'disputed'];
+
+function paymentTone(row: ConsultationRow): Tone {
+    if (!row.payment) {
+        return 'neutral';
+    }
+
+    if (SETTLED.includes(row.payment.status.value)) {
+        return (row.payment.status.tone ?? 'success') as Tone;
+    }
+
+    return row.payment.status.value === 'failed' ? 'danger' : 'warning';
+}
+
+function paymentLabel(row: ConsultationRow): string {
+    if (!row.payment) {
+        return 'Sin cobro';
+    }
+
+    if (row.payment.status.value === 'pending') {
+        return 'Por pagar';
+    }
+
+    return row.payment.status.label;
+}
 </script>
 
 <template>
@@ -289,6 +335,33 @@ const time = (iso: string) => timeFmt.format(new Date(iso));
                     :label="row.status.label"
                     size="sm"
                 />
+            </template>
+            <template #cell-payment="{ row }">
+                <span class="flex flex-col items-start gap-1">
+                    <span class="inline-flex items-center gap-1.5">
+                        <StatusBadge
+                            :tone="paymentTone(row)"
+                            :label="paymentLabel(row)"
+                            size="sm"
+                        />
+                        <CircleAlert
+                            v-if="row.needsAttention"
+                            class="size-4 text-danger"
+                            aria-label="Requiere atención"
+                        />
+                    </span>
+                    <span
+                        class="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums"
+                    >
+                        <CreditCard class="size-3" aria-hidden="true" />
+                        {{ formatMoney(row.payment?.amount ?? row.price) }}
+                        <template v-if="row.holdExpiresAt">
+                            ·
+                            <Timer class="size-3" aria-hidden="true" /> apartado
+                            hasta {{ time(row.holdExpiresAt) }}
+                        </template>
+                    </span>
+                </span>
             </template>
             <template #cell-outcome="{ row }">
                 <span v-if="row.outcome" class="text-sm">{{

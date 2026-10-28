@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     CalendarClock,
     CalendarX,
+    CircleCheck,
     Clock,
+    CreditCard,
     ExternalLink,
     Loader2,
+    Lock,
     MessageCircle,
     Phone,
+    Receipt,
+    Timer,
     UserRound,
     Video,
 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import ConsultationSlotPicker from '@/components/crm/ConsultationSlotPicker.vue';
 import ConfirmDialog from '@/components/ds/ConfirmDialog.vue';
 import StatusBadge from '@/components/ds/StatusBadge.vue';
@@ -19,7 +24,8 @@ import type { Tone } from '@/components/ds/tones';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { TIME_ZONE } from '@/lib/format';
+import { formatMoney, TIME_ZONE } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 type Opt = { value: string; label: string; tone?: Tone };
 
@@ -36,9 +42,24 @@ const props = defineProps<{
         price: string;
         isActive: boolean;
         durationMinutes: number;
+        holdExpiresAt?: string | null;
+        paidAt?: string | null;
     };
+    payment?: {
+        uuid: string;
+        folio: string;
+        amount: string;
+        status: Opt;
+        cardBrand: string | null;
+        cardLast4: string | null;
+        paidAt: string | null;
+        errorMessage: string | null;
+    } | null;
+    payUrl?: string | null;
+    receiptUrl?: string | null;
     lead: { folio: string; firstName: string };
     canChange: boolean;
+    canCancel?: boolean;
     settings: { enabled: boolean; durationMinutes: number };
     window: { min: string; max: string };
     availabilityUrl: string;
@@ -73,6 +94,73 @@ const channelIcon = computed(
             props.consultation.channel.value
         ] ?? Video,
 );
+
+// ---------------------------------------------------------------- Pago
+
+const awaitingPayment = computed(
+    () => props.consultation.status.value === 'pending_payment',
+);
+const isBooked = computed(
+    () => props.consultation.isActive && !awaitingPayment.value,
+);
+const processing = computed(() => props.payment?.status.value === 'processing');
+const paid = computed(() =>
+    ['paid', 'partially_refunded', 'refunded', 'disputed'].includes(
+        props.payment?.status.value ?? '',
+    ),
+);
+const canCancel = computed(() => props.canCancel ?? props.canChange);
+
+const now = ref(Date.now());
+let clock: ReturnType<typeof setInterval> | undefined;
+let poll: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+    clock = setInterval(() => (now.value = Date.now()), 1000);
+    // Nunca se muestra éxito sin el backend: mientras el banco confirma, se consulta cada 4 s.
+    poll = setInterval(() => {
+        if (processing.value) {
+            router.reload({
+                only: [
+                    'consultation',
+                    'payment',
+                    'payUrl',
+                    'receiptUrl',
+                    'canChange',
+                    'canCancel',
+                ],
+            });
+        }
+    }, 4000);
+});
+onBeforeUnmount(() => {
+    clearInterval(clock);
+    clearInterval(poll);
+});
+
+const countdown = computed(() => {
+    if (!props.consultation.holdExpiresAt) {
+        return null;
+    }
+
+    const total = Math.max(
+        0,
+        Math.floor(
+            (new Date(props.consultation.holdExpiresAt).getTime() - now.value) /
+                1000,
+        ),
+    );
+    const hours = Math.floor(total / 3600);
+    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+
+    if (total === 0) {
+        return null;
+    }
+
+    return hours > 0 ? `${hours} h ${mmss}` : mmss;
+});
+
+// ---------------------------------------------------------------- Reprogramar / cancelar
 
 const rescheduling = ref(false);
 const date = ref<string | null>(null);
@@ -122,9 +210,13 @@ function cancel(): Promise<void> {
                     Asesoría {{ consultation.folio }}
                 </p>
                 <h1 class="mt-2 text-display-md font-display tracking-tight">
-                    <template v-if="consultation.isActive"
+                    <template v-if="awaitingPayment"
+                        >{{ lead.firstName }}, confirma tu asesoría con el
+                        pago</template
+                    >
+                    <template v-else-if="consultation.isActive"
                         >{{ lead.firstName }}, tu asesoría está
-                        agendada</template
+                        confirmada</template
                     >
                     <template
                         v-else-if="consultation.status.value === 'cancelled'"
@@ -132,6 +224,103 @@ function cancel(): Promise<void> {
                     >
                     <template v-else>Tu asesoría</template>
                 </h1>
+
+                <div
+                    v-if="payment && (awaitingPayment || paid)"
+                    :class="
+                        cn(
+                            'pay-panel mt-8 flex flex-wrap items-center gap-4 rounded-xl border p-5',
+                            paid
+                                ? 'border-success/25 bg-success-soft'
+                                : 'border-warning/30 bg-warning-soft',
+                        )
+                    "
+                    role="status"
+                >
+                    <span
+                        :class="
+                            cn(
+                                'grid size-11 shrink-0 place-items-center rounded-full',
+                                paid
+                                    ? 'bg-success text-success-foreground'
+                                    : 'bg-card text-warning-ink',
+                            )
+                        "
+                        aria-hidden="true"
+                    >
+                        <CircleCheck v-if="paid" class="size-5" />
+                        <Loader2
+                            v-else-if="processing"
+                            class="size-5 animate-spin"
+                        />
+                        <CreditCard v-else class="size-5" />
+                    </span>
+                    <div class="min-w-0 flex-1 text-sm">
+                        <template v-if="paid">
+                            <p class="font-semibold text-success-ink">
+                                Pago recibido ·
+                                {{ formatMoney(payment.amount) }} MXN
+                            </p>
+                            <p class="mt-0.5 text-success-ink/80">
+                                Folio {{ payment.folio
+                                }}<template v-if="payment.cardLast4">
+                                    · tarjeta ••••
+                                    {{ payment.cardLast4 }}</template
+                                >. No guardamos los datos de tu tarjeta.
+                            </p>
+                        </template>
+                        <template v-else-if="processing">
+                            <p class="font-semibold text-warning-ink">
+                                Estamos confirmando tu pago con el banco
+                            </p>
+                            <p class="mt-0.5 text-warning-ink/80">
+                                Esta página se actualiza sola. No vuelvas a
+                                pagar.
+                            </p>
+                        </template>
+                        <template v-else>
+                            <p class="font-semibold text-warning-ink">
+                                Pendiente de pago ·
+                                {{ formatMoney(payment.amount) }} MXN
+                            </p>
+                            <p
+                                class="mt-0.5 flex items-center gap-1.5 text-warning-ink/80"
+                            >
+                                <Timer class="size-3.5" aria-hidden="true" />
+                                <span v-if="countdown"
+                                    >Tu horario está apartado
+                                    <strong class="tabular-nums">{{
+                                        countdown
+                                    }}</strong>
+                                    más.</span
+                                >
+                                <span v-else>El apartado está por vencer.</span>
+                            </p>
+                            <p
+                                v-if="payment.errorMessage"
+                                class="mt-1 text-danger-ink"
+                            >
+                                Intento anterior: {{ payment.errorMessage }}
+                            </p>
+                        </template>
+                    </div>
+                    <Button v-if="payUrl && !processing" as-child class="h-11">
+                        <Link :href="payUrl">
+                            <Lock aria-hidden="true" /> Pagar
+                            {{ formatMoney(payment.amount) }}
+                        </Link>
+                    </Button>
+                    <Button
+                        v-else-if="receiptUrl"
+                        as-child
+                        variant="outline"
+                        class="h-11 bg-card"
+                    >
+                        <a :href="receiptUrl" target="_blank" rel="noopener">
+                            <Receipt aria-hidden="true" /> Ver comprobante
+                        </a>
+                    </Button>
+                </div>
 
                 <article
                     class="mt-8 overflow-hidden rounded-xl border bg-card shadow-xs"
@@ -205,7 +394,7 @@ function cancel(): Promise<void> {
                         </div>
                     </dl>
                     <div
-                        v-if="consultation.isActive"
+                        v-if="isBooked"
                         class="border-t bg-muted/40 px-6 py-4 text-sm"
                     >
                         <template v-if="consultation.meetingUrl">
@@ -234,10 +423,11 @@ function cancel(): Promise<void> {
                 </article>
 
                 <div
-                    v-if="canChange && !rescheduling"
+                    v-if="(canChange || canCancel) && !rescheduling"
                     class="mt-6 flex flex-wrap gap-3"
                 >
                     <Button
+                        v-if="canChange"
                         variant="outline"
                         class="h-11"
                         @click="rescheduling = true"
@@ -245,6 +435,7 @@ function cancel(): Promise<void> {
                         <CalendarClock aria-hidden="true" /> Reprogramar
                     </Button>
                     <Button
+                        v-if="canCancel"
                         variant="ghost"
                         class="h-11 text-danger-ink"
                         @click="cancelOpen = true"
@@ -267,7 +458,7 @@ function cancel(): Promise<void> {
                         </h2>
                         <p class="mt-1 text-sm text-muted-foreground">
                             Tu horario actual se libera solo cuando confirmes el
-                            nuevo.
+                            nuevo. Tu pago se conserva.
                         </p>
                     </div>
                     <ConsultationSlotPicker
@@ -345,6 +536,13 @@ function cancel(): Promise<void> {
                     >Liberaremos tu horario del {{ dayText }}. Puedes agendar
                     otra fecha cuando quieras.</span
                 >
+                <span v-if="paid" class="mt-2 block"
+                    >Tu pago ya se recibió: un asesor te contactará para el
+                    reembolso según la política vigente.</span
+                >
+                <span v-else-if="awaitingPayment" class="mt-2 block"
+                    >No se realizará ningún cargo.</span
+                >
                 <label
                     for="cancel-reason"
                     class="mt-4 block text-sm font-medium text-foreground"
@@ -362,3 +560,22 @@ function cancel(): Promise<void> {
         </div>
     </section>
 </template>
+
+<style scoped>
+.pay-panel {
+    animation: pay-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pay-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pay-panel {
+        animation: none;
+    }
+}
+</style>

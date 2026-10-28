@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { CalendarCheck, Clock, Loader2, Wallet } from '@lucide/vue';
+import { CalendarCheck, Clock, Loader2, Lock, Wallet } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ChoiceCards from '@/components/crm/ChoiceCards.vue';
 import ConsultationSlotPicker from '@/components/crm/ConsultationSlotPicker.vue';
 import FormStatus from '@/components/ds/FormStatus.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatMoney, TIME_ZONE } from '@/lib/format';
@@ -20,10 +21,12 @@ const props = defineProps<{
         durationMinutes: number;
         price: string;
         isFree: boolean;
+        holdMinutes?: number;
         bookingWindowDays: number;
         minNoticeHours: number;
         channels: Channel[];
     };
+    needsEmail?: boolean;
     window: { min: string; max: string };
     availabilityUrl: string;
     submitUrl: string;
@@ -35,6 +38,7 @@ const form = useForm({
     starts_at: null as string | null,
     channel: (props.settings.channels[0]?.value ?? null) as string | null,
     notes: '',
+    email: '',
 });
 
 const whenText = computed(() =>
@@ -133,6 +137,33 @@ function submit() {
                         />
                     </section>
 
+                    <section v-if="needsEmail" class="space-y-2">
+                        <Label for="email">Tu correo electrónico</Label>
+                        <Input
+                            id="email"
+                            v-model="form.email"
+                            type="email"
+                            autocomplete="email"
+                            inputmode="email"
+                            maxlength="255"
+                            class="h-11 max-w-md"
+                            placeholder="tucorreo@ejemplo.com"
+                            :aria-invalid="!!form.errors.email"
+                            aria-describedby="email-help email-error"
+                        />
+                        <p
+                            id="email-help"
+                            class="text-xs text-muted-foreground"
+                        >
+                            Ahí te enviamos la confirmación y el comprobante de
+                            pago.
+                        </p>
+                        <InputError
+                            id="email-error"
+                            :message="form.errors.email"
+                        />
+                    </section>
+
                     <section class="space-y-2">
                         <Label for="notes"
                             >¿Algo que quieras adelantarnos?
@@ -187,11 +218,15 @@ function submit() {
                                     class="mt-0.5 size-4 shrink-0 text-primary"
                                     aria-hidden="true"
                                 />
-                                <span v-if="settings.isFree">Sin costo</span>
-                                <span v-else>
-                                    {{ formatMoney(settings.price) }}. Por ahora
-                                    el pago de la asesoría se coordina con tu
-                                    asesor.
+                                <span>
+                                    <strong
+                                        class="font-semibold text-foreground"
+                                        >{{
+                                            formatMoney(settings.price)
+                                        }}</strong
+                                    >
+                                    MXN · pago único con tarjeta de crédito o
+                                    débito
                                 </span>
                             </li>
                         </ul>
@@ -209,15 +244,21 @@ function submit() {
                                 class="animate-spin"
                                 aria-hidden="true"
                             />
+                            <Lock v-else class="size-4" aria-hidden="true" />
                             {{
                                 form.processing
-                                    ? 'Agendando…'
-                                    : 'Confirmar asesoría'
+                                    ? 'Apartando tu horario…'
+                                    : 'Continuar al pago'
                             }}
                         </Button>
-                        <p class="mt-3 text-xs text-muted-foreground">
-                            Te enviamos la confirmación por correo y puedes
-                            reprogramar si lo necesitas.
+                        <p
+                            class="mt-3 text-xs leading-relaxed text-muted-foreground"
+                        >
+                            Apartamos tu horario
+                            {{ settings.holdMinutes ?? 15 }} minutos mientras
+                            pagas. Tu asesoría queda confirmada en cuanto el
+                            banco autoriza el cargo. No guardamos los datos de
+                            tu tarjeta.
                         </p>
                     </div>
                 </aside>
