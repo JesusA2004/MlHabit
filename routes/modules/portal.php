@@ -4,6 +4,7 @@ use App\Http\Controllers\Portal\DesignController;
 use App\Http\Controllers\Portal\PaymentController;
 use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Portal\QuoteController;
+use App\Http\Controllers\Portal\RequestController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,7 @@ Route::middleware(['auth', 'verified', 'role:cliente'])
     ->group(function () {
         Route::get('/', [PortalController::class, 'home'])->name('inicio');
         Route::post('proyectos/{project}/seleccionar', [PortalController::class, 'select'])->name('proyectos.seleccionar');
+        Route::get('solicitudes', [RequestController::class, 'index'])->name('solicitudes.index');
         Route::get('citas', [PortalController::class, 'appointments'])->name('citas');
         Route::get('documentos', [PortalController::class, 'documents'])->name('documentos');
         Route::get('garantias', [PortalController::class, 'support'])->name('garantias');

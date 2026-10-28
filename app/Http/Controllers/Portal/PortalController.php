@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers\Portal;
 
-use App\Enums\ConsultationStatus;
 use App\Enums\ContractStatus;
 use App\Enums\DesignStatus;
 use App\Enums\QuoteStatus;
-use App\Enums\VisitStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Portal\Concerns\ResolvesPortalCustomer;
+use App\Http\Controllers\Portal\Support\PortalFeed;
 use App\Http\Presenters\Projects\ProjectPresenter as P;
-use App\Models\Consultation;
-use App\Models\Customer;
 use App\Models\Incident;
 use App\Models\InstallationOrder;
 use App\Models\Project;
-use App\Models\SiteVisit;
+use App\Models\Quote;
 use App\Models\Warranty;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
@@ -31,23 +28,98 @@ class PortalController extends Controller
     public function home(Request $request): Response
     {
         $customer = $this->customer($request);
+        $customerIds = $this->customerIds($request);
         $projects = $this->projects($customer);
         $project = $this->currentProject($request, $projects);
+
+        $appointments = PortalFeed::appointments($customerIds);
+        $requests = PortalFeed::requests($customerIds);
+        $payments = PortalFeed::payments($customerIds);
+        $events = $project ? array_values($project->events()
+            ->where('visibility', 'client')
+            ->orderByDesc('occurred_at')->orderByDesc('id')
+            ->limit(30)->get()
+            ->map(fn ($e) => P::event($e, forClient: true))->all()) : [];
+
+        $actions = $project ? $this->pendingActions($project) : [];
+        // Pagos por completar fuera del proyecto (visita apartada, asesoría).
+        foreach ($payments as $payment) {
+            if ($payment['awaiting'] && $payment['pay_url'] && ! str_starts_with((string) $payment['pay_url'], '/portal/pagos/anticipo/')) {
+                $actions[] = [
+                    'key' => "payment-{$payment['uuid']}",
+                    'title' => 'Completa tu pago',
+                    'description' => "{$payment['subject']['label']} · {$payment['folio']}",
+                    'href' => $payment['pay_url'],
+                    'cta' => 'Pagar ahora',
+                    'tone' => 'warning',
+                    'amount' => $payment['amount'],
+                    'external' => true,
+                ];
+            }
+        }
+
+        $quotesPending = $projects->isEmpty() ? 0 : Quote::query()
+            ->whereIn('project_id', $projects->pluck('id'))
+            ->where('status', QuoteStatus::Sent->value)
+            ->get(['id', 'valid_until', 'status'])
+            ->reject(fn (Quote $q) => $q->isPastValidity())
+            ->count();
 
         return Inertia::render('portal/Inicio', [
             'firstName' => $customer->first_name ?? explode(' ', (string) $request->user()?->name)[0],
             'projects' => $this->projectOptions($projects),
             'project' => $project ? $this->projectCard($project) : null,
             'journey' => P::journey(),
-            'events' => $project ? $project->events()
-                ->where('visibility', 'client')
-                ->orderByDesc('occurred_at')->orderByDesc('id')
-                ->limit(30)->get()
-                ->map(fn ($e) => P::event($e, forClient: true))->values() : [],
-            'actions' => $project ? $this->pendingActions($project) : [],
-            'nextAppointment' => $customer ? ($this->appointmentsOf($customer)['upcoming'][0] ?? null) : null,
+            'events' => $events,
+            'actions' => $actions,
+            'nextAppointment' => $appointments['upcoming'][0] ?? null,
+            'upcomingCount' => count($appointments['upcoming']),
             'advisor' => $this->advisor($project),
+            'requests' => array_slice($requests, 0, 3),
+            'requestStages' => PortalFeed::REQUEST_STAGES,
+            'stats' => [
+                'open_requests' => count(array_filter($requests, fn ($r) => ! $r['closed'] && $r['project'] === null)),
+                'quotes_pending' => $quotesPending,
+                'upcoming' => count($appointments['upcoming']),
+                ...PortalFeed::paymentTotals($payments),
+            ],
+            'activity' => $this->activity($events, $requests, $payments, $appointments),
         ]);
+    }
+
+    /**
+     * Actividad reciente combinada: novedades del proyecto, pagos,
+     * solicitudes y citas, de la más nueva a la más vieja.
+     *
+     * @param  list<array<string, mixed>>  $events
+     * @param  list<array<string, mixed>>  $requests
+     * @param  list<array<string, mixed>>  $payments
+     * @param  array{upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>}  $appointments
+     * @return list<array{key: string, kind: string, title: string, description: string|null, date: string|null}>
+     */
+    private function activity(array $events, array $requests, array $payments, array $appointments): array
+    {
+        $items = [];
+        foreach ($events as $e) {
+            $items[] = ['key' => "e-{$e['id']}", 'kind' => 'project', 'title' => (string) $e['title'], 'description' => $e['body'], 'date' => $e['occurred_at']];
+        }
+        foreach ($payments as $p) {
+            if ($p['paid_at']) {
+                $items[] = ['key' => "p-{$p['uuid']}", 'kind' => 'payment', 'title' => 'Pago recibido: '.$p['subject']['label'], 'description' => $p['folio'], 'date' => $p['paid_at'], 'amount' => $p['amount']];
+            }
+        }
+        foreach ($requests as $r) {
+            $items[] = ['key' => "r-{$r['uuid']}", 'kind' => 'request', 'title' => "Enviaste tu solicitud {$r['folio']}", 'description' => $r['categories'] ? implode(', ', $r['categories']) : null, 'date' => $r['created_at']];
+        }
+        foreach ($appointments['past'] as $a) {
+            if (($a['status']['value'] ?? null) === 'completed') {
+                $items[] = ['key' => "c-{$a['key']}", 'kind' => $a['kind'], 'title' => $a['title'].' realizada', 'description' => $a['with'] ? "Con {$a['with']}" : null, 'date' => $a['starts_at']];
+            }
+        }
+
+        usort($items, fn ($a, $b) => strcmp((string) $b['date'], (string) $a['date']));
+
+        return array_slice($items, 0, 12);
     }
 
     /** Selector de proyecto (solo entre los del propio cliente). */
@@ -61,9 +133,7 @@ class PortalController extends Controller
 
     public function appointments(Request $request): Response
     {
-        $customer = $this->customer($request);
-
-        return Inertia::render('portal/Citas', $customer ? $this->appointmentsOf($customer) : ['upcoming' => [], 'past' => []]);
+        return Inertia::render('portal/Citas', PortalFeed::appointments($this->customerIds($request)));
     }
 
     public function documents(Request $request): Response
@@ -240,62 +310,6 @@ class PortalController extends Controller
         }
 
         return $actions;
-    }
-
-    /**
-     * Citas del cliente: asesorías (vía sus prospectos) y visitas técnicas.
-     *
-     * @return array{upcoming: array<int, array<string, mixed>>, past: array<int, array<string, mixed>>}
-     */
-    private function appointmentsOf(Customer $customer): array
-    {
-        $items = collect();
-
-        $items = $items->merge($this->attempt(fn () => Consultation::query()
-            ->whereHas('lead', fn ($q) => $q->where('customer_id', $customer->id))
-            ->whereNotIn('status', [ConsultationStatus::Rescheduled->value])
-            ->with('advisor:id,name')
-            ->latest('starts_at')->limit(30)->get()
-            ->map(fn (Consultation $c) => [
-                'key' => "a-{$c->uuid}",
-                'kind' => 'consultation',
-                'title' => 'Asesoría',
-                'starts_at' => P::date($c->starts_at),
-                'ends_at' => P::date($c->ends_at),
-                'status' => P::enum($c->status),
-                'with' => $c->advisor->name,
-                'channel' => $c->channel->label(),
-                'meeting_url' => $c->meeting_url,
-                'location' => null,
-                'active' => in_array($c->status, [ConsultationStatus::Scheduled, ConsultationStatus::Confirmed], true),
-                'reschedule_url' => null,
-            ]), collect()));
-
-        $items = $items->merge($this->attempt(fn () => SiteVisit::query()
-            ->where('customer_id', $customer->id)
-            ->whereNotIn('status', [VisitStatus::PendingPayment->value, VisitStatus::PaymentProcessing->value, VisitStatus::Expired->value])
-            ->with(['technician:id,name', 'address'])
-            ->latest('starts_at')->limit(30)->get()
-            ->map(fn (SiteVisit $v) => [
-                'key' => "v-{$v->uuid}",
-                'kind' => 'visit',
-                'title' => 'Visita técnica de medición',
-                'starts_at' => P::date($v->starts_at),
-                'ends_at' => P::date($v->ends_at),
-                'status' => P::enum($v->status),
-                'with' => $v->technician?->name,
-                'channel' => null,
-                'meeting_url' => null,
-                'location' => $v->address->one_line,
-                'active' => $v->status->isUpcoming(),
-                'reschedule_url' => null,
-            ]), collect()));
-
-        $now = now();
-        $upcoming = $items->filter(fn ($i) => $i['active'] && $i['ends_at'] && $now->lt($i['ends_at']))->sortBy('starts_at')->values()->all();
-        $past = $items->reject(fn ($i) => $i['active'] && $i['ends_at'] && $now->lt($i['ends_at']))->sortByDesc('starts_at')->values()->all();
-
-        return ['upcoming' => $upcoming, 'past' => $past];
     }
 
     /** @param  list<string>  $names */

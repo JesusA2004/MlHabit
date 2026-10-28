@@ -25,6 +25,32 @@ trait ResolvesPortalCustomer
         return Customer::query()->where('user_id', $user->id)->first();
     }
 
+    /**
+     * IDs de todas las fichas de cliente de la persona: la ligada a su
+     * cuenta y, si su correo está verificado, las fichas SIN cuenta con ese
+     * mismo correo (solicitudes que hizo en /solicitar antes de tener
+     * acceso). Una ficha ligada a otra cuenta nunca se incluye.
+     *
+     * @return list<int>
+     */
+    protected function customerIds(Request $request): array
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $email = $user->hasVerifiedEmail() ? mb_strtolower(trim((string) $user->email)) : '';
+
+        return array_values(Customer::query()
+            ->where(function ($q) use ($user, $email) {
+                $q->where('user_id', $user->id);
+                if ($email !== '') {
+                    $q->orWhere(fn ($q) => $q->whereNull('user_id')->whereRaw('LOWER(email) = ?', [$email]));
+                }
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all());
+    }
+
     /** @return Collection<int, Project> */
     protected function projects(?Customer $customer): Collection
     {

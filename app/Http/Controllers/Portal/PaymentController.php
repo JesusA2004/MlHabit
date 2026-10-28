@@ -6,6 +6,7 @@ use App\Enums\ContractStatus;
 use App\Enums\PaymentConcept;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Portal\Concerns\ResolvesPortalCustomer;
+use App\Http\Controllers\Portal\Support\PortalFeed;
 use App\Http\Presenters\Projects\ProjectPresenter as P;
 use App\Models\Contract;
 use App\Models\Payment;
@@ -26,17 +27,16 @@ class PaymentController extends Controller
 {
     use ResolvesPortalCustomer;
 
-    /** Pagos del cliente (solo lectura) + anticipos pendientes. */
+    /**
+     * Todos los pagos del cliente (visitas, asesorías, anticipos, abonos…)
+     * con su estado y comprobante, más los anticipos pendientes.
+     */
     public function index(Request $request): Response
     {
         $customer = $this->customer($request);
         $projects = $this->projects($customer);
 
-        $payments = $customer ? $this->attempt(fn () => Payment::query()
-            ->where('customer_id', $customer->id)
-            ->whereIn('status', ['paid', 'partially_refunded', 'refunded', 'processing'])
-            ->latest('id')->limit(100)->get()
-            ->map(fn (Payment $p) => P::payment($p, forClient: true))->values()->all(), []) : [];
+        $payments = PortalFeed::payments($this->customerIds($request));
 
         $pending = Contract::query()
             ->whereIn('project_id', $projects->pluck('id'))
@@ -55,8 +55,15 @@ class PaymentController extends Controller
             ->map(fn (Contract $c) => P::contract($c, ['project' => ['folio' => $c->project->folio, 'name' => $c->project->name]]))
             ->values();
 
+        // Anticipos que aún no tienen intento de pago listado (para no contarlos dos veces).
+        $listedContracts = collect($payments)->where('awaiting', true)->pluck('pay_url')->filter()->all();
+        $extraPending = $pending
+            ->reject(fn (array $c) => in_array($c['pay_url'], $listedContracts, true))
+            ->sum(fn (array $c) => (float) $c['deposit_due_amount']);
+
         return Inertia::render('portal/Pagos', [
             'payments' => $payments,
+            'totals' => PortalFeed::paymentTotals($payments, (float) $extraPending),
             'pendingDeposits' => $pending,
             'contracts' => $contracts,
         ]);
