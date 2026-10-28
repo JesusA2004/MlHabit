@@ -56,110 +56,118 @@ const hasContact = computed(() =>
 <template>
     <Head title="Ayuda" />
 
-    <PageContainer width="narrow" class="flex flex-col gap-6">
+    <PageContainer class="flex flex-col gap-6">
         <PageHeader
             title="¿Cómo te ayudamos?"
             description="Estamos para resolver tus dudas sobre tu proyecto."
         />
 
-        <SectionCard v-if="advisor" title="Tu asesor">
-            <div class="flex items-center gap-3">
-                <UserAvatar :name="advisor.name" size="lg" />
-                <div>
-                    <p class="font-medium text-foreground">
-                        {{ advisor.name }}
-                    </p>
-                    <p class="text-sm text-muted-foreground">
-                        {{
-                            project
-                                ? `Te acompaña en ${project.name}.`
-                                : 'Te acompaña en todo tu proyecto.'
-                        }}
-                    </p>
+        <div
+            class="portal-stagger grid items-start gap-6 lg:grid-cols-2"
+            style="--stagger-base: 60ms"
+        >
+            <SectionCard v-if="advisor" title="Tu asesor">
+                <div class="flex items-center gap-3">
+                    <UserAvatar :name="advisor.name" size="lg" />
+                    <div>
+                        <p class="font-medium text-foreground">
+                            {{ advisor.name }}
+                        </p>
+                        <p class="text-sm text-muted-foreground">
+                            {{
+                                project
+                                    ? `Te acompaña en ${project.name}.`
+                                    : 'Te acompaña en todo tu proyecto.'
+                            }}
+                        </p>
+                    </div>
                 </div>
-            </div>
-            <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                <Button v-if="advisor.phone" as-child variant="outline">
-                    <a :href="`tel:${advisor.phone}`"
-                        ><Phone class="size-4" aria-hidden="true" /> Llamar</a
-                    >
-                </Button>
-                <Button v-if="advisor.email" as-child variant="outline">
-                    <a :href="`mailto:${advisor.email}`"
-                        ><Mail class="size-4" aria-hidden="true" /> Escribir
-                        correo</a
-                    >
-                </Button>
-            </div>
-        </SectionCard>
+                <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                    <Button v-if="advisor.phone" as-child variant="outline">
+                        <a :href="`tel:${advisor.phone}`"
+                            ><Phone class="size-4" aria-hidden="true" />
+                            Llamar</a
+                        >
+                    </Button>
+                    <Button v-if="advisor.email" as-child variant="outline">
+                        <a :href="`mailto:${advisor.email}`"
+                            ><Mail class="size-4" aria-hidden="true" /> Escribir
+                            correo</a
+                        >
+                    </Button>
+                </div>
+            </SectionCard>
 
-        <SectionCard title="ML Habitat">
-            <ul v-if="hasContact" class="flex flex-col gap-3 text-sm">
-                <li v-if="whatsappUrl">
-                    <a
-                        :href="whatsappUrl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="flex items-center gap-2.5 text-foreground hover:text-primary"
+            <SectionCard title="ML Habitat">
+                <ul v-if="hasContact" class="flex flex-col gap-3 text-sm">
+                    <li v-if="whatsappUrl">
+                        <a
+                            :href="whatsappUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="flex items-center gap-2.5 text-foreground hover:text-primary"
+                        >
+                            <MessageCircle
+                                class="size-4 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                            WhatsApp {{ contact.whatsapp }}
+                        </a>
+                    </li>
+                    <li v-if="contact.phone">
+                        <a
+                            :href="`tel:${contact.phone}`"
+                            class="flex items-center gap-2.5 text-foreground hover:text-primary"
+                        >
+                            <Phone
+                                class="size-4 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                            {{ contact.phone }}
+                        </a>
+                    </li>
+                    <li v-if="contact.email">
+                        <a
+                            :href="`mailto:${contact.email}`"
+                            class="flex items-center gap-2.5 text-foreground hover:text-primary"
+                        >
+                            <Mail
+                                class="size-4 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                            {{ contact.email }}
+                        </a>
+                    </li>
+                    <li
+                        v-if="contact.hours"
+                        class="flex items-start gap-2.5 text-foreground"
                     >
-                        <MessageCircle
-                            class="size-4 text-muted-foreground"
+                        <Clock
+                            class="mt-0.5 size-4 shrink-0 text-muted-foreground"
                             aria-hidden="true"
                         />
-                        WhatsApp {{ contact.whatsapp }}
-                    </a>
-                </li>
-                <li v-if="contact.phone">
-                    <a
-                        :href="`tel:${contact.phone}`"
-                        class="flex items-center gap-2.5 text-foreground hover:text-primary"
+                        <span class="whitespace-pre-line">{{
+                            contact.hours
+                        }}</span>
+                    </li>
+                    <li
+                        v-if="contact.address"
+                        class="flex items-start gap-2.5 text-foreground"
                     >
-                        <Phone
-                            class="size-4 text-muted-foreground"
+                        <MapPin
+                            class="mt-0.5 size-4 shrink-0 text-muted-foreground"
                             aria-hidden="true"
                         />
-                        {{ contact.phone }}
-                    </a>
-                </li>
-                <li v-if="contact.email">
-                    <a
-                        :href="`mailto:${contact.email}`"
-                        class="flex items-center gap-2.5 text-foreground hover:text-primary"
-                    >
-                        <Mail
-                            class="size-4 text-muted-foreground"
-                            aria-hidden="true"
-                        />
-                        {{ contact.email }}
-                    </a>
-                </li>
-                <li
-                    v-if="contact.hours"
-                    class="flex items-start gap-2.5 text-foreground"
-                >
-                    <Clock
-                        class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                    <span class="whitespace-pre-line">{{ contact.hours }}</span>
-                </li>
-                <li
-                    v-if="contact.address"
-                    class="flex items-start gap-2.5 text-foreground"
-                >
-                    <MapPin
-                        class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                    <span class="whitespace-pre-line">{{
-                        contact.address
-                    }}</span>
-                </li>
-            </ul>
-            <p v-else class="text-sm text-muted-foreground">
-                Escríbele a tu asesor; te responderá a la brevedad.
-            </p>
-        </SectionCard>
+                        <span class="whitespace-pre-line">{{
+                            contact.address
+                        }}</span>
+                    </li>
+                </ul>
+                <p v-else class="text-sm text-muted-foreground">
+                    Escríbele a tu asesor; te responderá a la brevedad.
+                </p>
+            </SectionCard>
+        </div>
 
         <Link
             href="/portal/garantias"
