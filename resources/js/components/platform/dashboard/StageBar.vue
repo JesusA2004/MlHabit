@@ -33,7 +33,7 @@ function share(stage: Stage): string {
 <template>
     <div class="flex flex-col gap-4">
         <div
-            class="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
+            class="admin-grow-x flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
             role="img"
             :aria-label="`Proyectos activos por etapa: ${props.stages.map((s) => `${s.label} ${s.count}`).join(', ')}`"
         >
@@ -53,7 +53,7 @@ function share(stage: Stage): string {
             <li
                 v-for="stage in props.stages"
                 :key="stage.status"
-                class="flex items-center gap-2"
+                class="-mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-0.5 transition-colors hover:bg-muted/70"
             >
                 <span
                     class="size-2.5 shrink-0 rounded-sm bg-primary"

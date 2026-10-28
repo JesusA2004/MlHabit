@@ -700,7 +700,7 @@ const optionalSelects = computed(() => [
                             :data-transitions="lead.transitions.join(',')"
                             :class="
                                 cn(
-                                    'group relative rounded-lg border bg-card p-3 shadow-xs transition-shadow hover:shadow-sm',
+                                    'group relative rounded-lg border bg-card p-3 shadow-xs transition-[box-shadow,border-color] duration-200 hover:border-primary/30 hover:shadow-md',
                                     can.update &&
                                         'cursor-grab active:cursor-grabbing',
                                     pending === lead.uuid && 'opacity-60',

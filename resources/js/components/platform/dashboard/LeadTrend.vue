@@ -56,7 +56,7 @@ const activePoint = computed(() =>
                 @blur="active = null"
             >
                 <span
-                    class="w-full rounded-t-[3px] bg-primary transition-opacity group-hover:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-ring"
+                    class="admin-grow-y w-full rounded-t-[3px] bg-linear-to-t from-primary to-primary/75 transition-opacity group-hover:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-ring"
                     :class="
                         active !== null && active !== index
                             ? 'opacity-50'
@@ -67,6 +67,7 @@ const activePoint = computed(() =>
                             ? `${Math.max(6, (point.count / max) * 100)}%`
                             : '2px',
                         opacity: point.count ? undefined : 0.25,
+                        animationDelay: `${Math.min(index * 18, 540)}ms`,
                     }"
                 />
             </button>

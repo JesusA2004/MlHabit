@@ -1,8 +1,8 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { Inbox } from '@lucide/vue';
 import { computed } from 'vue';
-import type { HTMLAttributes } from 'vue';
+import type { Component, HTMLAttributes } from 'vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Table,
@@ -38,6 +38,8 @@ const props = withDefaults(
         skeletonRows?: number;
         emptyTitle?: string;
         emptyDescription?: string;
+        /** Icono del estado vacío por defecto. */
+        emptyIcon?: Component;
         caption?: string;
         only?: string[];
         itemLabel?: string;
@@ -66,6 +68,42 @@ const valueOf = (row: T, column: DataColumn<T>): unknown =>
         : (row as Record<string, unknown>)[column.key];
 const display = displayValue;
 
+/**
+ * Con `rowHref`, toda la fila abre el detalle (además del enlace del
+ * título, que es el que usan teclado y lectores de pantalla). No se dispara
+ * si el clic fue en un control, si hay texto seleccionado o con Ctrl/Cmd
+ * (abre en otra pestaña).
+ */
+function onRowClick(event: MouseEvent, row: T) {
+    if (!props.rowHref || event.button !== 0) {
+        return;
+    }
+
+    const target = event.target as HTMLElement | null;
+
+    if (
+        target?.closest(
+            'a, button, input, select, textarea, label, summary, [role="button"], [role="checkbox"], [role="combobox"], [role="menuitem"], [data-no-row-click]',
+        )
+    ) {
+        return;
+    }
+
+    if (window.getSelection()?.toString()) {
+        return;
+    }
+
+    const href = props.rowHref(row);
+
+    if (event.metaKey || event.ctrlKey) {
+        window.open(href, '_blank', 'noopener');
+
+        return;
+    }
+
+    router.visit(href);
+}
+
 const alignClass = {
     left: 'text-left',
     right: 'text-right',
@@ -86,7 +124,7 @@ const alignClass = {
                         props.caption
                     }}
                 </caption>
-                <TableHeader class="bg-muted/50">
+                <TableHeader class="bg-muted/55">
                     <TableRow class="hover:bg-transparent">
                         <TableHead
                             v-for="column in tableColumns"
@@ -107,7 +145,7 @@ const alignClass = {
                         >
                     </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody class="admin-rows">
                     <template v-if="props.loading">
                         <TableRow
                             v-for="n in props.skeletonRows"
@@ -133,7 +171,13 @@ const alignClass = {
                         <TableRow
                             v-for="(row, index) in items"
                             :key="keyOf(row, index)"
-                            class="group/row"
+                            :class="
+                                cn(
+                                    'group/row hover:bg-primary-soft/35 [&>td:first-child]:shadow-[inset_3px_0_0_transparent] [&>td:first-child]:transition-shadow [&>td:first-child]:duration-200 hover:[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-primary)]',
+                                    props.rowHref && 'cursor-pointer',
+                                )
+                            "
+                            @click="onRowClick($event, row)"
                         >
                             <TableCell
                                 v-for="column in tableColumns"
@@ -156,7 +200,7 @@ const alignClass = {
                                             props.rowHref && column === primary
                                         "
                                         :href="props.rowHref(row)"
-                                        class="font-medium text-foreground underline-offset-4 hover:underline"
+                                        class="font-medium text-foreground underline-offset-4 transition-colors group-hover/row:text-primary hover:underline"
                                     >
                                         {{ display(valueOf(row, column)) }}
                                     </Link>
@@ -208,7 +252,7 @@ const alignClass = {
         <div v-if="!props.loading && items.length === 0">
             <slot name="empty">
                 <EmptyState
-                    :icon="Inbox"
+                    :icon="props.emptyIcon ?? Inbox"
                     :title="props.emptyTitle"
                     :description="props.emptyDescription"
                 />

@@ -144,11 +144,14 @@ function olderVersions(group: Group): RateCardRow[] {
             </template>
         </EmptyState>
 
-        <ul v-else class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        <ul
+            v-else
+            class="admin-stagger grid gap-4 lg:grid-cols-2 2xl:grid-cols-3"
+        >
             <li
                 v-for="group in groups"
                 :key="group.name"
-                class="flex flex-col rounded-xl border bg-card"
+                class="flex flex-col rounded-xl border bg-card shadow-xs transition-shadow duration-200 hover:shadow-md"
             >
                 <div
                     class="flex items-start justify-between gap-3 border-b p-4"

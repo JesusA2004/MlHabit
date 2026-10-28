@@ -14,7 +14,11 @@ withDefaults(defineProps<{ breadcrumbs?: BreadcrumbItem[] }>(), {
 
 // Las pantallas del panel usan todo el ancho disponible y entran con una
 // animación breve al navegar (ver `admin-enter` en app.css).
-provide(pageContainerContextKey, { defaultWidth: 'fluid', animate: true });
+provide(pageContainerContextKey, {
+    defaultWidth: 'fluid',
+    animate: true,
+    sectionIcons: true,
+});
 </script>
 
 <template>

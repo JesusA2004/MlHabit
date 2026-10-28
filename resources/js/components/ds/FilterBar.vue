@@ -75,10 +75,10 @@ function applyMobile() {
         <div class="flex items-center gap-2 md:contents">
             <div
                 v-if="props.searchable"
-                class="relative min-w-0 flex-1 md:max-w-sm"
+                class="group/search relative min-w-0 flex-1 md:max-w-sm xl:max-w-md"
             >
                 <Search
-                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200 group-focus-within/search:text-primary"
                     aria-hidden="true"
                 />
                 <Input
@@ -86,12 +86,12 @@ function applyMobile() {
                     type="search"
                     :placeholder="props.placeholder"
                     :aria-label="props.placeholder"
-                    class="h-11 bg-card pr-9 pl-9 md:h-9"
+                    class="h-11 bg-card pr-9 pl-9 shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-input md:h-9"
                 />
                 <button
                     v-if="local"
                     type="button"
-                    class="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground md:size-7"
+                    class="admin-pop absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:size-7"
                     aria-label="Limpiar búsqueda"
                     @click="clearSearch"
                 >
@@ -114,7 +114,7 @@ function applyMobile() {
                 Filtros
                 <span
                     v-if="props.activeCount"
-                    class="grid size-5 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground tabular-nums"
+                    class="admin-pop grid size-5 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground tabular-nums"
                 >
                     {{ props.activeCount }}
                 </span>

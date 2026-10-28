@@ -18,7 +18,6 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { isActivePath } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
 import type { AdminNavGroup, AdminNavItem } from '@/types/navigation';
 
 /**
@@ -66,8 +65,15 @@ function onNavigate() {
     }
 }
 
-const buttonClass =
-    'h-10 gap-2.5 text-sidebar-foreground/85 md:h-8 [&>svg]:text-sidebar-foreground/60 data-[active=true]:bg-primary-soft data-[active=true]:font-medium data-[active=true]:text-primary data-[active=true]:[&>svg]:text-primary';
+// Activo: fondo eucalipto suave + barra lateral que crece (scaleY). El
+// icono se asoma un poco en hover. Todo con transform/opacity.
+const buttonClass = [
+    'relative h-10 gap-2.5 text-sidebar-foreground/85 md:h-8',
+    '[&>svg]:text-sidebar-foreground/60 [&>svg]:transition-[color,scale] [&>svg]:duration-200 hover:[&>svg]:scale-110 hover:[&>svg]:text-sidebar-foreground/90',
+    'before:absolute before:top-1/2 before:left-0 before:h-4 before:w-[3px] before:-translate-y-1/2 before:scale-y-0 before:rounded-r-full before:bg-primary before:transition-transform before:duration-300 before:ease-out',
+    'data-[active=true]:bg-primary-soft data-[active=true]:font-medium data-[active=true]:text-primary data-[active=true]:before:scale-y-100 data-[active=true]:[&>svg]:text-primary',
+    'group-data-[collapsible=icon]:before:hidden',
+].join(' ');
 </script>
 
 <template>
@@ -128,7 +134,7 @@ const buttonClass =
                                     as-child
                                     :is-active="isActive(item)"
                                     :tooltip="item.title"
-                                    :class="cn(buttonClass)"
+                                    :class="buttonClass"
                                 >
                                     <Link
                                         :href="item.href"

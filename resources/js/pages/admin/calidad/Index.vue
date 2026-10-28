@@ -72,12 +72,12 @@ defineOptions({
 
             <ol
                 v-else
-                class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                class="admin-stagger grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
             >
                 <li v-for="row in queue" :key="row.id">
                     <Link
                         :href="calidad.show(row.id).url"
-                        class="group flex h-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs transition-colors hover:border-primary/40 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
+                        class="group flex h-full hover-lift flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs hover:border-primary/40 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
                     >
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">

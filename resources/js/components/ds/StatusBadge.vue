@@ -29,11 +29,16 @@ const props = withDefaults(
         :data-tone="props.tone"
         :class="
             cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-full font-medium whitespace-nowrap',
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full font-medium whitespace-nowrap transition-colors duration-200',
                 props.size === 'sm'
                     ? 'h-5 px-2 text-[11px]'
                     : 'h-6 px-2.5 text-xs',
-                props.variant === 'soft' && toneClasses[props.tone].soft,
+                props.variant === 'soft' &&
+                    cn(
+                        toneClasses[props.tone].soft,
+                        toneClasses[props.tone].ring,
+                        'ring-1 ring-inset',
+                    ),
                 props.variant === 'solid' && toneClasses[props.tone].solid,
                 props.variant === 'outline' &&
                     'bg-transparent text-foreground ring-1 ring-border ring-inset',

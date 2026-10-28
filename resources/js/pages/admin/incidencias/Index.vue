@@ -6,6 +6,7 @@ import {
     DataView,
     DatePicker,
     DateText,
+    EmptyState,
     FileDropzone,
     FilterBar,
     FormSheet,
@@ -271,7 +272,7 @@ const NONE = '__ninguno__';
                 :aria-pressed="severidad === sev.value"
                 :class="
                     cn(
-                        'flex flex-col items-start gap-1 rounded-xl border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40',
+                        'flex hover-lift flex-col items-start gap-1 rounded-xl border bg-card px-4 py-3 text-left hover:border-primary/40',
                         severidad === sev.value &&
                             'border-primary ring-2 ring-primary/20',
                     )
@@ -433,27 +434,19 @@ const NONE = '__ninguno__';
                 </span>
             </template>
             <template #empty>
-                <div
-                    class="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center"
+                <EmptyState
+                    :icon="ShieldAlert"
+                    title="Sin incidencias con estos filtros"
+                    description="Cambia los filtros o registra una incidencia cuando detectes un problema."
                 >
-                    <ShieldAlert
-                        class="size-8 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                    <p class="font-medium">Sin incidencias con estos filtros</p>
-                    <p class="max-w-sm text-sm text-muted-foreground">
-                        Cambia los filtros o registra una incidencia cuando
-                        detectes un problema.
-                    </p>
                     <Button
                         v-if="canManage"
                         variant="outline"
                         size="sm"
-                        class="mt-2"
                         @click="openCreate"
                         >Registrar incidencia</Button
                     >
-                </div>
+                </EmptyState>
             </template>
         </DataView>
     </PageContainer>

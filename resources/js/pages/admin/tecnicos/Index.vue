@@ -242,14 +242,14 @@ function invite() {
 
         <ul
             v-else
-            class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+            class="admin-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
         >
             <li v-for="t in technicians.data" :key="t.id">
                 <Link
                     :href="tecnicos.show(t.id).url"
                     :class="
                         cn(
-                            'flex h-full flex-col gap-3 rounded-xl border bg-card p-4 transition-shadow hover:shadow-md',
+                            'flex h-full hover-lift flex-col gap-3 rounded-xl border bg-card p-4 hover:border-primary/30',
                             !t.active && 'opacity-70',
                         )
                     "

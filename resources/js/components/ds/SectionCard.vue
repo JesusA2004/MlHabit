@@ -38,16 +38,28 @@ const headingId = useId();
     >
         <header
             v-if="props.title || $slots.header || $slots.actions"
-            class="flex items-start justify-between gap-4 border-b px-4 py-3.5 sm:px-5"
+            class="flex items-center justify-between gap-4 border-b bg-linear-to-b from-muted/35 to-transparent px-4 py-3.5 sm:px-5"
         >
             <slot name="header">
-                <div class="flex min-w-0 items-start gap-3">
-                    <component
-                        :is="props.icon"
+                <div
+                    :class="
+                        cn(
+                            'flex min-w-0 gap-3',
+                            props.description ? 'items-start' : 'items-center',
+                        )
+                    "
+                >
+                    <span
                         v-if="props.icon"
-                        class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        class="grid size-7 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary ring-1 ring-primary/10"
                         aria-hidden="true"
-                    />
+                    >
+                        <component
+                            :is="props.icon"
+                            class="size-3.5"
+                            stroke-width="2"
+                        />
+                    </span>
                     <div class="min-w-0">
                         <h2
                             :id="headingId"

@@ -42,7 +42,7 @@ const homeHref = computed(
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="hover:bg-transparent"
+                        class="group/logo hover:bg-transparent [&_svg]:transition-transform [&_svg]:duration-300 hover:[&_svg]:-rotate-6"
                     >
                         <Link
                             :href="homeHref"
@@ -53,6 +53,16 @@ const homeHref = computed(
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
+            <!-- Muestrario de acabados: la firma visual, en fino -->
+            <div
+                class="mx-2 mt-1 flex h-1 gap-0.5 overflow-hidden rounded-full group-data-[collapsible=icon]:hidden"
+                aria-hidden="true"
+            >
+                <span class="admin-grow-x flex-[3] bg-primary" />
+                <span class="admin-grow-x flex-[2] bg-oak" />
+                <span class="admin-grow-x flex-[1.4] bg-input" />
+                <span class="admin-grow-x flex-1 bg-espresso" />
+            </div>
         </SidebarHeader>
 
         <SidebarContent class="gap-0 pb-2">

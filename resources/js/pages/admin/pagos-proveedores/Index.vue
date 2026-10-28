@@ -183,7 +183,7 @@ const hasFilters = computed(() => !!status.value || !!search.value);
                 type="button"
                 :class="
                     cn(
-                        'flex items-center gap-4 rounded-xl border bg-card p-4 text-left transition-colors hover:border-warning/50',
+                        'flex hover-lift items-center gap-4 rounded-xl border bg-card p-4 text-left hover:border-warning/50',
                         status === 'pending_authorization' &&
                             'border-warning ring-3 ring-warning/20',
                     )
@@ -213,7 +213,7 @@ const hasFilters = computed(() => !!status.value || !!search.value);
                 type="button"
                 :class="
                     cn(
-                        'flex items-center gap-4 rounded-xl border bg-card p-4 text-left transition-colors hover:border-info/50',
+                        'flex hover-lift items-center gap-4 rounded-xl border bg-card p-4 text-left hover:border-info/50',
                         status === 'authorized' &&
                             'border-info ring-3 ring-info/20',
                     )

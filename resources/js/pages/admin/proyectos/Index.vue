@@ -4,6 +4,7 @@ import { FolderKanban } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import DataView from '@/components/ds/DataView.vue';
 import DateText from '@/components/ds/DateText.vue';
+import EmptyState from '@/components/ds/EmptyState.vue';
 import FilterBar from '@/components/ds/FilterBar.vue';
 import PageContainer from '@/components/ds/PageContainer.vue';
 import PageHeader from '@/components/ds/PageHeader.vue';
@@ -273,18 +274,11 @@ const emptyTitle = computed(() =>
                 />
             </template>
             <template #empty>
-                <div class="flex flex-col items-center gap-2 py-12 text-center">
-                    <FolderKanban
-                        class="size-8 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                    <p class="font-medium">{{ emptyTitle }}</p>
-                    <p class="max-w-md text-sm text-muted-foreground">
-                        Los proyectos nacen cuando un prospecto pasa a diseño.
-                        Usa «Crear proyecto» desde el detalle del prospecto o de
-                        la visita.
-                    </p>
-                </div>
+                <EmptyState
+                    :icon="FolderKanban"
+                    :title="emptyTitle"
+                    description="Los proyectos nacen cuando un prospecto pasa a diseño. Usa «Crear proyecto» desde el detalle del prospecto o de la visita."
+                />
             </template>
         </DataView>
     </PageContainer>

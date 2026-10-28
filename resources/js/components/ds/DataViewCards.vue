@@ -25,12 +25,12 @@ const cardColumns = computed(() =>
 </script>
 
 <template>
-    <ul class="flex flex-col gap-2.5" :aria-label="props.caption">
+    <ul class="admin-stagger flex flex-col gap-2.5" :aria-label="props.caption">
         <template v-if="props.loading">
             <li
                 v-for="n in Math.min(props.skeletonRows, 4)"
                 :key="`ms-${n}`"
-                class="rounded-xl border bg-card p-4"
+                class="admin-shimmer rounded-xl border bg-card p-4"
             >
                 <Skeleton class="h-4 w-2/3" />
                 <Skeleton class="mt-3 h-3 w-1/2" />
@@ -41,7 +41,10 @@ const cardColumns = computed(() =>
             <li
                 v-for="(row, index) in props.items"
                 :key="rowKeyOf(row, index, props.rowKey)"
-                class="relative rounded-xl border bg-card shadow-xs transition-colors has-[a.card-link:active]:bg-muted/50"
+                :class="[
+                    'relative rounded-xl border bg-card shadow-xs transition-[background-color,border-color,scale] duration-150 has-[a.card-link:active]:scale-[0.99] has-[a.card-link:active]:bg-muted/50',
+                    props.rowHref && 'hover:border-primary/30',
+                ]"
             >
                 <slot name="card" :row="row">
                     <div class="flex items-start gap-3 p-4">

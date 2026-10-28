@@ -12,6 +12,7 @@ import {
     DataView,
     DatePicker,
     DateText,
+    EmptyState,
     FilterBar,
     FormSheet,
     PageContainer,
@@ -380,28 +381,19 @@ const TYPE_HINT: Record<string, string> = {
                 />
             </template>
             <template #empty>
-                <div
-                    class="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center"
+                <EmptyState
+                    :icon="BadgeCheck"
+                    title="Sin garantías registradas"
+                    description="Cuando un proyecto se complete, registra aquí sus garantías de producto, instalación o servicios adicionales."
                 >
-                    <BadgeCheck
-                        class="size-8 text-muted-foreground"
-                        aria-hidden="true"
-                    />
-                    <p class="font-medium">Sin garantías registradas</p>
-                    <p class="max-w-sm text-sm text-muted-foreground">
-                        Cuando un proyecto se complete, registra aquí sus
-                        garantías de producto, instalación o servicios
-                        adicionales.
-                    </p>
                     <Button
                         v-if="canManage"
                         variant="outline"
                         size="sm"
-                        class="mt-2"
                         @click="openRegister"
                         >Registrar garantías</Button
                     >
-                </div>
+                </EmptyState>
             </template>
         </DataView>
     </PageContainer>

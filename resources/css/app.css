@@ -345,6 +345,301 @@
 }
 
 /* ---------------------------------------------------------------------- */
+/* Panel: lienzo, movimiento y microinteracciones                          */
+/* Solo transform/opacity; todo se apaga con prefers-reduced-motion.       */
+/* ---------------------------------------------------------------------- */
+
+/* Lienzo del panel: un velo de eucalipto y roble muy tenue arriba. */
+.admin-canvas {
+    background-image:
+        radial-gradient(
+            60rem 18rem at 0% 0%,
+            color-mix(in srgb, var(--primary) 6%, transparent),
+            transparent 70%
+        ),
+        radial-gradient(
+            40rem 14rem at 100% 0%,
+            color-mix(in srgb, var(--oak) 6%, transparent),
+            transparent 70%
+        );
+    background-repeat: no-repeat;
+}
+
+/* Tarjeta que se eleva en hover (solo con puntero fino). */
+@utility hover-lift {
+    transition:
+        transform var(--duration-base) var(--ease-out),
+        box-shadow var(--duration-base) var(--ease-out),
+        border-color var(--duration-base) var(--ease-out),
+        background-color var(--duration-fast) ease;
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover {
+            transform: translate3d(0, -2px, 0);
+            box-shadow: var(--shadow-md);
+        }
+    }
+
+    &:active {
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/*
+ * Pestañas: cuando la pastilla deslizante (TabsIndicator) ya se midió, ella
+ * pinta el fondo de la pestaña activa y la pestaña se vuelve transparente.
+ */
+[data-slot='tabs-list']:has(> [data-slot='tabs-indicator'])
+    > [data-slot='tabs-trigger'][data-state='active']:not(:focus-visible) {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/* Barra de "cambios sin guardar" (Transition name="float-bar"). */
+.float-bar-enter-active,
+.float-bar-leave-active {
+    transition:
+        opacity var(--duration-base) var(--ease-out),
+        transform var(--duration-slow) var(--ease-out);
+}
+
+.float-bar-enter-from,
+.float-bar-leave-to {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+}
+
+/* Cambio de pestaña o de contenido dentro de una pantalla. */
+.fade-swap-enter-active {
+    transition:
+        opacity 260ms var(--ease-out),
+        transform 260ms var(--ease-out);
+}
+
+.fade-swap-leave-active {
+    transition: opacity 120ms ease;
+}
+
+.fade-swap-enter-from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+}
+
+.fade-swap-leave-to {
+    opacity: 0;
+}
+
+/* Brillo para esqueletos de carga. */
+@keyframes admin-shimmer {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes admin-rise {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 10px, 0);
+    }
+}
+
+@keyframes admin-fade {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes admin-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+}
+
+@keyframes admin-grow-x {
+    from {
+        transform: scaleX(0);
+    }
+}
+
+@keyframes admin-grow-y {
+    from {
+        transform: scaleY(0);
+    }
+}
+
+/*
+ * En capa de componentes: las utilidades (animate-pulse, etc.) de un hijo
+ * siguen mandando sobre la cascada.
+ */
+@layer components {
+    @media (prefers-reduced-motion: no-preference) {
+        /*
+         * Entrada de pantalla: los bloques del PageContainer suben en cascada
+         * al navegar. `backwards` = al terminar no queda ninguna transformación
+         * (no rompe `position: sticky/fixed` de los hijos).
+         */
+        .admin-enter > * {
+            animation: admin-rise 480ms var(--ease-out) backwards;
+        }
+
+        .admin-enter > :nth-child(2) {
+            animation-delay: 50ms;
+        }
+
+        .admin-enter > :nth-child(3) {
+            animation-delay: 100ms;
+        }
+
+        .admin-enter > :nth-child(4) {
+            animation-delay: 150ms;
+        }
+
+        .admin-enter > :nth-child(5) {
+            animation-delay: 200ms;
+        }
+
+        .admin-enter > :nth-child(n + 6) {
+            animation-delay: 240ms;
+        }
+
+        /* Cascada para rejillas de tarjetas, indicadores y listas. */
+        .admin-stagger > * {
+            animation: admin-rise 440ms var(--ease-out) backwards;
+            animation-delay: calc(var(--stagger-base, 120ms) + 360ms);
+        }
+
+        .admin-stagger > :nth-child(1) {
+            animation-delay: var(--stagger-base, 120ms);
+        }
+
+        .admin-stagger > :nth-child(2) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 40ms);
+        }
+
+        .admin-stagger > :nth-child(3) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 80ms);
+        }
+
+        .admin-stagger > :nth-child(4) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 120ms);
+        }
+
+        .admin-stagger > :nth-child(5) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 160ms);
+        }
+
+        .admin-stagger > :nth-child(6) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 200ms);
+        }
+
+        .admin-stagger > :nth-child(7) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 240ms);
+        }
+
+        .admin-stagger > :nth-child(8) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 280ms);
+        }
+
+        .admin-stagger > :nth-child(9) {
+            animation-delay: calc(var(--stagger-base, 120ms) + 320ms);
+        }
+
+        /* Filas de tabla: solo opacidad (sin desplazar celdas). */
+        .admin-rows > tr {
+            animation: admin-fade 360ms var(--ease-out) backwards;
+            animation-delay: calc(var(--stagger-base, 140ms) + 330ms);
+        }
+
+        .admin-rows > tr:nth-child(1) {
+            animation-delay: var(--stagger-base, 140ms);
+        }
+
+        .admin-rows > tr:nth-child(2) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 30ms);
+        }
+
+        .admin-rows > tr:nth-child(3) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 60ms);
+        }
+
+        .admin-rows > tr:nth-child(4) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 90ms);
+        }
+
+        .admin-rows > tr:nth-child(5) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 120ms);
+        }
+
+        .admin-rows > tr:nth-child(6) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 150ms);
+        }
+
+        .admin-rows > tr:nth-child(7) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 180ms);
+        }
+
+        .admin-rows > tr:nth-child(8) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 210ms);
+        }
+
+        .admin-rows > tr:nth-child(9) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 240ms);
+        }
+
+        .admin-rows > tr:nth-child(10) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 270ms);
+        }
+
+        .admin-rows > tr:nth-child(11) {
+            animation-delay: calc(var(--stagger-base, 140ms) + 300ms);
+        }
+
+        /* Contenido de una pestaña al cambiar. */
+        [data-slot='tabs-content'][data-state='active'] {
+            animation: admin-rise 320ms var(--ease-out);
+        }
+
+        /* Piezas sueltas. */
+        .admin-pop {
+            animation: admin-pop 360ms var(--ease-out) backwards;
+        }
+
+        .admin-grow-x {
+            transform-origin: left center;
+            animation: admin-grow-x 900ms var(--ease-out) 200ms backwards;
+        }
+
+        .admin-grow-y {
+            transform-origin: bottom center;
+            animation: admin-grow-y 700ms var(--ease-out) backwards;
+        }
+
+        .admin-shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .admin-shimmer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgb(255 255 255 / 0.55),
+                transparent
+            );
+            animation: admin-shimmer 1.4s ease-in-out infinite;
+        }
+    }
+}
+
+/* ---------------------------------------------------------------------- */
 /* Accesibilidad de movimiento                                             */
 /* ---------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {

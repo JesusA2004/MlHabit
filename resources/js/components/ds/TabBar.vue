@@ -47,7 +47,7 @@ const page = usePage();
                     <span
                         :class="
                             cn(
-                                'grid h-7 w-12 place-items-center rounded-full transition-colors duration-200',
+                                'grid h-7 w-12 place-items-center rounded-full transition-[background-color,scale] duration-200 group-active:scale-90',
                                 isActivePath(page.url, item) &&
                                     'bg-primary-soft',
                             )
