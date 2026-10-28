@@ -135,12 +135,8 @@ class VisitCheckoutController extends Controller
             throw ValidationException::withMessages(['form' => $e->getMessage()]);
         }
 
-        $payment = $visit->payment()->first();
-
-        if ($payment === null) {
-            // Política sin costo: la visita ya quedó agendada.
-            return redirect()->route('public.visita.abierta')->with('success', "Tu visita {$visit->folio} quedó agendada. Te enviamos la confirmación por correo.");
-        }
+        // Toda visita se cobra: la reserva siempre crea su intención de pago.
+        $payment = $visit->payment()->firstOrFail();
 
         return redirect()->to(VisitCheckoutUrls::pay($payment));
     }

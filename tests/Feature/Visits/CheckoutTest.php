@@ -314,13 +314,24 @@ it('valida los datos del formulario en español', function () {
         ->assertSessionHasErrors(['email', 'terms', 'phone']);
 });
 
-it('una política con tarifa en cero agenda sin cobro', function () {
+it('toda visita se cobra: una política antigua con tarifa en cero no vende visitas', function () {
     $s = VisitScenario::make(fn ($f) => $f->state(['fee_amount' => '0.00']));
-    $visit = $s->book();
 
-    expect($visit->status)->toBe(VisitStatus::Scheduled)
+    expect(fn () => $s->book())->toThrow(VisitBookingException::class, 'Por ahora agenda tu visita con un asesor.');
+    expect(SiteVisit::query()->count())->toBe(0)
         ->and(Payment::query()->count())->toBe(0)
-        ->and(CalendarBooking::query()->sole()->status)->toBe(BookingStatus::Confirmed);
+        ->and(CalendarBooking::query()->count())->toBe(0);
+});
+
+it('una visita acreditable se cobra completa: el crédito abona al proyecto, no a la visita', function () {
+    $s = VisitScenario::make(fn ($f) => $f->creditablePercent('100', 60));
+    $visit = $s->book();
+    $payment = VisitScenario::paymentOf($visit);
+
+    expect($visit->status)->toBe(VisitStatus::PendingPayment)
+        ->and($payment->amount)->toBe($visit->fee_amount)
+        ->and($payment->amountMoney()->isPositive())->toBeTrue()
+        ->and($visit->hold_expires_at)->not->toBeNull();
 });
 
 it('lanza VisitBookingException sin política activa', function () {

@@ -34,6 +34,7 @@ use Illuminate\Support\Str;
  * @property int|null $site_visit_id
  * @property int|null $project_id
  * @property int|null $contract_id
+ * @property int|null $consultation_id
  * @property PaymentConcept $concept
  * @property string $description
  * @property PaymentMethod $method
@@ -62,6 +63,7 @@ use Illuminate\Support\Str;
  * @property-read Customer $customer
  * @property-read SiteVisit|null $siteVisit
  * @property-read Project|null $project
+ * @property-read Consultation|null $consultation
  */
 class Payment extends Model
 {
@@ -69,7 +71,7 @@ class Payment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'uuid', 'folio', 'order_id', 'idempotency_key', 'customer_id', 'site_visit_id', 'project_id', 'contract_id',
+        'uuid', 'folio', 'order_id', 'idempotency_key', 'customer_id', 'site_visit_id', 'project_id', 'contract_id', 'consultation_id',
         'concept', 'description', 'method', 'provider', 'amount', 'currency', 'status', 'provider_transaction_id',
         'provider_authorization', 'card_brand', 'card_last4', 'fee_amount', 'net_amount', 'refunded_amount',
         'error_code', 'error_message', 'redirect_url', 'reference', 'metadata', 'paid_at', 'failed_at',
@@ -177,6 +179,12 @@ class Payment extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    /** @return BelongsTo<Consultation, $this> Asesoría pagada (concepto consultation_fee). */
+    public function consultation(): BelongsTo
+    {
+        return $this->belongsTo(Consultation::class);
     }
 
     /** @return BelongsTo<User, $this> */

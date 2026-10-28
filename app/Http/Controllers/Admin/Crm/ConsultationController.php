@@ -9,8 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Crm\BookConsultationRequest;
 use App\Models\Consultation;
 use App\Models\Lead;
+use App\Models\Payment;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\Crm\ConsultationCheckoutUrls;
 use App\Services\Crm\ConsultationScheduler;
 use App\Services\Scheduling\SlotUnavailableException;
 use App\Support\Crm\CrmLinks;
@@ -49,7 +51,7 @@ class ConsultationController extends Controller
         ]);
         $period = $filters['periodo'] ?? 'proximas';
 
-        $query = Consultation::query()->with(['lead.customer', 'advisor']);
+        $query = Consultation::query()->with(['lead.customer', 'advisor', 'payment']);
 
         if (! $user->hasPermission(Permission::ConsultationsView)) {
             $query->where('advisor_id', $user->id);
@@ -75,7 +77,7 @@ class ConsultationController extends Controller
                     ->orWhereHas('customer', fn (Builder $c) => $c->whereRaw("CONCAT(first_name, ' ', COALESCE(last_name, '')) LIKE ?", ["%{$term}%"]))));
         }
 
-        $page = $query->paginate(25)->withQueryString()->through(fn (Consultation $c) => Present::consultation($c, true));
+        $page = $query->paginate(25)->withQueryString()->through(fn (Consultation $c) => [...Present::consultation($c, true), 'payment' => self::paymentBrief($c->payment), 'holdExpiresAt' => $c->status->isAwaitingPayment() ? $c->hold_expires_at?->toIso8601String() : null, 'needsAttention' => $c->attention_reason !== null]);
 
         return Inertia::render('admin/asesorias/Index', [
             'consultations' => $page,
@@ -97,8 +99,9 @@ class ConsultationController extends Controller
 
         /** @var User $user */
         $user = $request->user();
-        $consultation->load(['lead.customer', 'advisor', 'rescheduledFrom', 'rescheduledTo']);
+        $consultation->load(['lead.customer', 'advisor', 'rescheduledFrom', 'rescheduledTo', 'payment']);
         $settings = $this->scheduler->settings();
+        $payment = $consultation->payment;
 
         return Inertia::render('admin/asesorias/Show', [
             'consultation' => [
@@ -114,7 +117,22 @@ class ConsultationController extends Controller
                 'rescheduledTo' => $consultation->rescheduledTo ? ['uuid' => $consultation->rescheduledTo->uuid, 'folio' => $consultation->rescheduledTo->folio] : null,
                 'leadStatus' => Options::one($consultation->lead->status),
                 'customerPhone' => $consultation->lead->customer->phone,
+                'holdExpiresAt' => $consultation->status->isAwaitingPayment() ? $consultation->hold_expires_at?->toIso8601String() : null,
+                'paidAt' => $consultation->paid_at?->toIso8601String(),
+                'attentionReason' => $consultation->attention_reason,
             ],
+            'payment' => $payment ? [
+                ...self::paymentBrief($payment),
+                'description' => $payment->description,
+                'method' => $payment->method->label(),
+                'cardBrand' => $payment->card_brand,
+                'cardLast4' => $payment->card_last4,
+                'authorization' => $payment->provider_authorization,
+                'errorMessage' => $payment->error_message,
+                'refundedAmount' => $payment->refunded_amount,
+                'url' => $user->can('view', $payment) ? route('admin.pagos.show', $payment) : null,
+            ] : null,
+            'payUrl' => $consultation->status->isAwaitingPayment() && $consultation->holdIsActive() ? ConsultationCheckoutUrls::pay($consultation) : null,
             'leadUrl' => $user->can('view', $consultation->lead) ? route('admin.prospectos.show', $consultation->lead) : null,
             'customerManageUrl' => CrmLinks::manageConsultation($consultation),
             'options' => [
@@ -147,7 +165,39 @@ class ConsultationController extends Controller
             throw ValidationException::withMessages(['starts_at' => $e->getMessage()]);
         }
 
-        return back()->with('success', "Asesoría {$consultation->folio} agendada con {$consultation->advisor->name}.");
+        return back()->with('success', "Asesoría {$consultation->folio} apartada con {$consultation->advisor->name}. Enviamos al cliente el enlace de pago; se confirma al pagar.");
+    }
+
+    /** Reenvía al cliente el enlace de pago de una asesoría apartada. */
+    public function sendPaymentLink(Consultation $consultation): RedirectResponse
+    {
+        Gate::authorize('update', $consultation);
+
+        if (! $consultation->status->isAwaitingPayment() || ! $consultation->holdIsActive()) {
+            throw ValidationException::withMessages(['status' => 'Esta asesoría no tiene un pago pendiente vigente.']);
+        }
+
+        $this->scheduler->notifyPaymentLink($consultation);
+
+        return back()->with('success', 'Reenviamos el enlace de pago al cliente.');
+    }
+
+    /**
+     * @return array{uuid: string, folio: string, amount: string, status: array<string, mixed>, paidAt: string|null}|null
+     */
+    private static function paymentBrief(?Payment $payment): ?array
+    {
+        if ($payment === null) {
+            return null;
+        }
+
+        return [
+            'uuid' => $payment->uuid,
+            'folio' => $payment->folio,
+            'amount' => $payment->amount,
+            'status' => $payment->status->toArray(),
+            'paidAt' => $payment->paid_at?->toIso8601String(),
+        ];
     }
 
     /** Disponibilidad para el panel (sin anticipación mínima; filtro por asesor). */

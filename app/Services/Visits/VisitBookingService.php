@@ -28,7 +28,8 @@ use Illuminate\Support\Facades\DB;
  * En UNA transacción: re-valida política y cobertura → bloquea la zona
  * (cupo diario) → aparta el horario (BookingService::reserve con holdUntil)
  * en el técnico menos cargado → crea la visita con tarifa/crédito
- * CONGELADOS → crea la intención de cobro (concept visit_fee).
+ * CONGELADOS → crea la intención de cobro (concept visit_fee). Toda visita
+ * se cobra: no existe camino sin pago.
  * Idempotente por la clave del cliente: la misma clave devuelve la misma visita.
  */
 class VisitBookingService
@@ -40,7 +41,6 @@ class VisitBookingService
         private readonly PaymentService $payments,
         private readonly LeadBridge $leads,
         private readonly ActivityLogger $audit,
-        private readonly VisitPaymentHandler $handler,
     ) {}
 
     /**
@@ -62,7 +62,8 @@ class VisitBookingService
         }
 
         $policy = VisitPolicy::current();
-        if ($policy === null) {
+        // Toda visita se cobra: una política sin tarifa positiva (dato antiguo) no se vende.
+        if ($policy === null || ! $policy->feeMoney()->isPositive()) {
             throw new VisitBookingException('Por ahora agenda tu visita con un asesor.', VisitBookingException::NO_POLICY);
         }
 
@@ -111,8 +112,8 @@ class VisitBookingService
             ]);
 
             $fee = $policy->feeMoney();
+            // El crédito abona al proyecto futuro; la visita se cobra completa.
             $credit = $policy->creditAmountFor($fee);
-            $free = ! $fee->isPositive();
 
             $visit = SiteVisit::query()->create([
                 'folio' => Folio::next('V'),
@@ -128,7 +129,7 @@ class VisitBookingService
                 'currency' => $policy->currency,
                 'is_creditable' => $policy->is_creditable && $credit->isPositive(),
                 'credit_amount' => $credit->amount,
-                'hold_expires_at' => $free ? null : $holdUntil,
+                'hold_expires_at' => $holdUntil,
                 'idempotency_key' => $idempotencyKey,
                 'access_notes' => $data['access_notes'] ?? null,
                 'customer_notes' => $data['customer_notes'] ?? null,
@@ -136,7 +137,7 @@ class VisitBookingService
                 'created_by' => $actor?->id,
             ]);
 
-            $booking = $this->reserveBestTechnician($zone, $policy, $startsAt, $endsAt, $free ? null : $holdUntil, $visit, $technicianId, $actor !== null);
+            $booking = $this->reserveBestTechnician($zone, $policy, $startsAt, $endsAt, $holdUntil, $visit, $technicianId, $actor !== null);
             $visit->forceFill(['technician_id' => $booking->user_id])->save();
 
             if ($lead === null) {
@@ -152,14 +153,8 @@ class VisitBookingService
                 'tecnico' => $booking->user_id,
                 'politica' => $policy->version,
                 'tarifa' => $fee->amount,
-                'apartado_hasta' => $free ? null : $holdUntil->toIso8601String(),
+                'apartado_hasta' => $holdUntil->toIso8601String(),
             ]);
-
-            if ($free) {
-                $this->handler->scheduleWithoutPayment($visit, $actor);
-
-                return $visit->fresh() ?? $visit;
-            }
 
             $this->payments->createIntent(
                 $customer,

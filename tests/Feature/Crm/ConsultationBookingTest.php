@@ -6,12 +6,16 @@ use App\Enums\BookingStatus;
 use App\Enums\ConsultationChannel;
 use App\Enums\ConsultationStatus;
 use App\Enums\LeadStatus;
+use App\Enums\PaymentConcept;
+use App\Enums\PaymentStatus;
 use App\Models\AvailabilityException;
 use App\Models\CalendarBooking;
 use App\Models\Consultation;
 use App\Models\Lead;
+use App\Models\Payment;
 use App\Notifications\Crm\ConsultationAdvisorAlert;
 use App\Notifications\Crm\ConsultationBooked;
+use App\Notifications\Crm\ConsultationPaymentLink;
 use App\Notifications\Crm\ConsultationReminder;
 use App\Services\Crm\ConsultationScheduler;
 use App\Services\Scheduling\SlotUnavailableException;
@@ -56,7 +60,7 @@ it('returns only dates with availability within the booking window', function ()
         ->and($dates)->not->toContain('2026-11-25'); // fuera de la ventana de 21 días
 });
 
-it('books a free consultation from the signed public link', function () {
+it('books from the signed public link: slot held and payment pending (every consultation is paid)', function () {
     $advisor = CrmSetup::advisor([2]);
     $lead = Lead::factory()->create();
 
@@ -68,17 +72,33 @@ it('books a free consultation from the signed public link', function () {
 
     $consultation = Consultation::query()->sole();
     $response->assertRedirect();
-    expect($response->headers->get('Location'))->toContain('/asesoria/'.$consultation->uuid);
+    expect($response->headers->get('Location'))->toContain('/asesoria/'.$consultation->uuid.'/pago');
 
     expect($consultation->advisor_id)->toBe($advisor->id)
         ->and($consultation->starts_at->format('Y-m-d H:i'))->toBe('2026-11-03 10:00')
         ->and($consultation->ends_at->format('H:i'))->toBe('10:30')
         ->and($consultation->folio)->toStartWith('MLH-A-')
         ->and($consultation->channel)->toBe(ConsultationChannel::Whatsapp)
-        ->and($consultation->price)->toBe('0.00')
+        ->and($consultation->price)->toBe('500.00')
+        ->and($consultation->status)->toBe(ConsultationStatus::PendingPayment)
+        ->and($consultation->hold_expires_at->format('H:i'))->toBe('08:15')
+        ->and($consultation->booking->status)->toBe(BookingStatus::Held)
+        ->and($consultation->payment->status)->toBe(PaymentStatus::Pending)
+        ->and($consultation->payment->concept)->toBe(PaymentConcept::ConsultationFee)
+        ->and($consultation->payment->amount)->toBe('500.00')
+        ->and($consultation->payment->consultation_id)->toBe($consultation->id)
+        ->and($consultation->payment->customer_id)->toBe($lead->customer_id)
+        ->and($consultation->payment->idempotency_key)->toBe('consultation:'.$consultation->uuid)
+        // El prospecto avanza y se avisa hasta que se confirma el pago.
+        ->and($lead->refresh()->status)->toBe(LeadStatus::New);
+
+    Notification::assertNothingSent();
+
+    CrmSetup::pay($consultation);
+
+    expect($consultation->refresh()->status)->toBe(ConsultationStatus::Confirmed)
         ->and($consultation->booking->status)->toBe(BookingStatus::Confirmed)
         ->and($lead->refresh()->status)->toBe(LeadStatus::ConsultationScheduled);
-
     Notification::assertSentOnDemand(ConsultationBooked::class);
     Notification::assertSentTo($advisor, ConsultationAdvisorAlert::class);
 });
@@ -100,7 +120,7 @@ it('lets only one of two reservations of the same slot succeed', function () {
 
     expect(fn () => $this->scheduler->book($b, $slot, ConsultationChannel::Video))->toThrow(SlotUnavailableException::class);
     expect(Consultation::query()->count())->toBe(1)
-        ->and(CalendarBooking::query()->where('status', 'confirmed')->count())->toBe(1);
+        ->and(CalendarBooking::query()->where('status', 'held')->count())->toBe(1);
 });
 
 it('assigns a second advisor when the first one is busy, picking the least loaded', function () {
@@ -137,7 +157,7 @@ it('rejects slots inside the minimum notice for public bookings', function () {
 it('reschedules releasing the previous booking', function () {
     CrmSetup::advisor([2]);
     $lead = Lead::factory()->create();
-    $old = $this->scheduler->book($lead, CarbonImmutable::parse('2026-11-03 10:00'), ConsultationChannel::Video);
+    $old = CrmSetup::pay($this->scheduler->book($lead, CarbonImmutable::parse('2026-11-03 10:00'), ConsultationChannel::Video));
 
     $this->post(URL::signedRoute('public.asesoria.reprogramar', ['consultation' => $old->uuid]), [
         'starts_at' => '2026-11-03T10:30:00-06:00',
@@ -149,7 +169,12 @@ it('reschedules releasing the previous booking', function () {
     expect($old->status)->toBe(ConsultationStatus::Rescheduled)
         ->and(CalendarBooking::query()->where('bookable_id', $old->id)->value('status'))->toBe(BookingStatus::Released)
         ->and($new->starts_at->format('H:i'))->toBe('10:30')
-        ->and($new->status)->toBe(ConsultationStatus::Scheduled);
+        // El pago se conserva: la nueva cita queda firme sin volver a cobrar.
+        ->and($new->status)->toBe(ConsultationStatus::Confirmed)
+        ->and($new->payment_id)->toBe($old->payment_id)
+        ->and($new->paid_at)->not->toBeNull()
+        ->and($new->booking->status)->toBe(BookingStatus::Confirmed)
+        ->and(Payment::query()->count())->toBe(1);
 
     // El horario original vuelve a estar libre.
     $other = $this->scheduler->book(Lead::factory()->create(), CarbonImmutable::parse('2026-11-03 11:30'), ConsultationChannel::Video);
@@ -166,7 +191,8 @@ it('cancels idempotently and frees the slot', function () {
 
     expect($c->refresh()->status)->toBe(ConsultationStatus::Cancelled)
         ->and(CalendarBooking::query()->where('status', 'released')->count())->toBe(1)
-        ->and(collect($this->scheduler->slotsForDate(CarbonImmutable::parse('2026-11-03')))->pluck('time'))->toContain('10:00');
+        ->and(collect($this->scheduler->slotsForDate(CarbonImmutable::parse('2026-11-03')))->pluck('time'))->toContain('10:00')
+        ->and($c->payment->status)->toBe(PaymentStatus::Cancelled);
 });
 
 it('records the outcome and advances the lead', function () {
@@ -191,12 +217,17 @@ it('lets staff book from the lead detail ignoring minimum notice', function () {
         'advisor_id' => $advisor->id,
     ])->assertSessionHasNoErrors();
 
-    expect(Consultation::query()->sole()->starts_at->format('H:i'))->toBe('09:00');
+    $consultation = Consultation::query()->sole();
+    expect($consultation->starts_at->format('H:i'))->toBe('09:00')
+        ->and($consultation->status)->toBe(ConsultationStatus::PendingPayment)
+        // El equipo aparta 24 h y el cliente recibe el enlace de pago.
+        ->and($consultation->hold_expires_at->toDateTimeString())->toBe('2026-11-03 08:00:00');
+    Notification::assertSentOnDemand(ConsultationPaymentLink::class);
 });
 
 it('sends 24h and 1h reminders exactly once', function () {
     CrmSetup::advisor([3]);
-    $c = $this->scheduler->book(Lead::factory()->create(), CarbonImmutable::parse('2026-11-04 10:00'), ConsultationChannel::Video);
+    $c = CrmSetup::pay($this->scheduler->book(Lead::factory()->create(), CarbonImmutable::parse('2026-11-04 10:00'), ConsultationChannel::Video));
 
     $this->travelTo(CarbonImmutable::parse('2026-11-03 10:30'));
     $this->artisan('consultations:send-reminders')->assertSuccessful();

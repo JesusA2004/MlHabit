@@ -25,6 +25,7 @@ class BookConsultationRequest extends FormRequest
             'channel' => [$this->isMethod('POST') && ! $this->routeIs('*.reprogramar') ? 'required' : 'nullable', Rule::enum(ConsultationChannel::class)],
             'notes' => ['nullable', 'string', 'max:1000'],
             'advisor_id' => ['nullable', 'integer', 'exists:users,id'],
+            'email' => ['nullable', 'email', 'max:255'],
         ];
     }
 
@@ -37,6 +38,7 @@ class BookConsultationRequest extends FormRequest
             'starts_at.required' => 'Elige un horario.',
             'starts_at.date' => 'Elige un horario válido.',
             'channel.required' => 'Elige cómo prefieres tu asesoría.',
+            'email.email' => 'Revisa tu correo; parece incompleto.',
         ];
     }
 

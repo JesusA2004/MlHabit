@@ -58,6 +58,8 @@ test('invalid values are rejected', function (string $group, array $payload, str
     'validity zero' => ['commercial', ['deposit_percent' => '10', 'tax_rate' => '16', 'prices_include_tax' => true, 'quote_validity_days' => 0], 'quote_validity_days'],
     'unknown channel' => ['consultation', ['enabled' => true, 'duration_minutes' => 30, 'buffer_minutes' => 10, 'price' => '0', 'booking_window_days' => 21, 'min_notice_hours' => 4, 'channels' => ['telepathy']], 'channels.0'],
     'no channels while enabled' => ['consultation', ['enabled' => true, 'duration_minutes' => 30, 'buffer_minutes' => 10, 'price' => '0', 'booking_window_days' => 21, 'min_notice_hours' => 4, 'channels' => []], 'channels'],
+    'consultation price zero (every consultation is paid)' => ['consultation', ['enabled' => true, 'duration_minutes' => 30, 'buffer_minutes' => 10, 'price' => '0', 'booking_window_days' => 21, 'min_notice_hours' => 4, 'channels' => ['video']], 'price'],
+    'consultation price 0.00' => ['consultation', ['enabled' => true, 'duration_minutes' => 30, 'buffer_minutes' => 10, 'price' => '0.00', 'booking_window_days' => 21, 'min_notice_hours' => 4, 'channels' => ['video']], 'price'],
     'follow up zero' => ['leads', ['follow_up_hours' => 0], 'follow_up_hours'],
 ]);
 

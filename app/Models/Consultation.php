@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
@@ -31,6 +32,10 @@ use Illuminate\Support\Str;
  * @property string|null $meeting_provider
  * @property string|null $meeting_url
  * @property string $price
+ * @property int|null $payment_id
+ * @property Carbon|null $hold_expires_at
+ * @property Carbon|null $paid_at
+ * @property string|null $attention_reason
  * @property string|null $customer_notes
  * @property string|null $internal_notes
  * @property ConsultationOutcome|null $outcome
@@ -46,6 +51,7 @@ use Illuminate\Support\Str;
  * @property-read Lead $lead
  * @property-read User $advisor
  * @property-read CalendarBooking|null $booking
+ * @property-read Payment|null $payment
  */
 class Consultation extends Model
 {
@@ -56,7 +62,7 @@ class Consultation extends Model
         'uuid', 'folio', 'lead_id', 'advisor_id', 'starts_at', 'ends_at', 'status', 'channel',
         'meeting_provider', 'meeting_url', 'price', 'customer_notes', 'internal_notes', 'outcome',
         'outcome_notes', 'cancel_reason', 'rescheduled_from_id', 'reminder_sent_at', 'completed_at',
-        'cancelled_at', 'created_by',
+        'cancelled_at', 'created_by', 'payment_id', 'hold_expires_at', 'paid_at', 'attention_reason',
     ];
 
     protected static function booted(): void
@@ -78,6 +84,8 @@ class Consultation extends Model
             'reminder_sent_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'hold_expires_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 
@@ -114,6 +122,24 @@ class Consultation extends Model
     public function booking(): MorphOne
     {
         return $this->morphOne(CalendarBooking::class, 'bookable')->latestOfMany();
+    }
+
+    /** @return BelongsTo<Payment, $this> Pago vigente (se conserva al reprogramar). */
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
+    /** @return HasMany<Payment, $this> Pagos creados para esta asesoría (payments.consultation_id). */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /** ¿El apartado del horario sigue vigente para pagar? */
+    public function holdIsActive(): bool
+    {
+        return $this->hold_expires_at !== null && $this->hold_expires_at->isFuture();
     }
 
     /**

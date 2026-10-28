@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SystemSettingsRequest;
 use App\Models\SiteSetting;
 use App\Services\ActivityLogger;
+use App\Services\Crm\ConsultationSettings;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -37,7 +38,8 @@ class SettingsController extends Controller
                     'quote_validity_days' => (int) $commercial['quote_validity_days'],
                     'currency' => (string) $commercial['currency'],
                 ],
-                'consultation' => Settings::group('consultation'),
+                // Toda asesoría tiene costo: se muestra el precio vigente (nunca 0).
+                'consultation' => [...Settings::group('consultation'), 'price' => ConsultationSettings::current()->price->amount],
                 'leads' => Settings::group('leads'),
                 'security' => Settings::group('security'),
                 // Solo la verificación de buscadores; título y descripción viven en /admin/sitio.

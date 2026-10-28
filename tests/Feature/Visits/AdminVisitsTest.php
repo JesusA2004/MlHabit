@@ -299,4 +299,8 @@ it('política de visita: crear versión y activar deja solo una activa', functio
 
     // Porcentaje > 100 no es válido.
     $this->actingAs($director)->post(route('admin.visitas.politica.store'), ['credit_value' => '150'] + $payload)->assertSessionHasErrors('credit_value');
+
+    // Toda visita se cobra: la tarifa no puede ser cero.
+    $this->actingAs($director)->post(route('admin.visitas.politica.store'), ['fee_amount' => '0'] + $payload)->assertSessionHasErrors('fee_amount');
+    $this->actingAs($director)->post(route('admin.visitas.politica.store'), ['fee_amount' => '0.00'] + $payload)->assertSessionHasErrors('fee_amount');
 });

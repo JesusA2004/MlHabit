@@ -11,7 +11,6 @@ use App\Models\Lead;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\SiteVisit;
-use App\Models\User;
 use App\Models\VisitCredit;
 use App\Services\ActivityLogger;
 use App\Services\Scheduling\BookingService;
@@ -121,21 +120,6 @@ class VisitPaymentHandler
             ->whereIn('status', [VisitStatus::PendingPayment->value, VisitStatus::PaymentProcessing->value])
             ->where('status', '!=', $target->value)
             ->update(['status' => $target->value, 'updated_at' => now()]);
-    }
-
-    /** Visita sin costo (política con tarifa 0): se confirma el horario sin cobro. */
-    public function scheduleWithoutPayment(SiteVisit $visit, ?User $actor = null): void
-    {
-        $booking = $visit->activeBooking();
-        if ($booking !== null) {
-            $this->bookings->confirm($booking);
-        }
-
-        $visit->forceFill(['status' => VisitStatus::Scheduled, 'hold_expires_at' => null])->save();
-
-        DB::afterCommit(function () use ($visit) {
-            $this->notifier->visitPaid($visit->fresh() ?? $visit, null);
-        });
     }
 
     public function onPaymentRefunded(Payment $payment, Refund $refund): void

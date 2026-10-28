@@ -47,6 +47,12 @@ Route::middleware('signed')->group(function () {
         ->name('public.asesoria.store');
 
     Route::get('asesoria/{consultation:uuid}', [ConsultationBookingController::class, 'show'])->name('public.asesoria.show');
+    // Pago con tarjeta (toda asesoría tiene costo). El retorno de 3D Secure
+    // usa el genérico pagos.retorno (routes/modules/payments.php).
+    Route::get('asesoria/{consultation:uuid}/pago', [ConsultationBookingController::class, 'pay'])->name('public.asesoria.pago');
+    Route::post('asesoria/{consultation:uuid}/pago', [ConsultationBookingController::class, 'charge'])
+        ->middleware('throttle:10,1')
+        ->name('public.asesoria.cobrar');
     Route::post('asesoria/{consultation:uuid}/reprogramar', [ConsultationBookingController::class, 'reschedule'])
         ->middleware('throttle:crm-customer-actions')
         ->name('public.asesoria.reprogramar');
@@ -85,6 +91,7 @@ Route::middleware(['auth', 'verified', 'staff'])
         Route::post('asesorias/{consultation:uuid}/resultado', [ConsultationController::class, 'outcome'])->name('asesorias.resultado');
         Route::post('asesorias/{consultation:uuid}/reprogramar', [ConsultationController::class, 'reschedule'])->name('asesorias.reprogramar');
         Route::post('asesorias/{consultation:uuid}/cancelar', [ConsultationController::class, 'cancel'])->name('asesorias.cancelar');
+        Route::post('asesorias/{consultation:uuid}/enlace-pago', [ConsultationController::class, 'sendPaymentLink'])->middleware('throttle:10,1')->name('asesorias.enlace-pago');
 
         // Precalificaciones
         Route::get('precalificaciones', [PrequalificationController::class, 'index'])->name('precalificaciones.index');

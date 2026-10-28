@@ -28,7 +28,7 @@ class ConsultationFactory extends Factory
             'ends_at' => $start->addMinutes(30),
             'status' => ConsultationStatus::Confirmed,
             'channel' => ConsultationChannel::Video,
-            'price' => '0.00',
+            'price' => '500.00',
         ];
     }
 }

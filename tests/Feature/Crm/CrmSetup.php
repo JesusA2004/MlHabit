@@ -5,9 +5,12 @@ namespace Tests\Feature\Crm;
 use App\Enums\BookingKind;
 use App\Enums\UserRole;
 use App\Models\AvailabilityRule;
+use App\Models\Consultation;
 use App\Models\CoveragePostalCode;
 use App\Models\CoverageZone;
+use App\Models\Payment;
 use App\Models\User;
+use App\Payments\PaymentService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -24,6 +27,18 @@ final class CrmSetup
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    /**
+     * Marca pagada la intención de cobro de una asesoría (como si Openpay
+     * confirmara el cargo): dispara PaymentConfirmed → asesoría confirmada.
+     */
+    public static function pay(Consultation $consultation): Consultation
+    {
+        $payment = Payment::query()->findOrFail($consultation->fresh()?->payment_id);
+        app(PaymentService::class)->markPaid($payment, null, 'test');
+
+        return $consultation->fresh() ?? $consultation;
     }
 
     public static function zone(string $postalCode = '06700', bool $withTechnician = true): CoverageZone

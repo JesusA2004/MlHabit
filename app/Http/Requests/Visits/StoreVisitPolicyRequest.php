@@ -20,7 +20,8 @@ class StoreVisitPolicyRequest extends FormRequest
         $creditable = $this->boolean('is_creditable');
 
         return [
-            'fee_amount' => ['required', 'regex:/^\d{1,9}(\.\d{1,2})?$/'],
+            // Toda visita se cobra: la tarifa nunca puede ser cero.
+            'fee_amount' => ['required', 'regex:/^\d{1,9}(\.\d{1,2})?$/', 'numeric', 'min:1'],
             'is_creditable' => ['required', 'boolean'],
             'credit_type' => [Rule::requiredIf($creditable), 'nullable', Rule::enum(VisitCreditType::class)],
             'credit_value' => [Rule::requiredIf($creditable), 'nullable', 'regex:/^\d{1,9}(\.\d{1,2})?$/'],
@@ -46,6 +47,14 @@ class StoreVisitPolicyRequest extends FormRequest
                     $validator->errors()->add('credit_value', 'El porcentaje no puede ser mayor a 100.');
                 }
             },
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [
+            'fee_amount.min' => 'Toda visita técnica se cobra: la tarifa debe ser de al menos $1.00 MXN.',
         ];
     }
 

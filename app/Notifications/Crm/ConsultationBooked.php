@@ -3,6 +3,7 @@
 namespace App\Notifications\Crm;
 
 use App\Models\Consultation;
+use App\Models\Payment;
 use App\Support\Crm\CrmLinks;
 use App\Support\Crm\Ics;
 use App\Support\Money;
@@ -10,6 +11,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\URL;
 
 /** Al cliente: asesoría agendada o reprogramada, con archivo .ics. */
 class ConsultationBooked extends Notification implements ShouldQueue
@@ -44,8 +46,10 @@ class ConsultationBooked extends Notification implements ShouldQueue
             $mail->line("Enlace de la reunión: {$c->meeting_url}");
         }
 
-        if (Money::of($c->price)->isPositive()) {
-            $mail->line('La asesoría tiene un costo de '.Money::of($c->price)->format().'; por ahora el pago se coordina directamente con tu asesor.');
+        $payment = $c->payment_id !== null ? Payment::query()->find($c->payment_id) : null;
+        if ($payment !== null && $payment->status->isSettled()) {
+            $mail->line('Recibimos tu pago de '.Money::of($payment->amount)->format()." (folio {$payment->folio}).")
+                ->line('Comprobante: '.URL::signedRoute('pagos.comprobante', ['payment' => $payment->uuid]));
         }
 
         return $mail

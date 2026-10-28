@@ -58,7 +58,7 @@ class PaymentService
     /**
      * Crea (o devuelve, si la clave ya existe) la intención de cobro.
      *
-     * @param  array{site_visit_id?: int|null, project_id?: int|null, contract_id?: int|null, return_url?: string|null}  $links
+     * @param  array{site_visit_id?: int|null, project_id?: int|null, contract_id?: int|null, consultation_id?: int|null, return_url?: string|null, next_url?: string|null}  $links
      */
     public function createIntent(Customer $customer, PaymentConcept $concept, Money $amount, string $description, array $links, string $idempotencyKey): Payment
     {
@@ -80,6 +80,7 @@ class PaymentService
                     'site_visit_id' => $links['site_visit_id'] ?? null,
                     'project_id' => $links['project_id'] ?? null,
                     'contract_id' => $links['contract_id'] ?? null,
+                    'consultation_id' => $links['consultation_id'] ?? null,
                     'concept' => $concept,
                     'description' => mb_substr($description, 0, 250),
                     'method' => PaymentMethod::Card,
@@ -88,7 +89,10 @@ class PaymentService
                     'currency' => 'MXN',
                     'status' => PaymentStatus::Pending,
                     'refunded_amount' => '0.00',
-                    'metadata' => isset($links['return_url']) ? ['return_url' => $links['return_url']] : null,
+                    'metadata' => array_filter([
+                        'return_url' => $links['return_url'] ?? null,
+                        'next_url' => $links['next_url'] ?? null,
+                    ]) ?: null,
                 ]);
 
                 $this->event($payment, 'system', 'created', null, PaymentStatus::Pending, [

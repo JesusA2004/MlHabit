@@ -13,6 +13,7 @@ Schedule::command('consultations:send-reminders')->everyFiveMinutes()->withoutOv
 Schedule::command('warranties:expire')->dailyAt('01:00');
 Schedule::command('quotes:expire')->dailyAt('00:15');
 Schedule::command('visits:expire-holds')->everyMinute()->withoutOverlapping();
+Schedule::command('consultations:expire-holds')->everyMinute()->withoutOverlapping();
 Schedule::command('payments:reconcile')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('visits:send-reminders')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('media:prune-orphans')->hourly();

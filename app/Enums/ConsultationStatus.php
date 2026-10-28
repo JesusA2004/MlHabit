@@ -2,10 +2,13 @@
 
 namespace App\Enums;
 
-/** Estado de una asesoría remota. */
+/** Estado de una asesoría remota. Toda asesoría tiene costo: nace en pending_payment. */
 enum ConsultationStatus: string
 {
+    /** Horario apartado (hold_expires_at) mientras el cliente paga con tarjeta. */
+    case PendingPayment = 'pending_payment';
     case Scheduled = 'scheduled';
+    /** Pagada: queda firme en la agenda. */
     case Confirmed = 'confirmed';
     case Completed = 'completed';
     case NoShow = 'no_show';
@@ -16,6 +19,7 @@ enum ConsultationStatus: string
     public function label(): string
     {
         return match ($this) {
+            self::PendingPayment => 'Pendiente de pago',
             self::Scheduled => 'Agendada',
             self::Confirmed => 'Confirmada',
             self::Completed => 'Realizada',
@@ -28,6 +32,7 @@ enum ConsultationStatus: string
     public function tone(): string
     {
         return match ($this) {
+            self::PendingPayment => 'warning',
             self::Scheduled => 'info',
             self::Confirmed => 'brand',
             self::Completed => 'success',
@@ -36,15 +41,26 @@ enum ConsultationStatus: string
         };
     }
 
-    /** ¿Sigue ocupando la agenda y puede moverse o cancelarse? */
+    /** ¿Sigue ocupando la agenda (o su apartado) y puede moverse o cancelarse? */
     public function isActive(): bool
     {
+        return in_array($this, self::active(), true);
+    }
+
+    /** ¿Ya está firme en la agenda (pagada)? Recordatorios, métricas y portal. */
+    public function isBooked(): bool
+    {
         return in_array($this, [self::Scheduled, self::Confirmed], true);
+    }
+
+    public function isAwaitingPayment(): bool
+    {
+        return $this === self::PendingPayment;
     }
 
     /** @return list<self> */
     public static function active(): array
     {
-        return [self::Scheduled, self::Confirmed];
+        return [self::PendingPayment, self::Scheduled, self::Confirmed];
     }
 }

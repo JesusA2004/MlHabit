@@ -45,7 +45,7 @@ class SystemSettingsRequest extends FormRequest
                 'enabled' => ['required', 'boolean'],
                 'duration_minutes' => ['required', 'integer', 'min:10', 'max:240'],
                 'buffer_minutes' => ['required', 'integer', 'min:0', 'max:120'],
-                'price' => ['required', 'string', self::DECIMAL, 'numeric', 'min:0', 'max:100000'],
+                'price' => ['required', 'string', self::DECIMAL, 'numeric', 'min:1', 'max:100000'],
                 'booking_window_days' => ['required', 'integer', 'min:1', 'max:120'],
                 'min_notice_hours' => ['required', 'integer', 'min:0', 'max:168'],
                 'channels' => ['present', 'array'],
@@ -142,6 +142,7 @@ class SystemSettingsRequest extends FormRequest
             'deposit_percent.regex' => 'Escribe un porcentaje con máximo dos decimales.',
             'tax_rate.regex' => 'Escribe un porcentaje con máximo dos decimales.',
             'price.regex' => 'Escribe un monto con máximo dos decimales.',
+            'price.min' => 'Toda asesoría tiene costo: el precio debe ser de al menos $1.00 MXN.',
             'google_site_verification.regex' => 'Pega el código tal como lo da Google (letras, números, guiones).',
             'bing_site_verification.regex' => 'Pega el código tal como lo da Bing (letras, números, guiones).',
         ];

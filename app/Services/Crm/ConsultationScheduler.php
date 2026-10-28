@@ -9,24 +9,30 @@ use App\Enums\ConsultationOutcome;
 use App\Enums\ConsultationStatus;
 use App\Enums\LeadActivityType;
 use App\Enums\LeadStatus;
+use App\Enums\PaymentConcept;
 use App\Enums\Permission;
 use App\Models\AvailabilityException;
 use App\Models\AvailabilityRule;
 use App\Models\CalendarBooking;
 use App\Models\Consultation;
+use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\Payment;
 use App\Models\User;
 use App\Notifications\Crm\ConsultationAdvisorAlert;
 use App\Notifications\Crm\ConsultationBooked;
 use App\Notifications\Crm\ConsultationCancelled;
+use App\Notifications\Crm\ConsultationPaymentLink;
 use App\Notifications\Crm\CustomerNotifier;
 use App\Notifications\Crm\When;
+use App\Payments\PaymentService;
 use App\Services\ActivityLogger;
 use App\Services\Crm\Meetings\MeetingProvider;
 use App\Services\Scheduling\BookingService;
 use App\Services\Scheduling\SlotFinder;
 use App\Services\Scheduling\SlotUnavailableException;
 use App\Support\Folio;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +57,7 @@ class ConsultationScheduler
         private readonly LeadWorkflow $workflow,
         private readonly MeetingProvider $meetings,
         private readonly ActivityLogger $logger,
+        private readonly PaymentService $payments,
     ) {}
 
     public function settings(): ConsultationSettings
@@ -179,10 +186,18 @@ class ConsultationScheduler
     }
 
     /**
-     * Agenda una asesoría. Lanza SlotUnavailableException si nadie tiene
-     * libre ese horario (p. ej. otra persona lo tomó un segundo antes).
+     * Agenda una asesoría. Toda asesoría tiene costo: una reserva nueva
+     * APARTA el horario (hold) y queda `pending_payment` con su intención de
+     * cobro (concepto consultation_fee, clave "consultation:{uuid}"). Se
+     * confirma al recibir el pago (ConsultationPaymentHandler) o se cancela
+     * al vencer el apartado (ConsultationHoldExpirer).
      *
-     * @param  bool  $staffBooking  Desde el panel: ignora la anticipación mínima.
+     * Al reprogramar se conserva el pago: si ya estaba pagada la nueva cita
+     * queda firme; si no, sigue pendiente con el mismo cobro.
+     *
+     * Lanza SlotUnavailableException si nadie tiene libre ese horario.
+     *
+     * @param  bool  $staffBooking  Desde el panel: ignora la anticipación mínima y aparta 24 h.
      */
     public function book(
         Lead $lead,
@@ -193,6 +208,7 @@ class ConsultationScheduler
         ?int $advisorId = null,
         bool $staffBooking = false,
         ?Consultation $rescheduledFrom = null,
+        ?CarbonImmutable $holdUntil = null,
     ): Consultation {
         $settings = $this->settings();
 
@@ -211,7 +227,21 @@ class ConsultationScheduler
 
         $endsAt = $startsAt->addMinutes($settings->durationMinutes);
 
-        $consultation = DB::transaction(function () use ($lead, $startsAt, $endsAt, $channel, $customerNotes, $actor, $advisorId, $settings, $minNotice, $rescheduledFrom) {
+        // ¿La nueva cita ya está pagada? Solo al reprogramar una asesoría firme
+        // (incluye asesorías antiguas sin costo que ya estaban agendadas).
+        $alreadyPaid = $rescheduledFrom !== null && ($rescheduledFrom->paid_at !== null || $rescheduledFrom->payment_id === null);
+
+        if ($alreadyPaid) {
+            $holdUntil = null;
+        } elseif ($rescheduledFrom?->hold_expires_at !== null && $rescheduledFrom->hold_expires_at->isFuture() && $holdUntil === null && ! $staffBooking) {
+            $holdUntil = CarbonImmutable::parse($rescheduledFrom->hold_expires_at);
+        } else {
+            $holdUntil ??= $staffBooking
+                ? CarbonImmutable::now()->addHours(ConsultationSettings::STAFF_HOLD_HOURS)
+                : CarbonImmutable::now()->addMinutes(ConsultationSettings::HOLD_MINUTES);
+        }
+
+        $consultation = DB::transaction(function () use ($lead, $startsAt, $endsAt, $channel, $customerNotes, $actor, $advisorId, $settings, $minNotice, $rescheduledFrom, $alreadyPaid, $holdUntil) {
             $booking = null;
             $advisor = null;
 
@@ -223,6 +253,7 @@ class ConsultationScheduler
                         $startsAt,
                         $endsAt,
                         $settings->bufferMinutes,
+                        $holdUntil,
                     );
                     $advisor = $candidate;
 
@@ -242,11 +273,16 @@ class ConsultationScheduler
                 'advisor_id' => $advisor->id,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
-                'status' => ConsultationStatus::Scheduled,
+                'status' => $alreadyPaid ? ($rescheduledFrom->paid_at !== null ? ConsultationStatus::Confirmed : ConsultationStatus::Scheduled) : ConsultationStatus::PendingPayment,
                 'channel' => $channel,
                 'meeting_provider' => $channel === ConsultationChannel::Video ? $this->meetings->key() : null,
                 'meeting_url' => $rescheduledFrom?->meeting_url,
+                // El precio se congela al apartar: un cambio posterior no altera lo pactado.
                 'price' => $rescheduledFrom !== null ? $rescheduledFrom->price : $settings->price->amount,
+                'payment_id' => $rescheduledFrom?->payment_id,
+                'hold_expires_at' => $holdUntil,
+                'paid_at' => $rescheduledFrom?->paid_at,
+                'attention_reason' => $rescheduledFrom?->attention_reason,
                 'customer_notes' => $customerNotes ?? $rescheduledFrom?->customer_notes,
                 'internal_notes' => $rescheduledFrom?->internal_notes,
                 'rescheduled_from_id' => $rescheduledFrom?->id,
@@ -255,36 +291,82 @@ class ConsultationScheduler
 
             $this->bookings->attach($booking, $consultation);
 
-            if ($channel === ConsultationChannel::Video) {
-                $url = $rescheduledFrom ? $this->meetings->update($consultation) : $this->meetings->create($consultation);
+            if ($rescheduledFrom === null) {
+                $this->createPaymentIntent($consultation, $lead);
+            }
+
+            // La reunión se crea al confirmarse el pago (ConsultationPaymentHandler).
+            if ($alreadyPaid && $channel === ConsultationChannel::Video) {
+                $url = $rescheduledFrom->meeting_url ? $this->meetings->update($consultation) : $this->meetings->create($consultation);
                 if ($url !== null && $url !== $consultation->meeting_url) {
                     $consultation->update(['meeting_url' => $url]);
                 }
             }
 
-            if (! $rescheduledFrom) {
-                $this->workflow->transition($lead, LeadStatus::ConsultationScheduled, $actor, 'Asesoría agendada', force: true);
-            }
-
             $this->workflow->record(
                 $lead,
                 $rescheduledFrom ? LeadActivityType::ConsultationUpdated : LeadActivityType::ConsultationScheduled,
-                ($rescheduledFrom ? 'Asesoría reprogramada para el ' : 'Asesoría agendada para el ').When::long($startsAt)." con {$advisor->name}",
+                ($rescheduledFrom ? 'Asesoría reprogramada para el ' : 'Asesoría apartada para el ').When::long($startsAt)." con {$advisor->name}"
+                    .($alreadyPaid ? '' : ' (pendiente de pago)'),
                 $actor,
                 ['consultation_id' => $consultation->id, 'channel' => $channel->value],
             );
 
-            $this->logger->log($rescheduledFrom ? 'asesoria.reprogramada' : 'asesoria.agendada', $consultation, [
-                'after' => ['starts_at' => $startsAt->toIso8601String(), 'advisor_id' => $advisor->id, 'channel' => $channel->value],
+            $this->logger->log($rescheduledFrom ? 'asesoria.reprogramada' : 'asesoria.apartada', $consultation, [
+                'after' => [
+                    'starts_at' => $startsAt->toIso8601String(),
+                    'advisor_id' => $advisor->id,
+                    'channel' => $channel->value,
+                    'price' => $consultation->price,
+                    'hold_expires_at' => $holdUntil?->toIso8601String(),
+                ],
                 'rescheduled_from' => $rescheduledFrom?->id,
             ]);
 
             return $consultation;
         });
 
-        $this->notifyBooked($consultation, $rescheduledFrom !== null, $actor);
+        if ($alreadyPaid) {
+            $this->notifyBooked($consultation, true, $actor);
+        } elseif ($staffBooking) {
+            // El equipo agendó: el cliente recibe el enlace seguro para pagar.
+            $this->notifyPaymentLink($consultation);
+        }
 
         return $consultation;
+    }
+
+    /** Intención de cobro idempotente (una por asesoría nueva; se hereda al reprogramar). */
+    private function createPaymentIntent(Consultation $consultation, Lead $lead): Payment
+    {
+        /** @var Customer $customer */
+        $customer = Customer::query()->withTrashed()->findOrFail($lead->customer_id);
+
+        $payment = $this->payments->createIntent(
+            $customer,
+            PaymentConcept::ConsultationFee,
+            Money::of($consultation->price),
+            "Asesoría por {$consultation->channel->label()} · {$consultation->folio}",
+            [
+                'consultation_id' => $consultation->id,
+                // Retorno de 3D Secure: pagos.retorno concilia y vuelve aquí.
+                'next_url' => ConsultationCheckoutUrls::manage($consultation),
+            ],
+            'consultation:'.$consultation->uuid,
+        );
+
+        $consultation->forceFill(['payment_id' => $payment->id])->save();
+
+        return $payment;
+    }
+
+    /** Correo al cliente con el enlace de pago (asesorías agendadas por el equipo). */
+    public function notifyPaymentLink(Consultation $consultation): void
+    {
+        $this->safely(function () use ($consultation) {
+            $consultation->loadMissing(['lead.customer', 'advisor']);
+            CustomerNotifier::send($consultation->lead->customer, new ConsultationPaymentLink($consultation, ConsultationCheckoutUrls::pay($consultation)));
+        });
     }
 
     /** Reprograma: libera el horario anterior y reserva el nuevo en una sola transacción. */
@@ -352,6 +434,15 @@ class ConsultationScheduler
                 throw ValidationException::withMessages(['status' => 'Esta asesoría ya no se puede cancelar.']);
             }
 
+            // Sin pagar: la intención de cobro deja de ser cobrable. Si hay un
+            // cargo en curso (3D Secure) no se cancela hasta conciliarlo.
+            if ($locked->status->isAwaitingPayment() && $locked->payment_id !== null) {
+                $payment = Payment::query()->find($locked->payment_id);
+                if ($payment !== null && ! $payment->status->isSettled() && ! $this->payments->cancel($payment, 'Asesoría cancelada', $actor)) {
+                    throw ValidationException::withMessages(['status' => 'Estamos confirmando un pago con el banco. Espera unos minutos antes de cancelar.']);
+                }
+            }
+
             $this->releaseBookings($locked);
             $this->meetings->cancel($locked);
 
@@ -398,6 +489,9 @@ class ConsultationScheduler
             }
             if (! $locked->status->isActive() && ! ($locked->status === ConsultationStatus::NoShow && $to === ConsultationStatus::Completed)) {
                 throw ValidationException::withMessages(['status' => 'Esta asesoría ya no admite ese cambio.']);
+            }
+            if ($locked->status->isAwaitingPayment()) {
+                throw ValidationException::withMessages(['status' => 'La asesoría aún no está pagada. Registra el pago desde Pagos o espera a que el cliente pague en línea.']);
             }
             if ($to === ConsultationStatus::Confirmed && $locked->starts_at->isPast()) {
                 throw ValidationException::withMessages(['status' => 'La asesoría ya pasó; márcala como realizada o como no presentada.']);
@@ -497,7 +591,8 @@ class ConsultationScheduler
             ->each(fn (CalendarBooking $b) => $this->bookings->release($b));
     }
 
-    private function notifyBooked(Consultation $consultation, bool $rescheduled, ?User $actor): void
+    /** Avisos de asesoría firme (pagada): correo al cliente con .ics y alerta al asesor. */
+    public function notifyBooked(Consultation $consultation, bool $rescheduled, ?User $actor): void
     {
         $this->safely(function () use ($consultation, $rescheduled, $actor) {
             $consultation->loadMissing(['lead.customer', 'advisor']);
