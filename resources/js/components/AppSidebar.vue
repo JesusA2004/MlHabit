@@ -35,6 +35,7 @@ const homeHref = computed(
         collapsible="icon"
         variant="inset"
         aria-label="Navegación principal"
+        data-tour="sidebar"
     >
         <SidebarHeader class="pb-1">
             <SidebarMenu>

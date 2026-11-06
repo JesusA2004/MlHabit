@@ -15,6 +15,7 @@ import {
     SectionCard,
     UserAvatar,
 } from '@/components/ds';
+import HelpCenter from '@/components/tour/HelpCenter.vue';
 import { Button } from '@/components/ui/button';
 
 const props = defineProps<{
@@ -186,5 +187,15 @@ const hasContact = computed(() =>
                 >
             </span>
         </Link>
+
+        <section aria-labelledby="ayuda-recorridos" class="flex flex-col gap-4">
+            <h2
+                id="ayuda-recorridos"
+                class="font-display text-lg font-semibold tracking-tight text-foreground"
+            >
+                Guía de tu portal
+            </h2>
+            <HelpCenter area="portal" compact />
+        </section>
     </PageContainer>
 </template>

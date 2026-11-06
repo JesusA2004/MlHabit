@@ -17,6 +17,7 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
+import { groupTourKey, navTourKey } from '@/components/tour/keys';
 import { isActivePath } from '@/lib/navigation';
 import type { AdminNavGroup, AdminNavItem } from '@/types/navigation';
 
@@ -89,6 +90,7 @@ const buttonClass = [
                     >
                         <Link
                             :href="item.href"
+                            :data-tour="navTourKey(item.href)"
                             :aria-current="isActive(item) ? 'page' : undefined"
                             @click="onNavigate"
                         >
@@ -106,7 +108,7 @@ const buttonClass = [
             class="group/collapsible"
             @update:open="(open: boolean) => setOpen(group.label!, open)"
         >
-            <SidebarGroup class="py-1">
+            <SidebarGroup class="py-1" :data-tour="groupTourKey(group.label)">
                 <SidebarGroupLabel
                     as-child
                     class="text-xs font-medium text-sidebar-foreground/60"
@@ -138,6 +140,7 @@ const buttonClass = [
                                 >
                                     <Link
                                         :href="item.href"
+                                        :data-tour="navTourKey(item.href)"
                                         :aria-current="
                                             isActive(item) ? 'page' : undefined
                                         "

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import type { HTMLAttributes } from 'vue';
+import { tabTourKey } from '@/components/tour/keys';
 import { isActivePath } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import type { TabNavItem } from '@/types/navigation';
@@ -32,6 +33,7 @@ const page = usePage();
             <li v-for="item in props.items" :key="item.href" class="flex-1">
                 <Link
                     :href="item.href"
+                    :data-tour="tabTourKey(item.href)"
                     :aria-current="
                         isActivePath(page.url, item) ? 'page' : undefined
                     "

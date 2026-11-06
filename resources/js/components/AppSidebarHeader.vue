@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import NotificationsMenu from '@/components/platform/NotificationsMenu.vue';
+import HelpMenu from '@/components/tour/HelpMenu.vue';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ const scrolled = computed(() => y.value > 4);
         "
     >
         <SidebarTrigger
+            data-tour="sidebar-trigger"
             class="size-11 text-muted-foreground hover:text-foreground md:-ml-1.5 md:size-8"
         />
         <Link
@@ -52,6 +54,7 @@ const scrolled = computed(() => y.value > 4);
         </div>
         <div class="flex shrink-0 items-center gap-2">
             <slot />
+            <HelpMenu area="admin" />
             <NotificationsMenu />
         </div>
     </header>

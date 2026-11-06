@@ -162,6 +162,7 @@ async function markAll() {
                 variant="ghost"
                 size="icon"
                 class="relative"
+                data-tour="notifications"
                 :aria-label="triggerLabel"
             >
                 <Bell class="size-5" />
