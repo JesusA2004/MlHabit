@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { ArrowRight, LockKeyhole, Mail } from '@lucide/vue';
 import FormStatus from '@/components/ds/FormStatus.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
@@ -13,8 +14,7 @@ import { Spinner } from '@/components/ui/spinner';
 defineOptions({
     layout: {
         title: 'Inicia sesión',
-        description:
-            'Entra para dar seguimiento a tu proyecto o a tu trabajo del día.',
+        description: 'Escribe tu correo y tu contraseña para entrar.',
     },
 });
 
@@ -38,92 +38,86 @@ defineProps<{
     >
         <div class="grid gap-2">
             <Label for="email">Correo electrónico</Label>
-            <Input
-                id="email"
-                type="email"
-                name="email"
-                required
-                v-focus
-                autocomplete="username"
-                inputmode="email"
-                placeholder="nombre@correo.com"
-                class="h-11 text-base md:text-[0.9375rem]"
-                :aria-invalid="errors.email ? true : undefined"
-                :aria-describedby="errors.email ? 'email-error' : undefined"
-            />
+            <div class="relative">
+                <Mail
+                    class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                />
+                <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    required
+                    v-focus
+                    autocomplete="username"
+                    inputmode="email"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    placeholder="nombre@correo.com"
+                    class="h-12 rounded-lg pl-10 text-base md:text-[0.9375rem]"
+                    :aria-invalid="errors.email ? true : undefined"
+                    :aria-describedby="errors.email ? 'email-error' : undefined"
+                />
+            </div>
             <InputError id="email-error" :message="errors.email" />
         </div>
 
         <div class="grid gap-2">
-            <div class="flex items-center justify-between gap-3">
-                <Label for="password">Contraseña</Label>
-                <TextLink
-                    v-if="canResetPassword !== false"
-                    href="/forgot-password"
-                    class="text-sm"
-                >
-                    ¿La olvidaste?
-                </TextLink>
+            <Label for="password">Contraseña</Label>
+            <div class="relative">
+                <LockKeyhole
+                    class="pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                />
+                <PasswordInput
+                    id="password"
+                    name="password"
+                    required
+                    autocomplete="current-password"
+                    placeholder="Tu contraseña"
+                    class="h-12 rounded-lg pl-10 text-base md:text-[0.9375rem]"
+                    :aria-invalid="errors.password ? true : undefined"
+                    :aria-describedby="
+                        errors.password ? 'password-error' : undefined
+                    "
+                />
             </div>
-            <PasswordInput
-                id="password"
-                name="password"
-                required
-                autocomplete="current-password"
-                placeholder="Tu contraseña"
-                class="h-11 text-base md:text-[0.9375rem]"
-                :aria-invalid="errors.password ? true : undefined"
-                :aria-describedby="
-                    errors.password ? 'password-error' : undefined
-                "
-            />
             <InputError id="password-error" :message="errors.password" />
         </div>
 
-        <Label
-            for="remember"
-            class="flex min-h-11 w-fit cursor-pointer items-center gap-3 font-normal text-muted-foreground"
+        <div
+            class="-mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1"
         >
-            <Checkbox id="remember" name="remember" value="1" />
-            <span>Mantener mi sesión iniciada</span>
-        </Label>
+            <Label
+                for="remember"
+                class="flex min-h-11 cursor-pointer items-center gap-2.5 font-normal text-muted-foreground"
+            >
+                <Checkbox id="remember" name="remember" value="1" />
+                <span>Recordarme</span>
+            </Label>
+            <TextLink
+                v-if="canResetPassword !== false"
+                href="/forgot-password"
+                class="inline-flex min-h-11 items-center text-sm"
+            >
+                ¿Olvidaste tu contraseña?
+            </TextLink>
+        </div>
 
         <Button
             type="submit"
-            class="h-11 w-full text-base"
+            class="group h-12 w-full rounded-lg text-base shadow-[0_10px_24px_-12px_rgb(47_90_76/0.7)]"
             :disabled="processing"
             :aria-busy="processing"
             data-test="login-button"
         >
             <Spinner v-if="processing" />
-            {{ processing ? 'Iniciando sesión…' : 'Iniciar sesión' }}
+            {{ processing ? 'Entrando…' : 'Entrar' }}
+            <ArrowRight
+                v-if="!processing"
+                class="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden="true"
+            />
         </Button>
     </Form>
-
-    <div class="mt-8 rounded-xl border border-border bg-muted/50 p-4">
-        <p class="text-sm font-medium text-foreground">
-            Un solo acceso para todos
-        </p>
-        <p class="mt-1 text-sm text-muted-foreground">
-            Al entrar te llevamos a tu área según tu cuenta:
-        </p>
-        <ul class="mt-3 flex flex-wrap gap-2 text-xs font-medium">
-            <li
-                v-for="area in [
-                    'Clientes → Mi proyecto',
-                    'Técnicos → Mi agenda',
-                    'Equipo → Panel',
-                ]"
-                :key="area"
-                class="rounded-full bg-card px-3 py-1.5 text-foreground ring-1 ring-border"
-            >
-                {{ area }}
-            </li>
-        </ul>
-    </div>
-
-    <p class="mt-6 text-sm leading-relaxed text-muted-foreground">
-        ¿Eres cliente y aún no tienes acceso? Te enviamos una invitación por
-        correo cuando confirmas tu proyecto.
-    </p>
 </template>

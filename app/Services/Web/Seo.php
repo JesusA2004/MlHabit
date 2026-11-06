@@ -69,7 +69,8 @@ class Seo
         if ($image !== null) {
             $imageMeta = ['url' => $image, 'width' => null, 'height' => null, 'type' => null, 'alt' => $title !== '' ? $title : $name];
         } else {
-            $imageMeta = $this->og->meta($og ?? $this->og->home());
+            // Sin tarjeta explícita: la de la ruta (agendar visita, asesoría…) o la de portada.
+            $imageMeta = $this->og->meta($og ?? $this->og->forPath((string) parse_url($canonical, PHP_URL_PATH)) ?? $this->og->home());
         }
 
         $twitter = is_string($settings['twitter_handle'] ?? null) && $settings['twitter_handle'] !== ''
@@ -114,6 +115,25 @@ class Seo
     public function private(string $title, ?string $description = null): array
     {
         return $this->page($title, $description, noindex: true, canonical: url()->current());
+    }
+
+    /**
+     * Pantallas de acceso (login, recuperar contraseña, 2FA, invitación…):
+     * título, descripción, canónica y su propia tarjeta de vista previa.
+     * Solo `/login` se indexa; las demás llevan noindex. `$path` es la
+     * canónica sin tokens ni firmas (nunca la URL con el token).
+     *
+     * @return array<string, mixed>
+     */
+    public function auth(string $title, string $description, string $path, bool $index = false): array
+    {
+        return $this->page(
+            $title,
+            $description,
+            canonical: url($path),
+            noindex: ! $index,
+            og: $this->og->login(),
+        );
     }
 
     /**

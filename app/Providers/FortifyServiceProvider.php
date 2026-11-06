@@ -7,6 +7,8 @@ use App\Actions\Fortify\UpdateUserPassword;
 use App\Http\Responses\LoginResponse;
 use App\Http\Responses\PasswordResetLinkFailedResponse;
 use App\Models\User;
+use App\Services\Web\PublicSite;
+use App\Services\Web\Seo;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -84,25 +86,45 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'status' => $request->session()->get('status'),
+            'seo' => $this->seo()->auth(
+                'Iniciar sesión',
+                'Entra a tu cuenta de '.PublicSite::name().' para dar seguimiento a tu proyecto: cotizaciones, citas, avances de fabricación y pagos.',
+                '/login',
+                index: true,
+            ),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
             'email' => $request->email,
             'token' => $request->route('token'),
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            // Canónica sin el token del enlace.
+            'seo' => $this->seo()->auth('Restablecer contraseña', 'Crea una contraseña nueva para tu cuenta de '.PublicSite::name().'.', '/forgot-password'),
         ]));
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/ForgotPassword', [
             'status' => $request->session()->get('status'),
+            'seo' => $this->seo()->auth('Recuperar contraseña', 'Recupera el acceso a tu cuenta de '.PublicSite::name().' con un enlace que te enviamos por correo.', '/forgot-password'),
         ]));
 
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/VerifyEmail', [
             'status' => $request->session()->get('status'),
+            'seo' => $this->seo()->auth('Verificar correo', 'Confirma tu correo para activar tu cuenta de '.PublicSite::name().'.', '/email/verify'),
         ]));
 
-        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
+        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge', [
+            'seo' => $this->seo()->auth('Verificación en dos pasos', 'Confirma que eres tú para terminar de iniciar sesión en '.PublicSite::name().'.', '/two-factor-challenge'),
+        ]));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/ConfirmPassword'));
+        Fortify::confirmPasswordView(fn () => Inertia::render('auth/ConfirmPassword', [
+            'seo' => $this->seo()->auth('Confirmar contraseña', 'Escribe tu contraseña para continuar en '.PublicSite::name().'.', '/user/confirm-password'),
+        ]));
+    }
+
+    /** Metadatos SEO y vista previa de las pantallas de acceso. */
+    private function seo(): Seo
+    {
+        return $this->app->make(Seo::class);
     }
 
     private function configureRateLimiting(): void

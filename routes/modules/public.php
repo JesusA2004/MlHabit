@@ -11,6 +11,7 @@ use App\Http\Controllers\Public\SitePageController;
 use App\Http\Middleware\CaptureLeadAttribution;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\TrackPageView;
+use App\Services\Web\OgImage;
 use App\Services\Web\SitePages;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -54,7 +55,7 @@ Route::name('public.')->group(function () {
         Route::get('site.webmanifest', [SeoController::class, 'manifest'])->name('manifest');
 
         Route::get('og/{type}/{slug}.png', OgImageController::class)
-            ->where(['type' => 'home|category|product|showcase|page', 'slug' => '[a-z0-9][a-z0-9-]*'])
+            ->where(['type' => implode('|', OgImage::TYPES), 'slug' => '[a-z0-9][a-z0-9-]*'])
             ->middleware('throttle:120,1')
             ->name('og');
     });

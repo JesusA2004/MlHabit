@@ -27,8 +27,9 @@ iMessage, Slack, Telegram).
 | Manifest          | `GET /site.webmanifest`                                                 | Iconos 192/512 y _maskable_ (`public/icons`).                                                                                                     |
 | Dominio canónico  | `App\Http\Middleware\CanonicalHost`                                     | Solo en producción: 301 de `http://` y `www.` a `https://mlhabitat.com.mx`.                                                                       |
 
-Páginas que **no** se indexan (`noindex, nofollow`): acceso (login, recuperar
-contraseña, 2FA), panel, portal de clientes, app de técnicos, "gracias",
+`/login` sí se indexa (título, descripción, canónica y su propia tarjeta
+`/og/login/acceso.png`). Páginas que **no** se indexan (`noindex, nofollow`):
+recuperar/restablecer contraseña, 2FA, verificación de correo, panel, portal de clientes, app de técnicos, "gracias",
 agendar/pagar visita técnica, reservar asesoría, precalificación,
 comprobantes de pago e invitaciones. También los listados de inspiración
 filtrados o paginados (la versión sin filtros sí se indexa).
@@ -55,7 +56,13 @@ Ejemplo: `https://mlhabitat.com.mx/og/product/cocina-nordica.png?v=06b47dc1e38e`
   monograma ML y el dominio.
 - **Portada:** si el hero del CMS tiene imagen, fotografía a sangre con
   degradado espresso; si no, tarjeta tipográfica con el abanico de acabados.
-- **Páginas fijas y legales:** tarjeta tipográfica con el abanico.
+- **Páginas fijas, legales, propias y acceso:** diseño `feature`: insignia
+  oficial grande, título, subtítulo y dominio, con un tema de color distinto
+  por página para reconocerlas al compartir: catálogo (bosque), inspiración
+  (roble), preguntas (salvia), solicitar (espresso), asesoría (lino + panel
+  eucalipto), agendar visita (piedra + panel roble), legales (piedra),
+  páginas propias (lino + panel salvia) y acceso (pastel). Las rutas sin
+  tarjeta explícita (agendar visita, asesoría) la toman de `OgImage::forPath()`.
 - **Imagen propia:** en _Sitio web → Marca_, la "Imagen para redes sociales (OG)"
   (`brand.og_media_id`) sustituye a la tarjeta de la portada (se recorta a
   1200×630).

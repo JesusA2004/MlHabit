@@ -68,7 +68,7 @@ defineProps<{ status?: string }>();
 
     <Link
         href="/login"
-        class="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        class="mx-auto mt-6 flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
     >
         <ArrowLeft class="size-4" />
         Volver a iniciar sesión

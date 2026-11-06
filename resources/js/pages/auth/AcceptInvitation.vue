@@ -38,7 +38,10 @@ const action = computed(
 <template>
     <Head title="Activar cuenta" />
 
-    <p v-if="firstName" class="-mt-3 mb-7 text-[0.9375rem] text-foreground">
+    <p
+        v-if="firstName"
+        class="-mt-3 mb-7 text-center text-[0.9375rem] text-foreground"
+    >
         Hola, <span class="font-medium">{{ firstName }}</span
         >. Ya casi terminas.
     </p>

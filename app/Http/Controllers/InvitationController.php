@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Web\PublicSite;
+use App\Services\Web\Seo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +46,8 @@ class InvitationController extends Controller
             'name' => $user->name,
             'action' => route('password.update', absolute: false),
             'passwordRules' => PasswordRule::defaults()->toPasswordRulesString(),
+            // Canónica sin la firma ni el usuario del enlace.
+            'seo' => app(Seo::class)->auth('Activar cuenta', 'Crea tu contraseña para entrar a '.PublicSite::name().'.', '/login'),
         ]);
     }
 }

@@ -31,7 +31,11 @@ use Throwable;
  *  - `split`: lino + fotografía con esquinas redondeadas (producto, categoría, proyecto).
  *  - `cover`: fotografía a sangre con degradado espresso (portada con hero).
  *  - `brand`: logotipo oficial grande sobre el verde de la marca (portada).
- *  - `type`: tarjeta tipográfica con el abanico de acabados (sin fotografía).
+ *  - `type`: tarjeta tipográfica con el abanico (producto, categoría o proyecto sin fotografía).
+ *  - `feature:{tema}`: páginas fijas, legales, propias y acceso. Cada una con
+ *    su propio tema de color de la marca (bosque, roble, salvia, espresso,
+ *    lino, piedra…), la insignia oficial grande, título, subtítulo y dominio,
+ *    para distinguir las vistas previas a simple vista.
  *  - `override`: imagen elegida por el administrador (`brand.og_media_id`), solo recortada.
  */
 final class OgImage
@@ -40,10 +44,10 @@ final class OgImage
 
     public const HEIGHT = 630;
 
-    public const TYPES = ['home', 'category', 'product', 'showcase', 'page'];
+    public const TYPES = ['home', 'category', 'product', 'showcase', 'page', 'login'];
 
     /** Súbelo al cambiar el diseño para regenerar todas las imágenes. */
-    private const VERSION = 5;
+    private const VERSION = 6;
 
     /** Supermuestreo: se dibuja al doble y se reduce (bordes suaves). */
     private const S = 2;
@@ -58,7 +62,85 @@ final class OgImage
         'inspiracion' => ['Inspiración: proyectos y propuestas', 'Proyectos entregados y renders'],
         'preguntas-frecuentes' => ['Preguntas frecuentes', 'Proceso, visita, pagos y garantía'],
         'solicitar' => ['Solicita tu propuesta a la medida', 'Asesoría sin compromiso'],
-        'asesoria' => ['Agenda una asesoría', 'Asesoría remota'],
+        'asesoria' => ['Agenda una asesoría', 'Por videollamada, sin compromiso'],
+        'agendar-visita' => ['Agenda tu visita técnica', 'Medimos tu espacio en tu domicilio'],
+    ];
+
+    /** Antetítulo con el que se marcan las páginas legales. */
+    public const LEGAL_EYEBROW = 'Información legal';
+
+    /**
+     * Temas de las tarjetas `feature` (todos con la paleta de marca).
+     * bg: degradado de fondo (izq. → der.); panel: bloque redondeado detrás
+     * de la insignia (opcional); blobs: manchas de luz difusa
+     * [x, y, diámetro, color, intensidad 0–1]; chip: [fondo, alfa GD].
+     *
+     * @var array<string, array{bg: array{0: string, 1: string}, panel: string|null, blobs: list<array{0: int, 1: int, 2: int, 3: string, 4: float}>, ink: string, body: string, accent: string, chip: array{0: string, 1: int}, chipInk: string, halo: string, domain: string, label: string, grain: bool}>
+     */
+    private const THEMES = [
+        // Acceso: pastel lino / salvia / roble claro, luminoso.
+        'login' => [
+            'bg' => ['#F7F2EB', '#E9F0EA'], 'panel' => null,
+            'blobs' => [[170, 70, 640, '#CFE2D6', 0.9], [1090, 610, 760, '#F1DCC5', 0.95], [800, -60, 460, '#E2ECDF', 0.85], [-60, 660, 460, '#EEDFD0', 0.8]],
+            'ink' => '#231E1A', 'body' => '#4A433C', 'accent' => '#2F5A4C', 'chip' => ['#FFFFFF', 38], 'chipInk' => '#264A3F',
+            'halo' => '#FFFFFF', 'domain' => '#4A433C', 'label' => 'Portal de clientes y equipo', 'grain' => true,
+        ],
+        // Catálogo: verde bosque profundo.
+        'catalogo' => [
+            'bg' => ['#2C5144', '#14251F'], 'panel' => null,
+            'blobs' => [[1010, 640, 780, '#B07D4F', 0.42], [80, -40, 560, '#4E8573', 0.45]],
+            'ink' => '#FFFFFF', 'body' => '#D6E3DC', 'accent' => '#E2BF97', 'chip' => ['#FFFFFF', 112], 'chipInk' => '#F1E3D3',
+            'halo' => '#3F7262', 'domain' => '#E2BF97', 'label' => 'Catálogo', 'grain' => true,
+        ],
+        // Inspiración: roble cálido.
+        'inspiracion' => [
+            'bg' => ['#9A6A40', '#5A3D27'], 'panel' => null,
+            'blobs' => [[1010, 60, 720, '#D9A773', 0.55], [60, 660, 600, '#3B2A1D', 0.5]],
+            'ink' => '#FFFFFF', 'body' => '#F4E6D6', 'accent' => '#FBE3C4', 'chip' => ['#FFFFFF', 108], 'chipInk' => '#FFF4E6',
+            'halo' => '#B9875A', 'domain' => '#FBE3C4', 'label' => 'Inspiración', 'grain' => true,
+        ],
+        // Preguntas frecuentes: salvia clara.
+        'preguntas-frecuentes' => [
+            'bg' => ['#E7EFE9', '#C8D9CE'], 'panel' => null,
+            'blobs' => [[1030, 110, 660, '#F7F5F2', 0.8], [120, 640, 620, '#B3CBBB', 0.7]],
+            'ink' => '#1E3A30', 'body' => '#3B574C', 'accent' => '#2F5A4C', 'chip' => ['#FFFFFF', 28], 'chipInk' => '#264A3F',
+            'halo' => '#FFFFFF', 'domain' => '#2F5A4C', 'label' => 'Ayuda', 'grain' => true,
+        ],
+        // Solicitar propuesta: espresso con luz de roble.
+        'solicitar' => [
+            'bg' => ['#3B312B', '#1A1512'], 'panel' => null,
+            'blobs' => [[1050, 600, 800, '#B07D4F', 0.48], [80, 0, 520, '#2F5A4C', 0.5]],
+            'ink' => '#FFFFFF', 'body' => '#E6DCD0', 'accent' => '#D9B48C', 'chip' => ['#FFFFFF', 112], 'chipInk' => '#F1E3D3',
+            'halo' => '#5A463A', 'domain' => '#D9B48C', 'label' => 'Cotización', 'grain' => true,
+        ],
+        // Asesoría: lino con panel eucalipto.
+        'asesoria' => [
+            'bg' => ['#F8F5F0', '#F0EBE4'], 'panel' => '#2F5A4C',
+            'blobs' => [[-60, 680, 560, '#DCE9E1', 0.9]],
+            'ink' => '#231E1A', 'body' => '#4A433C', 'accent' => '#2F5A4C', 'chip' => ['#E5EEE9', 0], 'chipInk' => '#264A3F',
+            'halo' => '#3E7464', 'domain' => '#4A433C', 'label' => 'Asesoría', 'grain' => false,
+        ],
+        // Visita técnica: piedra con panel roble.
+        'agendar-visita' => [
+            'bg' => ['#F3EDE5', '#E8DFD3'], 'panel' => '#B07D4F',
+            'blobs' => [[-40, 680, 560, '#F8F2EA', 0.9]],
+            'ink' => '#231E1A', 'body' => '#4A433C', 'accent' => '#8A6A4A', 'chip' => ['#F6E9DB', 0], 'chipInk' => '#6E4F33',
+            'halo' => '#C29468', 'domain' => '#6B5A4A', 'label' => 'Visita técnica', 'grain' => false,
+        ],
+        // Legales: piedra serena.
+        'legal' => [
+            'bg' => ['#F7F5F2', '#EFEBE5'], 'panel' => '#E4DDD3',
+            'blobs' => [],
+            'ink' => '#231E1A', 'body' => '#5A524A', 'accent' => '#6B635A', 'chip' => ['#EAE4DB', 0], 'chipInk' => '#4A433C',
+            'halo' => '#EEE8E0', 'domain' => '#6B635A', 'label' => 'Información legal', 'grain' => false,
+        ],
+        // Páginas propias del editor visual: lino con panel salvia.
+        'custom' => [
+            'bg' => ['#FBF8F3', '#F3EEE7'], 'panel' => '#D3E2D8',
+            'blobs' => [[-40, -60, 480, '#EFE4D6', 0.85]],
+            'ink' => '#231E1A', 'body' => '#4A433C', 'accent' => '#2F5A4C', 'chip' => ['#E5EEE9', 0], 'chipInk' => '#264A3F',
+            'halo' => '#E6EFE9', 'domain' => '#4A433C', 'label' => '', 'grain' => false,
+        ],
     ];
 
     private const C_LINO = '#F7F5F2';
@@ -179,7 +261,51 @@ final class OgImage
      */
     public function page(string $slug, string $title, ?string $eyebrow = null): array
     {
-        return $this->spec('page', $slug, $title, $eyebrow, null, 'type', "{$title} — ".PublicSite::name());
+        $theme = match (true) {
+            isset(self::STATIC_PAGES[$slug], self::THEMES[$slug]) => $slug,
+            $eyebrow === self::LEGAL_EYEBROW => 'legal',
+            default => 'custom',
+        };
+
+        return $this->spec('page', $slug, $title, $eyebrow, null, 'feature:'.$theme, "{$title} — ".PublicSite::name());
+    }
+
+    /**
+     * Acceso (`/login` y demás pantallas de cuenta): tarjeta pastel propia.
+     *
+     * @return array{type: string, slug: string, title: string, eyebrow: string|null, media: Media|null, layout: string, alt: string}
+     */
+    public function login(): array
+    {
+        return $this->spec(
+            'login',
+            'acceso',
+            'Acceso a tu cuenta',
+            'Tu proyecto, citas y pagos en un solo lugar',
+            null,
+            'feature:login',
+            'Acceso a tu cuenta de '.PublicSite::name(),
+        );
+    }
+
+    /**
+     * Tarjeta propia según la ruta pública (agendar visita, asesoría,
+     * solicitar…); null si la ruta no tiene una.
+     *
+     * @return array{type: string, slug: string, title: string, eyebrow: string|null, media: Media|null, layout: string, alt: string}|null
+     */
+    public function forPath(string $path): ?array
+    {
+        $path = trim($path, '/');
+
+        $slug = match (true) {
+            $path === 'agendar-visita' || str_starts_with($path, 'agendar-visita/') => 'agendar-visita',
+            str_starts_with($path, 'asesoria/') || (str_starts_with($path, 'solicitud/') && str_ends_with($path, '/asesoria')) => 'asesoria',
+            $path === 'solicitar' || str_starts_with($path, 'solicitar/') || str_starts_with($path, 'solicitud/') => 'solicitar',
+            default => null,
+        };
+
+        return $slug !== null ? $this->resolvePage($slug) : null;
     }
 
     /**
@@ -196,6 +322,7 @@ final class OgImage
                 ->whereHas('category', fn ($q) => $q->where('is_published', true))->first()) ? $this->product($p) : null,
             'showcase' => ($s = ShowcaseProject::query()->published()->where('slug', $slug)->first()) ? $this->showcase($s) : null,
             'page' => $this->resolvePage($slug),
+            'login' => $slug === 'acceso' ? $this->login() : null,
             default => null,
         };
     }
@@ -267,13 +394,15 @@ final class OgImage
         imagesavealpha($canvas, false);
 
         $photo = $spec['media'] !== null ? $this->loadImage($spec['media']) : null;
-        $layout = $photo === null && ! in_array($spec['layout'], ['type', 'brand'], true) ? 'type' : $spec['layout'];
+        [$layout, $theme] = array_pad(explode(':', $spec['layout'], 2), 2, '');
+        $layout = $photo === null && ! in_array($layout, ['type', 'brand', 'feature'], true) ? 'type' : $layout;
 
         match ($layout) {
             'override' => $this->drawOverride($canvas, $photo),
             'cover' => $this->drawCover($canvas, $spec, $photo),
             'split' => $this->drawSplit($canvas, $spec, $photo),
             'brand' => $this->drawBrand($canvas, $spec),
+            'feature' => $this->drawFeature($canvas, $spec, self::THEMES[$theme] ?? self::THEMES['custom']),
             default => $this->drawTypographic($canvas, $spec),
         };
 
@@ -382,6 +511,195 @@ final class OgImage
         imagefilledrectangle($canvas, $x * self::S, ($after + 28) * self::S, ($x + 56) * self::S, ($after + 31) * self::S, $this->color($canvas, self::C_OAK));
         $this->text($canvas, 21, $this->font('figtree-medium'), $x, $after + 72, '#EADFD2', $this->trimTo('Asesoría por videollamada y visita a domicilio', 21, 'figtree-medium', $maxWidth));
         $this->text($canvas, 22, $this->font('figtree-semibold'), $x, self::HEIGHT - 64, '#D9B48C', $this->domain());
+    }
+
+    /**
+     * Páginas fijas, legales, propias y acceso: fondo del tema con luz
+     * difusa, la insignia oficial grande (sin recortes ni cambios de color)
+     * a la derecha y, a la izquierda, etiqueta, título, subtítulo y dominio.
+     *
+     * @param  array{type: string, slug: string, title: string, eyebrow: string|null, media: Media|null, layout: string, alt: string}  $spec
+     * @param  array{bg: array{0: string, 1: string}, panel: string|null, blobs: list<array{0: int, 1: int, 2: int, 3: string, 4: float}>, ink: string, body: string, accent: string, chip: array{0: string, 1: int}, chipInk: string, halo: string, domain: string, label: string, grain: bool}  $t
+     */
+    private function drawFeature(GdImage $canvas, array $spec, array $t): void
+    {
+        $this->horizontalGradient($canvas, $t['bg'][0], $t['bg'][1]);
+        foreach ($t['blobs'] as [$bx, $by, $bd, $bc, $bi]) {
+            $this->blob($canvas, $bx, $by, $bd, $bc, $bi);
+        }
+        if ($t['grain']) {
+            $this->grain($canvas, $this->isDark($t['bg'][0]));
+        }
+
+        $dark = $this->isDark($t['bg'][0]);
+
+        // Insignia (derecha).
+        if ($t['panel'] !== null) {
+            $px = 676;
+            $py = 40;
+            $pw = self::WIDTH - $px - 40;
+            $ph = self::HEIGHT - 80;
+            $this->roundedRect($canvas, $px - 2, $py + 6, $pw + 4, $ph, 34, '#231E1A', 121);
+            $this->roundedRect($canvas, $px, $py, $pw, $ph, 32, $t['panel']);
+            $cx = $px + $pw / 2;
+            $cy = self::HEIGHT / 2;
+            $size = 356;
+            // Aro de luz dentro del panel.
+            $this->blob($canvas, (int) $cx, (int) $cy, 500, $t['halo'], 0.9);
+            $this->circle($canvas, $cx, $cy, $size + 34, $t['halo'], 40);
+        } else {
+            $cx = 906;
+            $cy = self::HEIGHT / 2;
+            $size = 392;
+            $this->blob($canvas, (int) $cx, (int) $cy, $size + 300, $t['halo'], $dark ? 0.75 : 0.95);
+            // Disco de "vidrio" detrás de la insignia.
+            $this->circle($canvas, $cx, $cy, $size + 44, $t['halo'], $dark ? 84 : 64);
+            $this->circle($canvas, $cx, $cy, $size + 20, $t['halo'], $dark ? 92 : 70);
+        }
+
+        // Sombra tintada bajo la insignia.
+        $shadow = $dark ? '#000000' : '#231E1A';
+        $layers = $dark ? [[26, 122], [16, 120], [8, 117]] : [[22, 124], [12, 123], [6, 122]];
+        foreach ($layers as [$grow, $alpha]) {
+            $this->circle($canvas, $cx, $cy + 12, $size + $grow, $shadow, $alpha);
+        }
+        $this->officialLogo($canvas, $cx, $cy, $size);
+
+        // Texto (izquierda).
+        $x = 72;
+        $maxWidth = ($t['panel'] !== null ? 676 : 660) - $x - 44;
+        $label = $t['label'] !== '' ? $t['label'] : PublicSite::name();
+        $subtitle = match (true) {
+            $spec['eyebrow'] === self::LEGAL_EYEBROW => 'Consulta la versión vigente',
+            $spec['eyebrow'] === null || $spec['eyebrow'] === '' => 'Diseño, fabricación e instalación',
+            default => $spec['eyebrow'],
+        };
+
+        $title = $this->fitTitle($spec['title'], $maxWidth, [72, 66, 60, 54, 50, 46, 42], 3);
+        $fs = $title['size'];
+        $lh = (int) round($fs * 1.06);
+        $subFont = $this->font('figtree-medium');
+        $subLines = array_slice($this->wrap($subtitle, $subFont, 26, $maxWidth), 0, 2);
+        $subLh = 36;
+
+        $chipH = 46;
+        $block = $chipH + 34 + $fs + $lh * (count($title['lines']) - 1) + 30 + $subLh * count($subLines);
+        $top = max(56, (int) round((self::HEIGHT - 70 - $block) / 2) + 4);
+
+        // Etiqueta en píldora con punto de acento.
+        $chipFont = 'figtree-semibold';
+        $chipText = $this->trimTo($label, 19, $chipFont, $maxWidth - 60);
+        $chipW = (int) round($this->textWidth(19, $this->font($chipFont), $chipText)) + 58;
+        $this->roundedRect($canvas, $x, $top, $chipW, $chipH, $chipH / 2, $t['chip'][0], $t['chip'][1]);
+        if (! $dark && $t['chip'][1] > 0) {
+            $this->roundedRectOutline($canvas, $x, $top, $chipW, $chipH, $chipH / 2, '#FFFFFF');
+        }
+        $this->circle($canvas, $x + 24, $top + $chipH / 2, 10, $t['accent']);
+        $this->text($canvas, 19, $this->font($chipFont), $x + 40, $top + 30, $t['chipInk'], $chipText);
+
+        $baseline = $top + $chipH + 34 + $fs;
+        foreach ($title['lines'] as $i => $line) {
+            $this->text($canvas, $fs, $this->font('familjen-bold'), $x, $baseline + $i * $lh, $t['ink'], $line, -0.02);
+        }
+
+        $y = $baseline + $lh * (count($title['lines']) - 1) + 30;
+        imagefilledrectangle($canvas, $x * self::S, $y * self::S, ($x + 56) * self::S, ($y + 3) * self::S, $this->color($canvas, $t['accent']));
+        foreach ($subLines as $i => $line) {
+            $this->text($canvas, 26, $subFont, $x, $y + 44 + $i * $subLh, $t['body'], $line);
+        }
+
+        // Pie: muestras de acabados + dominio.
+        $this->swatchRow($canvas, $x, self::HEIGHT - 80, 14);
+        $this->text($canvas, 22, $this->font('figtree-semibold'), $x + 100, self::HEIGHT - 66, $t['domain'], $this->domain());
+    }
+
+    /** Insignia oficial completa (`public/logoSinFondo.png`), centrada y solo redimensionada. */
+    private function officialLogo(GdImage $canvas, float $cx, float $cy, int $size): void
+    {
+        $path = public_path('logoSinFondo.png');
+        $logo = is_file($path) ? @imagecreatefrompng($path) : false;
+        if (! $logo instanceof GdImage) {
+            return;
+        }
+
+        $sw = imagesx($logo);
+        $sh = imagesy($logo);
+        $scale = $size / max($sw, $sh);
+        $dw = $sw * $scale;
+        $dh = $sh * $scale;
+        imagealphablending($canvas, true);
+        imagecopyresampled(
+            $canvas,
+            $logo,
+            (int) round(($cx - $dw / 2) * self::S),
+            (int) round(($cy - $dh / 2) * self::S),
+            0,
+            0,
+            (int) round($dw * self::S),
+            (int) round($dh * self::S),
+            $sw,
+            $sh,
+        );
+        imagedestroy($logo);
+    }
+
+    private function horizontalGradient(GdImage $canvas, string $from, string $to): void
+    {
+        [$r1, $g1, $b1] = $this->rgb($from);
+        [$r2, $g2, $b2] = $this->rgb($to);
+        $w = self::WIDTH * self::S;
+        $h = self::HEIGHT * self::S;
+        for ($x = 0; $x < $w; $x += 2) {
+            $t = $x / $w;
+            imagefilledrectangle($canvas, $x, 0, $x + 1, $h, $this->rgba(
+                $canvas,
+                (int) round($r1 + ($r2 - $r1) * $t),
+                (int) round($g1 + ($g2 - $g1) * $t),
+                (int) round($b1 + ($b2 - $b1) * $t),
+                0,
+            ));
+        }
+    }
+
+    /** Mancha de luz difusa: círculos concéntricos casi transparentes. */
+    private function blob(GdImage $canvas, int $x, int $y, int $diameter, string $hex, float $intensity): void
+    {
+        $layers = 30;
+        $opacity = 1 - (1 - max(0.0, min(0.99, $intensity))) ** (1 / $layers);
+        $alpha = (int) round(127 - 127 * $opacity);
+        for ($i = 0; $i < $layers; $i++) {
+            $this->circle($canvas, $x, $y, $diameter * (1 - $i / $layers), $hex, $alpha);
+        }
+    }
+
+    private function circle(GdImage $canvas, float $cx, float $cy, float $diameter, string $hex, int $alpha = 0): void
+    {
+        $d = (int) round($diameter * self::S);
+        imagefilledellipse($canvas, (int) round($cx * self::S), (int) round($cy * self::S), $d, $d, $this->color($canvas, $hex, $alpha));
+    }
+
+    /** Grano sutil de papel (determinista: misma imagen en cada render). */
+    private function grain(GdImage $canvas, bool $dark): void
+    {
+        mt_srand(20250611);
+        $light = $this->rgba($canvas, 255, 255, 255, $dark ? 116 : 104);
+        $shade = $this->rgba($canvas, 35, 30, 26, $dark ? 110 : 118);
+        $w = self::WIDTH * self::S;
+        $h = self::HEIGHT * self::S;
+        for ($i = 0; $i < 90000; $i++) {
+            $px = mt_rand(0, $w - 2);
+            $py = mt_rand(0, $h - 2);
+            imagefilledrectangle($canvas, $px, $py, $px + 1, $py + 1, $i % 2 === 0 ? $light : $shade);
+        }
+        mt_srand();
+    }
+
+    /** Luminancia aproximada: true si el texto debe ir claro. */
+    private function isDark(string $hex): bool
+    {
+        [$r, $g, $b] = $this->rgb($hex);
+
+        return (0.2126 * $r + 0.7152 * $g + 0.0722 * $b) < 140;
     }
 
     private function drawOverride(GdImage $canvas, ?GdImage $photo): void
@@ -1003,7 +1321,7 @@ final class OgImage
 
         $page = Page::query()->published()->where('slug', $slug)->first();
         if ($page !== null) {
-            return $this->page($page->slug, $page->title, 'Información legal');
+            return $this->page($page->slug, $page->title, self::LEGAL_EYEBROW);
         }
 
         // Páginas propias del editor visual (SitePages::render).

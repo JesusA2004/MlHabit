@@ -1,176 +1,216 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import AppLogo from '@/components/AppLogo.vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import AppToaster from '@/components/ds/AppToaster.vue';
-import FinishSwatches from '@/components/ds/FinishSwatches.vue';
 
 /**
- * Acceso a pantalla completa.
+ * Acceso a pantalla completa (login, recuperar contraseña, 2FA, invitación…).
  *
- * - ≥1024 px: dos columnas a toda la altura del viewport. Izquierda (~44 %)
- *   el formulario centrado (máx. 420 px); derecha, una composición de marca
- *   en espresso con el muestrario de acabados (o una fotografía si se pasa
- *   `image`). La columna visual queda fija mientras el formulario crece.
- * - Móvil/tableta: una columna; marca arriba, formulario y pie al fondo sin
- *   huecos artificiales. Funciona en horizontal (sin alturas fijas).
+ * Lienzo pastel de la marca (lino, salvia, eucalipto claro y roble claro)
+ * con manchas de luz que se mueven muy despacio y grano de papel; al
+ * centro una tarjeta de vidrio con la insignia oficial grande montada
+ * sobre su borde. Una sola columna de 390 a 1440 px, sin alturas fijas
+ * (funciona en horizontal). Con `prefers-reduced-motion` todo queda quieto.
  */
 const props = defineProps<{
     title?: string;
     description?: string;
-    image?: string | null;
-    imageAlt?: string;
 }>();
 
 const year = new Date().getFullYear();
 </script>
 
 <template>
-    <div
-        class="min-h-dvh bg-background text-foreground lg:grid lg:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]"
-    >
-        <!-- Canto de muestras (solo móvil/tableta, donde no hay columna visual) -->
-        <div
-            class="fixed inset-x-0 top-0 flex h-1 lg:hidden"
-            aria-hidden="true"
-        >
-            <span class="flex-1 bg-input" />
-            <span class="flex-1 bg-oak" />
-            <span class="flex-1 bg-primary" />
-            <span class="flex-1 bg-espresso" />
+    <div class="auth-shell relative isolate min-h-dvh overflow-hidden">
+        <!-- Fondo pastel animado (decorativo) -->
+        <div class="auth-bg absolute inset-0 -z-10" aria-hidden="true">
+            <span class="auth-blob auth-blob--sage" />
+            <span class="auth-blob auth-blob--oak" />
+            <span class="auth-blob auth-blob--eucalyptus" />
+            <span class="auth-blob auth-blob--linen" />
+            <span class="auth-grain absolute inset-0" />
         </div>
 
-        <!-- Formulario -->
         <main
-            class="flex min-h-dvh flex-col px-5 pt-6 pb-6 sm:px-10 sm:pt-9 lg:px-12 lg:pt-8 xl:px-16"
+            class="flex min-h-dvh flex-col items-center px-4 pt-6 pb-5 sm:px-6 sm:pt-10"
         >
-            <Link
-                href="/"
-                class="w-fit rounded-md"
-                aria-label="ML Habitat, ir al sitio"
-            >
-                <AppLogo size="lg" :wordmark="false" />
-            </Link>
-
             <div
-                class="flex flex-1 flex-col justify-center py-10 sm:py-14 lg:py-12"
+                class="flex w-full flex-1 flex-col items-center justify-center py-4 sm:py-8"
             >
-                <div class="mx-auto w-full max-w-[420px]">
-                    <header
-                        v-if="props.title || props.description"
-                        class="mb-8"
+                <div class="auth-rise w-full max-w-[440px]">
+                    <Link
+                        href="/"
+                        class="auth-logo relative z-10 mx-auto -mb-14 block w-fit rounded-full focus-visible:ring-4 focus-visible:ring-ring/40 focus-visible:outline-none sm:-mb-16"
+                        aria-label="ML Hábitat, ir al sitio"
                     >
-                        <h1
-                            v-if="props.title"
-                            class="text-display-md text-foreground"
+                        <span
+                            class="block rounded-full bg-white/80 p-1.5 shadow-[0_18px_40px_-14px_rgb(35_30_26/0.35),0_2px_6px_rgb(35_30_26/0.08)] ring-1 ring-white backdrop-blur"
                         >
-                            {{ props.title }}
-                        </h1>
-                        <p
-                            v-if="props.description"
-                            class="mt-2.5 text-[0.9375rem] leading-relaxed text-muted-foreground"
+                            <AppLogoIcon
+                                class-name="size-24 sm:size-28"
+                                sizes="(min-width: 640px) 112px, 96px"
+                            />
+                        </span>
+                    </Link>
+
+                    <section
+                        class="auth-card rounded-[28px] border border-white/80 bg-white/70 px-5 pt-[4.75rem] pb-7 shadow-[0_30px_70px_-30px_rgb(35_30_26/0.28),0_2px_8px_rgb(35_30_26/0.05)] backdrop-blur-xl min-[400px]:px-7 sm:px-9 sm:pt-[5.5rem] sm:pb-9"
+                    >
+                        <header
+                            v-if="props.title || props.description"
+                            class="mb-7 text-center"
                         >
-                            {{ props.description }}
-                        </p>
-                    </header>
-                    <slot />
+                            <h1
+                                v-if="props.title"
+                                class="text-display-md text-foreground"
+                            >
+                                {{ props.title }}
+                            </h1>
+                            <p
+                                v-if="props.description"
+                                class="mx-auto mt-2 max-w-[22rem] text-[0.9375rem] leading-relaxed text-muted-foreground"
+                            >
+                                {{ props.description }}
+                            </p>
+                        </header>
+                        <slot />
+                    </section>
                 </div>
             </div>
 
             <footer
-                class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground"
+                class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
             >
-                <span>© {{ year }} ML Habitat</span>
+                <span>© {{ year }} ML Hábitat</span>
+                <span aria-hidden="true">·</span>
                 <Link
                     href="/aviso-de-privacidad"
-                    class="rounded-sm underline-offset-4 hover:text-foreground hover:underline"
+                    class="rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
                 >
                     Aviso de privacidad
                 </Link>
             </footer>
         </main>
 
-        <!-- Composición de marca (solo escritorio) -->
-        <aside
-            class="auth-visual sticky top-0 hidden h-dvh overflow-hidden bg-espresso text-espresso-foreground lg:block"
-            aria-hidden="true"
-        >
-            <template v-if="props.image">
-                <img
-                    :src="props.image"
-                    :alt="props.imageAlt ?? ''"
-                    class="absolute inset-0 size-full object-cover"
-                />
-                <div
-                    class="absolute inset-0 bg-linear-to-t from-espresso/85 via-espresso/25 to-transparent"
-                />
-            </template>
-            <template v-else>
-                <!-- Luz cálida de taller y veta tenue -->
-                <div class="auth-visual__light absolute inset-0" />
-                <div class="auth-visual__grain absolute inset-0" />
-                <div
-                    class="auth-visual__fan absolute right-[-6%] bottom-[-18%] w-[min(820px,74%,66vh)]"
-                >
-                    <FinishSwatches tone="dark" />
-                </div>
-            </template>
-
-            <div class="relative flex h-full flex-col p-12 xl:p-16">
-                <p class="text-sm text-espresso-foreground/60">
-                    Cocinas, clósets y muebles a la medida
-                </p>
-                <div class="mt-[min(9vh,6rem)] max-w-[28rem]">
-                    <p class="text-display-lg text-white">
-                        Tu proyecto, de la medida a la instalación.
-                    </p>
-                    <p
-                        class="mt-5 max-w-sm text-lead text-espresso-foreground/75"
-                    >
-                        Cotizaciones, citas, avances de fabricación y pagos en
-                        un mismo lugar.
-                    </p>
-                </div>
-            </div>
-        </aside>
-
         <AppToaster />
     </div>
 </template>
 
 <style scoped>
-.auth-visual__light {
+.auth-bg {
     background:
-        radial-gradient(
-            120% 80% at 85% 100%,
-            rgb(176 125 79 / 0.28),
-            transparent 60%
-        ),
-        radial-gradient(90% 70% at 0% 0%, rgb(47 90 76 / 0.35), transparent 65%);
+        radial-gradient(120% 90% at 0% 0%, #eef4ef 0%, transparent 60%),
+        linear-gradient(155deg, #f7f2eb 0%, #f1f4ef 48%, #f5ece2 100%);
 }
 
-.auth-visual__grain {
-    opacity: 0.045;
-    background-image: repeating-linear-gradient(
-        172deg,
-        rgb(255 255 255 / 0.5) 0 1px,
-        transparent 1px 14px
-    );
-    mask-image: linear-gradient(to bottom, black, transparent 75%);
+.auth-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(64px);
+    opacity: 0.75;
+    will-change: transform;
+    animation: auth-drift 26s var(--ease-in-out) infinite alternate;
 }
 
-.auth-visual__fan {
-    transform-origin: 50% 80%;
-    animation: fan-open 1100ms var(--ease-out) both;
+.auth-blob--sage {
+    top: -18vmax;
+    left: -14vmax;
+    width: 52vmax;
+    height: 52vmax;
+    background: #cfe2d6;
 }
 
-@keyframes fan-open {
+.auth-blob--oak {
+    right: -16vmax;
+    bottom: -20vmax;
+    width: 56vmax;
+    height: 56vmax;
+    background: #f1dcc5;
+    animation-duration: 32s;
+    animation-delay: -8s;
+}
+
+.auth-blob--eucalyptus {
+    top: 18%;
+    right: -8vmax;
+    width: 32vmax;
+    height: 32vmax;
+    background: #dbe9e0;
+    opacity: 0.6;
+    animation-duration: 28s;
+    animation-delay: -14s;
+}
+
+.auth-blob--linen {
+    bottom: -10vmax;
+    left: 8%;
+    width: 30vmax;
+    height: 30vmax;
+    background: #efe2d3;
+    opacity: 0.6;
+    animation-duration: 30s;
+    animation-delay: -4s;
+}
+
+/* Grano de papel muy sutil (SVG en línea, sin peticiones). */
+.auth-grain {
+    opacity: 0.22;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .14 0 0 0 0 .12 0 0 0 0 .1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Campos sobre vidrio: fondo casi blanco para que se lean bien. */
+.auth-card :deep(input[data-slot='input']:not([readonly])) {
+    background-color: rgb(255 255 255 / 0.85);
+}
+
+.auth-rise {
+    animation: auth-rise 640ms var(--ease-out) both;
+}
+
+.auth-logo {
+    animation: auth-pop 720ms var(--ease-out) 80ms both;
+}
+
+@keyframes auth-drift {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(4vmax, 3vmax, 0) scale(1.06);
+    }
+    100% {
+        transform: translate3d(-3vmax, 5vmax, 0) scale(0.96);
+    }
+}
+
+@keyframes auth-rise {
     from {
         opacity: 0;
-        transform: translateY(24px) rotate(-6deg) scale(0.96);
+        transform: translateY(14px);
     }
     to {
         opacity: 1;
         transform: none;
+    }
+}
+
+@keyframes auth-pop {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-blob,
+    .auth-rise,
+    .auth-logo {
+        animation: none;
     }
 }
 </style>

@@ -1,20 +1,15 @@
 <script setup lang="ts">
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 
-/** Las páginas de acceso pasan `title`, `description` e `image` vía `defineOptions({ layout })`. */
-const {
-    title = '',
-    description = '',
-    image = null,
-} = defineProps<{
+/** Las páginas de acceso pasan `title` y `description` vía `defineOptions({ layout })`. */
+const { title = '', description = '' } = defineProps<{
     title?: string;
     description?: string;
-    image?: string | null;
 }>();
 </script>
 
 <template>
-    <AuthSplitLayout :title="title" :description="description" :image="image">
+    <AuthSplitLayout :title="title" :description="description">
         <slot />
     </AuthSplitLayout>
 </template>

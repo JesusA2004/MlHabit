@@ -73,7 +73,6 @@ class SeoController extends Controller
             'Disallow: /solicitud/',
             'Disallow: /asesoria/',
             'Disallow: /pagos/',
-            'Disallow: /login',
             'Disallow: /forgot-password',
             'Disallow: /reset-password',
             'Disallow: /two-factor-challenge',

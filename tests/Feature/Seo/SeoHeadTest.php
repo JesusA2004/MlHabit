@@ -143,11 +143,78 @@ it('does not render previews for drafts or unknown content', function () {
     $this->get('/og/otro/algo.png')->assertNotFound();
 });
 
-it('marks private and transactional pages as noindex', function () {
-    $html = $this->get('/login')->assertOk()->getContent();
-    expect(rawHead($html))->toContain('<meta name="robots" content="noindex, nofollow"')
-        ->and($html)->not->toContain('og:image');
+it('renders the login meta tags and its own preview card server side', function () {
+    config(['app.url' => 'https://mlhabitat.com.mx']);
 
+    $html = $this->get('/login')->assertOk()->getContent();
+    $head = rawHead($html);
+
+    expect($head)
+        ->toContain('<title data-inertia="">Iniciar sesión | ML Habitat</title>')
+        ->toContain('<meta name="description" content="Entra a tu cuenta de ML Habitat')
+        ->toContain('<meta name="robots" content="index, follow')
+        ->toContain('<link rel="canonical" href="https://mlhabitat.com.mx/login" data-inertia="canonical">')
+        ->toContain('<meta property="og:url" content="https://mlhabitat.com.mx/login"')
+        ->toContain('<meta property="og:title" content="Iniciar sesión | ML Habitat"')
+        ->toContain('<meta property="og:description" content="Entra a tu cuenta')
+        ->toContain('<meta property="og:site_name" content="ML Habitat"')
+        ->toContain('<meta property="og:locale" content="es_MX"')
+        ->toContain('<meta property="og:image" content="'.url('/og/login/acceso.png').'?v=')
+        ->toContain('<meta property="og:image:width" content="1200"')
+        ->toContain('<meta name="twitter:card" content="summary_large_image"')
+        ->toContain('<meta name="twitter:title" content="Iniciar sesión | ML Habitat"')
+        ->toContain('<meta name="theme-color" content="#F7F5F2">');
+
+    // Una sola etiqueta robots (sin el noindex genérico de las áreas privadas).
+    expect(substr_count($head, 'name="robots"'))->toBe(1);
+
+    $this->get('/login')->assertInertia(fn ($page) => $page
+        ->component('auth/Login')
+        ->where('seo.fullTitle', 'Iniciar sesión | ML Habitat'));
+
+    $this->get('/og/login/acceso.png')->assertOk()->assertHeader('Content-Type', 'image/png');
+    $this->get('/og/login/otra.png')->assertNotFound();
+});
+
+it('keeps the other account screens out of the index without leaking tokens', function () {
+    $forgot = rawHead($this->get('/forgot-password')->assertOk()->getContent());
+    expect($forgot)
+        ->toContain('<title data-inertia="">Recuperar contraseña | ML Habitat</title>')
+        ->toContain('<meta name="robots" content="noindex, nofollow"')
+        ->toContain('/og/login/acceso.png');
+
+    $reset = rawHead($this->get('/reset-password/secreto-123?email=a%40b.com')->assertOk()->getContent());
+    expect($reset)
+        ->toContain('<meta name="robots" content="noindex, nofollow"')
+        ->toContain('<link rel="canonical" href="'.url('/forgot-password').'"')
+        ->not->toContain('secreto-123');
+});
+
+it('gives each static page its own preview card', function () {
+    $og = app(OgImage::class);
+    $urls = collect(['catalogo', 'inspiracion', 'preguntas-frecuentes', 'solicitar', 'asesoria', 'agendar-visita'])
+        ->mapWithKeys(fn ($slug) => [$slug => $og->resolve('page', $slug)])
+        ->each(fn ($spec) => expect($spec)->not->toBeNull()->and($spec['layout'])->toStartWith('feature:'));
+
+    // Temas distintos y URLs distintas.
+    expect($urls->pluck('layout')->unique())->toHaveCount(6)
+        ->and($urls->map(fn ($spec) => $og->meta($spec)['url'])->unique())->toHaveCount(6);
+
+    expect($og->page('aviso-de-privacidad', 'Aviso de privacidad', OgImage::LEGAL_EYEBROW)['layout'])->toBe('feature:legal')
+        ->and($og->page('nosotros', 'Nosotros')['layout'])->toBe('feature:custom')
+        ->and($og->home()['layout'])->toBe('brand');
+
+    // Las rutas sin tarjeta explícita usan la suya.
+    expect($og->forPath('/agendar-visita')['slug'])->toBe('agendar-visita')
+        ->and($og->forPath('asesoria/abc')['slug'])->toBe('asesoria')
+        ->and($og->forPath('solicitud/abc/asesoria')['slug'])->toBe('asesoria')
+        ->and($og->forPath('catalogo'))->toBeNull();
+
+    $this->get('/og/page/agendar-visita.png')->assertOk();
+    $this->get('/og/page/asesoria.png')->assertOk();
+});
+
+it('marks private and transactional pages as noindex', function () {
     $solicitar = $this->get('/solicitar')->assertOk()->getContent();
     expect(rawHead($solicitar))->toContain('<meta name="robots" content="index, follow')
         ->toContain('/og/page/solicitar.png');
@@ -174,6 +241,8 @@ it('serves robots.txt, an image sitemap and the web manifest', function () {
         ->assertSee('Disallow: /archivos')
         ->assertSee('Disallow: /subidas')
         ->assertSee('Disallow: /agendar-visita/pago')
+        ->assertSee('Disallow: /reset-password')
+        ->assertDontSee('Disallow: /login')
         ->assertSee('Sitemap: '.url('/sitemap.xml'));
 
     $this->get('/sitemap.xml')->assertOk()
