@@ -71,6 +71,7 @@ const sectionIcon = computed<Component | null>(() => {
 <template>
     <header
         data-slot="page-header"
+        data-tour="page-header"
         :class="cn('flex flex-col gap-4', props.class)"
     >
         <div v-if="$slots.breadcrumbs" class="-mb-1">
@@ -116,6 +117,7 @@ const sectionIcon = computed<Component | null>(() => {
             </div>
             <div
                 v-if="$slots.actions"
+                data-tour="page-actions"
                 class="flex shrink-0 flex-wrap items-center gap-2 max-sm:w-full [&>*]:max-sm:flex-1"
             >
                 <slot name="actions" />

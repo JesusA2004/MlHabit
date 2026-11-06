@@ -34,7 +34,7 @@ const active = (href: string) => isActivePath(page.url, { href });
 </script>
 
 <template>
-    <PageContainer width="wide">
+    <PageContainer>
         <PageHeader
             title="Tu cuenta"
             description="Datos personales y seguridad de acceso."
@@ -89,7 +89,7 @@ const active = (href: string) => isActivePath(page.url, { href });
                 </ul>
             </nav>
 
-            <div class="flex max-w-4xl min-w-0 flex-col gap-6">
+            <div class="flex min-w-0 flex-col gap-6">
                 <slot />
             </div>
         </div>

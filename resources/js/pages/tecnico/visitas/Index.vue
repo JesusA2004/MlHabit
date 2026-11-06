@@ -16,7 +16,7 @@ defineOptions({ layout: { title: 'Visitas' } });
 <template>
     <Head title="Mis visitas" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-5 md:py-8">
+    <div class="flex w-full flex-col gap-8">
         <header>
             <h1 class="font-display text-2xl font-semibold tracking-tight">
                 Mis visitas
@@ -33,12 +33,17 @@ defineOptions({ layout: { title: 'Visitas' } });
             >
                 Próximas
             </h2>
-            <VisitCard
-                v-for="visit in props.upcoming"
-                :key="visit.uuid"
-                :visit="visit"
-                show-date
-            />
+            <div
+                v-if="props.upcoming.length"
+                class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"
+            >
+                <VisitCard
+                    v-for="visit in props.upcoming"
+                    :key="visit.uuid"
+                    :visit="visit"
+                    show-date
+                />
+            </div>
             <EmptyState
                 v-if="props.upcoming.length === 0"
                 compact
@@ -55,12 +60,17 @@ defineOptions({ layout: { title: 'Visitas' } });
             >
                 Últimos 30 días
             </h2>
-            <VisitCard
-                v-for="visit in props.past"
-                :key="visit.uuid"
-                :visit="visit"
-                show-date
-            />
+            <div
+                v-if="props.past.length"
+                class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3"
+            >
+                <VisitCard
+                    v-for="visit in props.past"
+                    :key="visit.uuid"
+                    :visit="visit"
+                    show-date
+                />
+            </div>
             <EmptyState
                 v-if="props.past.length === 0"
                 compact

@@ -114,9 +114,7 @@ function complete(): Promise<void> {
 <template>
     <Head :title="`Visita ${props.visit.folio}`" />
 
-    <div
-        class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 pb-10 md:py-8"
-    >
+    <div class="flex w-full flex-col gap-5 pb-10">
         <header class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
                 <StatusBadge
@@ -145,185 +143,203 @@ function complete(): Promise<void> {
             </p>
         </header>
 
-        <div class="grid grid-cols-2 gap-3">
-            <Button
-                v-if="telHref"
-                as-child
-                size="lg"
-                variant="outline"
-                class="h-14 text-base"
-            >
-                <a :href="telHref"><Phone class="size-5" /> Llamar</a>
-            </Button>
-            <Button
-                v-else
-                size="lg"
-                variant="outline"
-                class="h-14 text-base"
-                disabled
-            >
-                <Phone class="size-5" /> Sin teléfono
-            </Button>
-            <Button
-                v-if="props.visit.address"
-                as-child
-                size="lg"
-                variant="outline"
-                class="h-14 text-base"
-            >
-                <a
-                    :href="props.visit.address.maps_url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    <Navigation class="size-5" /> Abrir en Mapas
-                </a>
-            </Button>
-        </div>
-
-        <section
-            class="rounded-xl border bg-card p-4"
-            aria-labelledby="visita-lugar"
-        >
-            <h2
-                id="visita-lugar"
-                class="flex items-center gap-2 text-sm font-semibold"
-            >
-                <MapPin class="size-4 text-primary" aria-hidden="true" />
-                Dirección
-            </h2>
-            <p class="mt-2 text-base">
-                {{
-                    props.visit.address?.one_line ?? 'Sin dirección registrada'
-                }}
-            </p>
-            <p
-                v-if="props.visit.address?.references"
-                class="mt-1 text-sm text-muted-foreground"
-            >
-                Referencias: {{ props.visit.address.references }}
-            </p>
-            <dl class="mt-4 grid gap-3 text-sm">
-                <div v-if="props.visit.access_notes">
-                    <dt class="font-medium">Acceso</dt>
-                    <dd
-                        class="mt-0.5 whitespace-pre-line text-muted-foreground"
+        <div class="grid items-start gap-5 lg:grid-cols-2 lg:gap-8">
+            <div class="flex min-w-0 flex-col gap-5">
+                <div class="grid grid-cols-2 gap-3">
+                    <Button
+                        v-if="telHref"
+                        as-child
+                        size="lg"
+                        variant="outline"
+                        class="h-14 text-base"
                     >
-                        {{ props.visit.access_notes }}
-                    </dd>
-                </div>
-                <div v-if="props.visit.customer_notes">
-                    <dt class="font-medium">Notas del cliente</dt>
-                    <dd
-                        class="mt-0.5 whitespace-pre-line text-muted-foreground"
+                        <a :href="telHref"><Phone class="size-5" /> Llamar</a>
+                    </Button>
+                    <Button
+                        v-else
+                        size="lg"
+                        variant="outline"
+                        class="h-14 text-base"
+                        disabled
                     >
-                        {{ props.visit.customer_notes }}
-                    </dd>
-                </div>
-            </dl>
-        </section>
-
-        <section class="flex flex-col gap-3" aria-label="Acciones de la visita">
-            <Button
-                v-if="props.can.start"
-                size="lg"
-                class="h-14 text-base"
-                :disabled="busy !== null"
-                @click="start"
-            >
-                <Spinner v-if="busy === 'start'" />
-                <Play v-else class="size-5" />
-                Iniciar visita
-            </Button>
-            <Button
-                v-if="props.can.measure"
-                size="lg"
-                :variant="
-                    props.can.has_submitted && !hasDraft ? 'outline' : 'default'
-                "
-                class="h-14 text-base"
-                :disabled="busy !== null"
-                @click="measure"
-            >
-                <Spinner v-if="busy === 'measure'" />
-                <Ruler v-else class="size-5" />
-                {{
-                    hasDraft
-                        ? 'Continuar medición'
-                        : props.can.has_submitted
-                          ? 'Abrir medición'
-                          : 'Registrar medición'
-                }}
-            </Button>
-            <template v-if="props.can.complete">
-                <Button
-                    size="lg"
-                    variant="secondary"
-                    class="h-14 text-base"
-                    :disabled="!props.can.has_submitted"
-                    @click="confirmComplete = true"
-                >
-                    <CheckCircle2 class="size-5" /> Completar visita
-                </Button>
-                <p
-                    v-if="!props.can.has_submitted"
-                    class="text-center text-sm text-muted-foreground"
-                >
-                    Envía la medición para poder completar la visita.
-                </p>
-            </template>
-            <p
-                v-if="!props.can.start && !props.can.measure"
-                class="text-center text-sm text-muted-foreground"
-            >
-                No hay acciones pendientes para esta visita.
-            </p>
-        </section>
-
-        <section
-            v-if="props.measurements.length"
-            class="flex flex-col gap-2"
-            aria-labelledby="visita-mediciones"
-        >
-            <h2
-                id="visita-mediciones"
-                class="text-sm font-semibold text-muted-foreground"
-            >
-                Mediciones
-            </h2>
-            <Link
-                v-for="m in props.measurements"
-                :key="m.id"
-                :href="mediciones.edit(m.id).url"
-                class="flex min-h-14 items-center gap-3 rounded-xl border bg-card px-4 py-3 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            >
-                <div class="min-w-0 flex-1">
-                    <p class="font-medium">Versión {{ m.version }}</p>
-                    <p class="truncate text-sm text-muted-foreground">
-                        {{ m.items_count }}
-                        {{ m.items_count === 1 ? 'medida' : 'medidas' }}
-                        <template v-if="m.areas.length">
-                            · {{ m.areas.join(', ') }}</template
+                        <Phone class="size-5" /> Sin teléfono
+                    </Button>
+                    <Button
+                        v-if="props.visit.address"
+                        as-child
+                        size="lg"
+                        variant="outline"
+                        class="h-14 text-base"
+                    >
+                        <a
+                            :href="props.visit.address.maps_url"
+                            target="_blank"
+                            rel="noopener noreferrer"
                         >
-                    </p>
+                            <Navigation class="size-5" /> Abrir en Mapas
+                        </a>
+                    </Button>
                 </div>
-                <StatusBadge
-                    :label="m.status.label"
-                    :tone="m.status.tone"
-                    size="sm"
-                />
-                <ChevronRight
-                    class="size-5 text-muted-foreground"
-                    aria-hidden="true"
-                />
-            </Link>
-        </section>
 
-        <p class="flex items-start gap-2 text-xs text-muted-foreground">
-            <ShieldCheck class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            Por privacidad no registramos tu ubicación: solo usamos la dirección
-            del cliente para orientarte.
-        </p>
+                <section
+                    class="rounded-xl border bg-card p-4"
+                    aria-labelledby="visita-lugar"
+                >
+                    <h2
+                        id="visita-lugar"
+                        class="flex items-center gap-2 text-sm font-semibold"
+                    >
+                        <MapPin
+                            class="size-4 text-primary"
+                            aria-hidden="true"
+                        />
+                        Dirección
+                    </h2>
+                    <p class="mt-2 text-base">
+                        {{
+                            props.visit.address?.one_line ??
+                            'Sin dirección registrada'
+                        }}
+                    </p>
+                    <p
+                        v-if="props.visit.address?.references"
+                        class="mt-1 text-sm text-muted-foreground"
+                    >
+                        Referencias: {{ props.visit.address.references }}
+                    </p>
+                    <dl class="mt-4 grid gap-3 text-sm">
+                        <div v-if="props.visit.access_notes">
+                            <dt class="font-medium">Acceso</dt>
+                            <dd
+                                class="mt-0.5 whitespace-pre-line text-muted-foreground"
+                            >
+                                {{ props.visit.access_notes }}
+                            </dd>
+                        </div>
+                        <div v-if="props.visit.customer_notes">
+                            <dt class="font-medium">Notas del cliente</dt>
+                            <dd
+                                class="mt-0.5 whitespace-pre-line text-muted-foreground"
+                            >
+                                {{ props.visit.customer_notes }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+            </div>
+
+            <div class="flex min-w-0 flex-col gap-5 lg:sticky lg:top-24">
+                <section
+                    class="flex flex-col gap-3"
+                    aria-label="Acciones de la visita"
+                >
+                    <Button
+                        v-if="props.can.start"
+                        size="lg"
+                        class="h-14 text-base"
+                        :disabled="busy !== null"
+                        @click="start"
+                    >
+                        <Spinner v-if="busy === 'start'" />
+                        <Play v-else class="size-5" />
+                        Iniciar visita
+                    </Button>
+                    <Button
+                        v-if="props.can.measure"
+                        size="lg"
+                        :variant="
+                            props.can.has_submitted && !hasDraft
+                                ? 'outline'
+                                : 'default'
+                        "
+                        class="h-14 text-base"
+                        :disabled="busy !== null"
+                        @click="measure"
+                    >
+                        <Spinner v-if="busy === 'measure'" />
+                        <Ruler v-else class="size-5" />
+                        {{
+                            hasDraft
+                                ? 'Continuar medición'
+                                : props.can.has_submitted
+                                  ? 'Abrir medición'
+                                  : 'Registrar medición'
+                        }}
+                    </Button>
+                    <template v-if="props.can.complete">
+                        <Button
+                            size="lg"
+                            variant="secondary"
+                            class="h-14 text-base"
+                            :disabled="!props.can.has_submitted"
+                            @click="confirmComplete = true"
+                        >
+                            <CheckCircle2 class="size-5" /> Completar visita
+                        </Button>
+                        <p
+                            v-if="!props.can.has_submitted"
+                            class="text-center text-sm text-muted-foreground"
+                        >
+                            Envía la medición para poder completar la visita.
+                        </p>
+                    </template>
+                    <p
+                        v-if="!props.can.start && !props.can.measure"
+                        class="text-center text-sm text-muted-foreground"
+                    >
+                        No hay acciones pendientes para esta visita.
+                    </p>
+                </section>
+
+                <section
+                    v-if="props.measurements.length"
+                    class="flex flex-col gap-2"
+                    aria-labelledby="visita-mediciones"
+                >
+                    <h2
+                        id="visita-mediciones"
+                        class="text-sm font-semibold text-muted-foreground"
+                    >
+                        Mediciones
+                    </h2>
+                    <Link
+                        v-for="m in props.measurements"
+                        :key="m.id"
+                        :href="mediciones.edit(m.id).url"
+                        class="flex min-h-14 items-center gap-3 rounded-xl border bg-card px-4 py-3 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium">Versión {{ m.version }}</p>
+                            <p class="truncate text-sm text-muted-foreground">
+                                {{ m.items_count }}
+                                {{ m.items_count === 1 ? 'medida' : 'medidas' }}
+                                <template v-if="m.areas.length">
+                                    · {{ m.areas.join(', ') }}</template
+                                >
+                            </p>
+                        </div>
+                        <StatusBadge
+                            :label="m.status.label"
+                            :tone="m.status.tone"
+                            size="sm"
+                        />
+                        <ChevronRight
+                            class="size-5 text-muted-foreground"
+                            aria-hidden="true"
+                        />
+                    </Link>
+                </section>
+
+                <p class="flex items-start gap-2 text-xs text-muted-foreground">
+                    <ShieldCheck
+                        class="mt-0.5 size-4 shrink-0"
+                        aria-hidden="true"
+                    />
+                    Por privacidad no registramos tu ubicación: solo usamos la
+                    dirección del cliente para orientarte.
+                </p>
+            </div>
+        </div>
     </div>
 
     <ConfirmDialog

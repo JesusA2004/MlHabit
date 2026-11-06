@@ -251,7 +251,7 @@ const fields = [
 <template>
     <Head title="Nueva visita" />
 
-    <PageContainer width="narrow">
+    <PageContainer>
         <PageHeader
             title="Nueva visita técnica"
             :description="
@@ -276,14 +276,24 @@ const fields = [
             </template>
         </EmptyState>
 
-        <form v-else class="space-y-6" novalidate @submit.prevent="submit">
+        <form
+            v-else
+            class="grid items-start gap-6 xl:grid-cols-2 2xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+            novalidate
+            @submit.prevent="submit"
+        >
             <FormStatus
                 v-if="generalError"
+                class="xl:col-span-2"
                 tone="danger"
                 :message="generalError"
             />
 
-            <SectionCard title="1. Cobertura y horario" :icon="MapPinned">
+            <SectionCard
+                title="1. Cobertura y horario"
+                :icon="MapPinned"
+                class="xl:sticky xl:top-20"
+            >
                 <div class="space-y-5">
                     <div class="flex items-end gap-2">
                         <div class="flex-1 space-y-2">
@@ -352,187 +362,192 @@ const fields = [
                 </div>
             </SectionCard>
 
-            <SectionCard title="2. Cliente">
-                <div class="grid gap-4 md:grid-cols-2">
-                    <div class="space-y-2">
-                        <Label for="first_name">Nombre</Label>
-                        <Input
-                            id="first_name"
-                            v-model="form.first_name"
-                            autocomplete="given-name"
-                        />
-                        <InputError :message="form.errors.first_name" />
+            <div class="flex min-w-0 flex-col gap-6">
+                <SectionCard title="2. Cliente">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="space-y-2">
+                            <Label for="first_name">Nombre</Label>
+                            <Input
+                                id="first_name"
+                                v-model="form.first_name"
+                                autocomplete="given-name"
+                            />
+                            <InputError :message="form.errors.first_name" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="last_name">Apellidos</Label>
+                            <Input
+                                id="last_name"
+                                v-model="form.last_name"
+                                autocomplete="family-name"
+                            />
+                            <InputError :message="form.errors.last_name" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="email">Correo electrónico</Label>
+                            <Input
+                                id="email"
+                                v-model="form.email"
+                                type="email"
+                                autocomplete="email"
+                            />
+                            <InputError :message="form.errors.email" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="phone">Teléfono</Label>
+                            <Input
+                                id="phone"
+                                v-model="form.phone"
+                                type="tel"
+                                inputmode="tel"
+                                autocomplete="tel"
+                            />
+                            <InputError :message="form.errors.phone" />
+                        </div>
                     </div>
-                    <div class="space-y-2">
-                        <Label for="last_name">Apellidos</Label>
-                        <Input
-                            id="last_name"
-                            v-model="form.last_name"
-                            autocomplete="family-name"
-                        />
-                        <InputError :message="form.errors.last_name" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="email">Correo electrónico</Label>
-                        <Input
-                            id="email"
-                            v-model="form.email"
-                            type="email"
-                            autocomplete="email"
-                        />
-                        <InputError :message="form.errors.email" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="phone">Teléfono</Label>
-                        <Input
-                            id="phone"
-                            v-model="form.phone"
-                            type="tel"
-                            inputmode="tel"
-                            autocomplete="tel"
-                        />
-                        <InputError :message="form.errors.phone" />
-                    </div>
-                </div>
-            </SectionCard>
+                </SectionCard>
 
-            <SectionCard title="3. Domicilio">
-                <div class="grid gap-4 md:grid-cols-2">
-                    <div
-                        v-for="f in fields"
-                        :key="f.key"
-                        :class="['space-y-2', f.span]"
-                    >
-                        <Label :for="f.key">{{ f.label }}</Label>
-                        <Input
-                            :id="f.key"
-                            v-model="form[f.key]"
-                            :autocomplete="f.autocomplete"
-                        />
-                        <InputError :message="form.errors[f.key]" />
-                    </div>
-                    <div class="space-y-2 md:col-span-2">
-                        <Label for="access_notes"
-                            >Indicaciones de acceso (opcional)</Label
+                <SectionCard title="3. Domicilio">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div
+                            v-for="f in fields"
+                            :key="f.key"
+                            :class="['space-y-2', f.span]"
                         >
-                        <Textarea
-                            id="access_notes"
-                            v-model="form.access_notes"
-                            rows="2"
-                            maxlength="1000"
-                            placeholder="Ej. caseta de vigilancia, dejar identificación"
-                        />
+                            <Label :for="f.key">{{ f.label }}</Label>
+                            <Input
+                                :id="f.key"
+                                v-model="form[f.key]"
+                                :autocomplete="f.autocomplete"
+                            />
+                            <InputError :message="form.errors[f.key]" />
+                        </div>
+                        <div class="space-y-2 md:col-span-2">
+                            <Label for="access_notes"
+                                >Indicaciones de acceso (opcional)</Label
+                            >
+                            <Textarea
+                                id="access_notes"
+                                v-model="form.access_notes"
+                                rows="2"
+                                maxlength="1000"
+                                placeholder="Ej. caseta de vigilancia, dejar identificación"
+                            />
+                        </div>
+                        <div class="space-y-2 md:col-span-2">
+                            <Label for="internal_notes"
+                                >Notas internas (opcional)</Label
+                            >
+                            <Textarea
+                                id="internal_notes"
+                                v-model="form.internal_notes"
+                                rows="2"
+                                maxlength="2000"
+                            />
+                        </div>
                     </div>
-                    <div class="space-y-2 md:col-span-2">
-                        <Label for="internal_notes"
-                            >Notas internas (opcional)</Label
+                </SectionCard>
+
+                <SectionCard title="4. Pago">
+                    <p class="mb-4 text-sm text-muted-foreground">
+                        Tarifa vigente:
+                        <Money
+                            :value="policy.fee"
+                            class="font-medium text-foreground"
+                        />
+                        (política v{{ policy.version }},
+                        {{ policy.durationMinutes }} min).
+                    </p>
+                    <RadioGroup
+                        v-model="form.payment_action"
+                        class="gap-3"
+                        aria-label="Forma de pago"
+                    >
+                        <label
+                            class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[[data-state=checked]]:border-primary"
                         >
-                        <Textarea
-                            id="internal_notes"
-                            v-model="form.internal_notes"
-                            rows="2"
-                            maxlength="2000"
-                        />
-                    </div>
-                </div>
-            </SectionCard>
-
-            <SectionCard title="4. Pago">
-                <p class="mb-4 text-sm text-muted-foreground">
-                    Tarifa vigente:
-                    <Money
-                        :value="policy.fee"
-                        class="font-medium text-foreground"
-                    />
-                    (política v{{ policy.version }},
-                    {{ policy.durationMinutes }} min).
-                </p>
-                <RadioGroup
-                    v-model="form.payment_action"
-                    class="gap-3"
-                    aria-label="Forma de pago"
-                >
-                    <label
-                        class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[[data-state=checked]]:border-primary"
-                    >
-                        <RadioGroupItem value="link" class="mt-0.5" />
-                        <span>
-                            <span class="block text-sm font-medium"
-                                >Enviar enlace de pago al cliente</span
-                            >
-                            <span class="block text-sm text-muted-foreground"
-                                >El horario queda apartado {{ holdHours }} h; se
-                                confirma al pagar con tarjeta.</span
-                            >
-                        </span>
-                    </label>
-                    <label
-                        v-if="can.record"
-                        class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[[data-state=checked]]:border-primary"
-                    >
-                        <RadioGroupItem value="manual" class="mt-0.5" />
-                        <span>
-                            <span class="block text-sm font-medium"
-                                >Registrar pago manual</span
-                            >
-                            <span class="block text-sm text-muted-foreground"
-                                >Transferencia o efectivo ya recibido: la visita
-                                queda agendada de inmediato.</span
-                            >
-                        </span>
-                    </label>
-                </RadioGroup>
-                <InputError :message="form.errors.payment_action" />
-
-                <div
-                    v-if="form.payment_action === 'manual'"
-                    class="mt-4 grid gap-4 md:grid-cols-2"
-                >
-                    <div class="space-y-2">
-                        <Label for="method">Método</Label>
-                        <Select v-model="form.method">
-                            <SelectTrigger id="method" class="w-full"
-                                ><SelectValue
-                            /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem
-                                    v-for="m in manualMethods"
-                                    :key="m.value"
-                                    :value="m.value"
-                                    >{{ m.label }}</SelectItem
+                            <RadioGroupItem value="link" class="mt-0.5" />
+                            <span>
+                                <span class="block text-sm font-medium"
+                                    >Enviar enlace de pago al cliente</span
                                 >
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.method" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="reference">Referencia</Label>
-                        <Input
-                            id="reference"
-                            v-model="form.reference"
-                            maxlength="120"
-                            placeholder="Ej. SPEI 0045821"
-                        />
-                        <InputError :message="form.errors.reference" />
-                    </div>
-                </div>
-            </SectionCard>
+                                <span
+                                    class="block text-sm text-muted-foreground"
+                                    >El horario queda apartado
+                                    {{ holdHours }} h; se confirma al pagar con
+                                    tarjeta.</span
+                                >
+                            </span>
+                        </label>
+                        <label
+                            v-if="can.record"
+                            class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[[data-state=checked]]:border-primary"
+                        >
+                            <RadioGroupItem value="manual" class="mt-0.5" />
+                            <span>
+                                <span class="block text-sm font-medium"
+                                    >Registrar pago manual</span
+                                >
+                                <span
+                                    class="block text-sm text-muted-foreground"
+                                    >Transferencia o efectivo ya recibido: la
+                                    visita queda agendada de inmediato.</span
+                                >
+                            </span>
+                        </label>
+                    </RadioGroup>
+                    <InputError :message="form.errors.payment_action" />
 
-            <div class="flex justify-end gap-2">
-                <Button variant="outline" as-child
-                    ><Link href="/admin/visitas">Cancelar</Link></Button
-                >
-                <Button
-                    type="submit"
-                    :disabled="form.processing || !form.date || !form.start"
-                >
-                    <Spinner v-if="form.processing" />
-                    {{
-                        form.payment_action === 'manual'
-                            ? 'Agendar con pago registrado'
-                            : 'Apartar y enviar enlace'
-                    }}
-                </Button>
+                    <div
+                        v-if="form.payment_action === 'manual'"
+                        class="mt-4 grid gap-4 md:grid-cols-2"
+                    >
+                        <div class="space-y-2">
+                            <Label for="method">Método</Label>
+                            <Select v-model="form.method">
+                                <SelectTrigger id="method" class="w-full"
+                                    ><SelectValue
+                                /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="m in manualMethods"
+                                        :key="m.value"
+                                        :value="m.value"
+                                        >{{ m.label }}</SelectItem
+                                    >
+                                </SelectContent>
+                            </Select>
+                            <InputError :message="form.errors.method" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="reference">Referencia</Label>
+                            <Input
+                                id="reference"
+                                v-model="form.reference"
+                                maxlength="120"
+                                placeholder="Ej. SPEI 0045821"
+                            />
+                            <InputError :message="form.errors.reference" />
+                        </div>
+                    </div>
+                </SectionCard>
+
+                <div class="flex justify-end gap-2">
+                    <Button variant="outline" as-child
+                        ><Link href="/admin/visitas">Cancelar</Link></Button
+                    >
+                    <Button
+                        type="submit"
+                        :disabled="form.processing || !form.date || !form.start"
+                    >
+                        <Spinner v-if="form.processing" />
+                        {{
+                            form.payment_action === 'manual'
+                                ? 'Agendar con pago registrado'
+                                : 'Apartar y enviar enlace'
+                        }}
+                    </Button>
+                </div>
             </div>
         </form>
     </PageContainer>

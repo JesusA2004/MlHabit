@@ -8,7 +8,7 @@
 
 <template>
     <div
-        class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8 lg:px-8"
+        class="flex w-full flex-col gap-6 px-4 py-5 md:px-6 md:py-6 xl:px-8 xl:py-8 2xl:px-10"
         aria-hidden="true"
     >
         <div class="flex flex-col gap-3">

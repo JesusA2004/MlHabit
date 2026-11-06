@@ -7,6 +7,7 @@ import PublicLayout from '@/layouts/PublicLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import TechnicianLayout from '@/layouts/TechnicianLayout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { installSubmitBusy } from '@/lib/submitBusy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'ML Habitat';
 
@@ -55,11 +56,16 @@ void createInertiaApp({
             },
         });
     },
+    // Barra superior de carga: aparece si la visita tarda más de 250 ms.
     progress: {
         color: '#2F5A4C',
+        delay: 250,
         showSpinner: false,
     },
 });
 
 // Toasts enviados por el backend (`flash.toast`).
 initializeFlashToast();
+
+// Envíos de formulario lentos (> 400 ms): cursor de progreso y sin doble envío.
+installSubmitBusy();

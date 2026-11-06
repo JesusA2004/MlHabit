@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, Globe } from '@lucide/vue';
-import { computed, inject, ref, watch } from 'vue';
+import { computed, inject, nextTick, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import {
     AlertDialog,
@@ -15,10 +15,20 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import BusyOverlay from '@/components/feedback/BusyOverlay.vue';
+import { useLongTask } from '@/composables/useLongTask';
 import { editorKey } from './keys';
 
-/** Confirmación de publicación con nota opcional para el historial. */
+/**
+ * Confirmación de publicación con nota opcional para el historial. Al
+ * confirmar, el diálogo se cierra y una capa de pantalla completa con la
+ * insignia acompaña la publicación (si tarda más de ~400 ms). Si falla, el
+ * diálogo vuelve a abrirse con el error.
+ */
 const open = defineModel<boolean>('open', { default: false });
+/** Verdadero mientras se publica (la barra superior deshabilita "Publicar"). */
+const busy = defineModel<boolean>('busy', { default: false });
+const task = useLongTask();
 
 const editor = inject(editorKey)!;
 
@@ -39,17 +49,27 @@ const hidden = computed(
 const blocked = computed(() => editor.h1Count.value > 1);
 
 async function publish() {
-    if (loading.value) return;
+    if (loading.value || busy.value) return;
     loading.value = true;
+    busy.value = true;
     error.value = null;
+    const text = note.value;
+    open.value = false;
     try {
-        const message = await editor.publish(note.value);
+        const message = await task.run(() => editor.publish(text), {
+            title: 'Publicando tus cambios…',
+            description:
+                'Guardamos el borrador y actualizamos la página pública. No cierres esta pestaña.',
+        });
         toast.success(message);
-        open.value = false;
     } catch (e) {
+        open.value = true;
+        await nextTick();
+        note.value = text;
         error.value = e instanceof Error ? e.message : 'No se pudo publicar.';
     } finally {
         loading.value = false;
+        busy.value = false;
     }
 }
 </script>
@@ -137,4 +157,9 @@ async function publish() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+    <BusyOverlay
+        :open="task.visible.value"
+        :title="task.title.value"
+        :description="task.description.value"
+    />
 </template>

@@ -10,12 +10,18 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import ProgressBar from '@/components/feedback/ProgressBar.vue';
 import { formatBytes } from '@/lib/format';
+import { formatEta, formatRate } from '@/lib/transferRate';
 import { cn } from '@/lib/utils';
 import type { UploadItem } from './useUploadQueue';
 
-/** Fila de un archivo en FileDropzone: nombre, peso, progreso y acciones. */
+/**
+ * Fila de un archivo en subida (FileDropzone, EvidenceUploader, UploadTray):
+ * nombre, peso, barra con porcentaje, bytes enviados, velocidad y tiempo
+ * restante; luego "Verificando…" y, para videos, "Procesando video…"
+ * mientras el servidor genera la miniatura. Cancelar, reintentar o quitar.
+ */
 const props = defineProps<{ item: UploadItem }>();
 
 const emit = defineEmits<{ cancel: []; retry: []; remove: [] }>();
@@ -30,16 +36,68 @@ const icon = computed(() => {
     return type.startsWith('video/') ? Film : FileText;
 });
 
+const isVideo = computed(() => props.item.file.type.startsWith('video/'));
+
+const uploadingText = computed(() => {
+    const item = props.item;
+
+    if (item.phase === 'preparing') {
+        return 'Preparando archivo…';
+    }
+
+    if (item.phase === 'finalizing') {
+        return 'Verificando archivo en el servidor…';
+    }
+
+    const parts = [
+        `${formatBytes(item.sentBytes ?? 0)} de ${formatBytes(item.file.size)}`,
+    ];
+    const rate = formatRate(item.bytesPerSecond ?? 0);
+    const eta = formatEta(item.etaSeconds ?? null);
+
+    if (rate) {
+        parts.push(rate);
+    }
+
+    if (eta) {
+        parts.push(eta);
+    }
+
+    return parts.join(' · ');
+});
+
 const statusText = computed(
     () =>
         ({
             queued: 'En espera',
-            uploading: `Subiendo… ${props.item.percent}%`,
-            completed: 'Subido',
+            uploading: uploadingText.value,
+            processing: isVideo.value
+                ? 'Procesando video… (miniatura y duración)'
+                : 'Procesando archivo…',
+            completed: 'Listo',
             error: props.item.error ?? 'Error al subir',
             aborted: 'Cancelado',
         })[props.item.status],
 );
+
+const showBar = computed(() =>
+    ['uploading', 'queued', 'processing'].includes(props.item.status),
+);
+
+/** null = barra indeterminada (preparando, verificando o procesando). */
+const barValue = computed<number | null>(() => {
+    const item = props.item;
+
+    if (
+        item.status === 'processing' ||
+        item.phase === 'preparing' ||
+        item.phase === 'finalizing'
+    ) {
+        return null;
+    }
+
+    return item.percent;
+});
 </script>
 
 <template>
@@ -70,17 +128,27 @@ const statusText = computed(
                 <span
                     class="shrink-0 text-xs text-muted-foreground tabular-nums"
                 >
+                    <template
+                        v-if="
+                            props.item.status === 'uploading' &&
+                            barValue !== null
+                        "
+                        ><span class="font-semibold text-foreground"
+                            >{{ props.item.percent }}%</span
+                        >
+                        ·
+                    </template>
                     {{ formatBytes(props.item.file.size) }}
                 </span>
             </div>
-            <Progress
-                v-if="
-                    props.item.status === 'uploading' ||
-                    props.item.status === 'queued'
+            <ProgressBar
+                v-if="showBar"
+                :value="props.item.status === 'queued' ? 0 : barValue"
+                :tone="
+                    props.item.status === 'processing' ? 'warning' : 'primary'
                 "
-                :model-value="props.item.percent"
-                class="mt-2 h-1.5"
-                :aria-label="`Progreso de ${props.item.file.name}`"
+                class="mt-2"
+                :label="`Progreso de ${props.item.file.name}`"
             />
             <p
                 :class="
@@ -92,7 +160,9 @@ const statusText = computed(
                         props.item.status === 'completed' && 'text-success-ink',
                     )
                 "
-                aria-live="polite"
+                :aria-live="
+                    props.item.status === 'uploading' ? 'off' : 'polite'
+                "
             >
                 <CircleCheck
                     v-if="props.item.status === 'completed'"
@@ -125,6 +195,7 @@ const statusText = computed(
                 variant="ghost"
                 size="icon"
                 class="size-11 md:size-8"
+                title="Cancelar subida"
                 :aria-label="`Cancelar ${props.item.file.name}`"
                 @click="emit('cancel')"
             >

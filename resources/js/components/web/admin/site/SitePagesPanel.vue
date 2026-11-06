@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Link, router, useForm } from '@inertiajs/vue3';
+import BusyOverlay from '@/components/feedback/BusyOverlay.vue';
+import { useLongTask } from '@/composables/useLongTask';
 import {
     Copy,
     Ellipsis,
@@ -95,6 +97,9 @@ function status(row: SitePageRow) {
     return { tone: 'success' as const, label: 'Publicada' };
 }
 
+// Acciones que crean, duplican o publican: capa de "trabajando" si tardan.
+const task = useLongTask();
+
 // ----- Nueva página -----------------------------------------------------
 const createOpen = ref(false);
 const createForm = useForm({
@@ -121,10 +126,19 @@ function openCreate() {
 function submitCreate() {
     createForm
         .transform((data) => ({ ...data, slug: data.slug || null }))
-        .post(paginasWeb.store().url, {
-            preserveScroll: true,
-            onSuccess: () => (createOpen.value = false),
-        });
+        .post(
+            paginasWeb.store().url,
+            task.visit(
+                {
+                    title: 'Creando la página…',
+                    description: 'Preparamos la plantilla y el editor visual.',
+                },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => (createOpen.value = false),
+                },
+            ),
+        );
 }
 
 // ----- Ajustes y SEO ----------------------------------------------------
@@ -170,7 +184,14 @@ function submitSettings() {
 
 // ----- Acciones ---------------------------------------------------------
 function duplicate(row: SitePageRow) {
-    router.post(paginasWeb.duplicar(row.id).url, {}, { preserveScroll: true });
+    router.post(
+        paginasWeb.duplicar(row.id).url,
+        {},
+        task.visit(
+            { title: `Duplicando «${row.title}»…` },
+            { preserveScroll: true },
+        ),
+    );
 }
 
 function togglePublish(row: SitePageRow) {
@@ -179,7 +200,19 @@ function togglePublish(row: SitePageRow) {
             ? paginasWeb.despublicar(row.id).url
             : paginasWeb.publicar(row.id).url,
         {},
-        { preserveScroll: true },
+        task.visit(
+            row.isPublished
+                ? {
+                      title: 'Despublicando la página…',
+                      description: 'Dejará de verse en el sitio.',
+                  }
+                : {
+                      title: 'Publicando la página…',
+                      description:
+                          'Quedará visible en el sitio en unos segundos.',
+                  },
+            { preserveScroll: true },
+        ),
     );
 }
 
@@ -579,6 +612,11 @@ function remove(): Promise<void> {
             loading-label="Eliminando…"
             tone="destructive"
             :confirm="remove"
+        />
+        <BusyOverlay
+            :open="task.visible.value"
+            :title="task.title.value"
+            :description="task.description.value"
         />
     </SectionCard>
 </template>

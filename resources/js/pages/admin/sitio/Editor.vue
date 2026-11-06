@@ -29,7 +29,9 @@ import type {
 } from '@/components/site-builder/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useChunkedUpload } from '@/composables/useChunkedUpload';
+import { useUploadQueue } from '@/components/ds/useUploadQueue';
+import UploadGuard from '@/components/feedback/UploadGuard.vue';
+import UploadTray from '@/components/feedback/UploadTray.vue';
 import editorRoutes from '@/routes/admin/sitio/editor';
 import versiones from '@/routes/admin/sitio/editor/versiones';
 import pageEditor from '@/routes/admin/sitio/paginas-web/editor';
@@ -138,6 +140,7 @@ const leftTab = ref<'secciones' | 'elementos'>('secciones');
 const pickerOpen = ref(false);
 const pickerIndex = ref(0);
 const publishOpen = ref(false);
+const publishing = ref(false);
 const historyOpen = ref(false);
 
 function openPicker(index: number) {
@@ -156,7 +159,43 @@ function onPickTemplate(template: SectionTemplate) {
 
 // ----- Subir fotos desde el escritorio ------------------------------------
 const canUpload = computed(() => props.can.upload);
-const uploader = useChunkedUpload();
+// Cada archivo sube por fragmentos con progreso, velocidad y tiempo
+// restante en la bandeja flotante (UploadTray); al terminar, la foto se
+// coloca en el bloque que se creó al soltarla.
+const uploadTargets = new Map<string, { key: string; blockId: string }>();
+const uploads = useUploadQueue({
+    collection: 'sitio/editor',
+    visibility: 'public',
+    onUploaded: (result, item) => {
+        const target = uploadTargets.get(item.id);
+        uploadTargets.delete(item.id);
+        editor.library.value = {
+            ...editor.library.value,
+            [String(result.id)]: {
+                id: result.id,
+                url: result.url,
+                thumbnailUrl: result.url,
+                filename: result.filename,
+                type: result.type,
+                altText: null,
+                origin: null,
+                originLabel: null,
+                width: null,
+                height: null,
+            },
+        };
+        if (target) {
+            editor.updateProps(target.key, target.blockId, {
+                mediaId: result.id,
+                focalX: 50,
+                focalY: 50,
+                zoom: 1,
+            });
+        }
+        toast.success(`${result.filename} agregada`);
+    },
+    onError: (message) => toast.error(message || 'No se pudo subir la foto.'),
+});
 
 async function uploadFiles(
     files: File[],
@@ -175,6 +214,9 @@ async function uploadFiles(
         sectionKey ?? editor.selection.section ?? editor.sections.value[0]?.key;
     if (!key) return;
 
+    const targets: { key: string; blockId: string }[] = [];
+    const accepted: File[] = [];
+
     for (const [i, file] of files.entries()) {
         let blockId = targetBlock && i === 0 ? targetBlock : null;
         if (!blockId) {
@@ -184,42 +226,23 @@ async function uploadFiles(
             });
         }
         if (!blockId) continue;
-        const toastId = toast.loading(`Subiendo ${file.name}…`);
-        try {
-            const result = await uploader.upload(file, 'sitio/editor', {
-                visibility: 'public',
-            });
-            editor.library.value = {
-                ...editor.library.value,
-                [String(result.id)]: {
-                    id: result.id,
-                    url: result.url,
-                    thumbnailUrl: result.url,
-                    filename: result.filename,
-                    type: result.type,
-                    altText: null,
-                    origin: null,
-                    originLabel: null,
-                    width: null,
-                    height: null,
-                },
-            };
-            editor.updateProps(key, blockId, {
-                mediaId: result.id,
-                focalX: 50,
-                focalY: 50,
-                zoom: 1,
-            });
-            toast.success('Foto agregada', { id: toastId });
-        } catch (e) {
-            toast.error(
-                e instanceof Error && e.message
-                    ? e.message
-                    : 'No se pudo subir la foto.',
-                { id: toastId },
-            );
-        }
+        targets.push({ key, blockId });
+        accepted.push(file);
     }
+
+    const before = uploads.items.value.length;
+    uploads.add(accepted);
+    uploads.items.value
+        .slice(before)
+        .forEach(
+            (item, i) => targets[i] && uploadTargets.set(item.id, targets[i]),
+        );
+}
+
+function dismissUploads() {
+    uploads.items.value = uploads.items.value.filter((i) =>
+        ['queued', 'uploading', 'processing'].includes(i.status),
+    );
 }
 
 // ----- Teclado y salida -----------------------------------------------------
@@ -251,6 +274,7 @@ function reload() {
                 :page-name="props.page.name"
                 :preview-url="props.previewUrl"
                 :can-publish="props.can.publish"
+                :publishing="publishing"
                 :back-href="props.page.backHref"
                 @publish="publishOpen = true"
                 @history="historyOpen = true"
@@ -354,8 +378,17 @@ function reload() {
             :templates="props.templates"
             @pick="onPickTemplate"
         />
-        <PublishDialog v-model:open="publishOpen" />
+        <PublishDialog v-model:open="publishOpen" v-model:busy="publishing" />
         <HistorySheet v-model:open="historyOpen" />
+        <UploadTray
+            :items="uploads.items.value"
+            class="right-[21.5rem]"
+            @cancel="(item) => uploads.cancel(item)"
+            @retry="(item) => uploads.retry(item)"
+            @remove="(item) => uploads.remove(item)"
+            @dismiss="dismissUploads"
+        />
+        <UploadGuard />
         <AppToaster />
     </TooltipProvider>
 </template>

@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { ChevronLeft } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, provide, onBeforeUnmount, onMounted, ref } from 'vue';
 import '../../css/portal.css';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import AccountMenu from '@/components/ds/AccountMenu.vue';
 import NotificationsMenu from '@/components/platform/NotificationsMenu.vue';
 import AppToaster from '@/components/ds/AppToaster.vue';
+import UploadGuard from '@/components/feedback/UploadGuard.vue';
 import TabBar from '@/components/ds/TabBar.vue';
+import HelpMenu from '@/components/tour/HelpMenu.vue';
+import { navTourKey } from '@/components/tour/keys';
+import TourHost from '@/components/tour/TourHost.vue';
 import { isActivePath, normalizePath, technicianTabs } from '@/lib/navigation';
+import { pageContainerContextKey } from '@/components/ds/pageContext';
 import { cn } from '@/lib/utils';
 
 /**
@@ -20,6 +25,9 @@ const props = withDefaults(
     defineProps<{ title?: string; backHref?: string }>(),
     {},
 );
+
+// Las pantallas usan todo el ancho disponible (sin tope).
+provide(pageContainerContextKey, { defaultWidth: 'full', animate: false });
 
 const page = usePage();
 
@@ -91,11 +99,16 @@ onBeforeUnmount(() => {
                     {{ props.title ?? 'ML Habitat' }}
                 </p>
 
-                <nav aria-label="Secciones" class="hidden flex-1 md:block">
+                <nav
+                    aria-label="Secciones"
+                    data-tour="tech-nav"
+                    class="hidden flex-1 md:block"
+                >
                     <ul class="flex items-center gap-1">
                         <li v-for="item in technicianTabs" :key="item.href">
                             <Link
                                 :href="item.href"
+                                :data-tour="navTourKey(item.href)"
                                 :aria-current="
                                     isActivePath(page.url, item)
                                         ? 'page'
@@ -117,6 +130,7 @@ onBeforeUnmount(() => {
                     </ul>
                 </nav>
 
+                <HelpMenu area="tecnico" />
                 <NotificationsMenu />
                 <AccountMenu />
             </div>
@@ -132,7 +146,7 @@ onBeforeUnmount(() => {
             id="contenido"
             class="portal-canvas w-full flex-1 px-4 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:px-6 md:pt-8 md:pb-12 lg:px-8"
         >
-            <div :key="pageKey" class="portal-enter mx-auto w-full max-w-7xl">
+            <div :key="pageKey" class="portal-enter w-full">
                 <slot />
             </div>
         </main>
@@ -143,5 +157,7 @@ onBeforeUnmount(() => {
             class="md:hidden"
         />
         <AppToaster />
+        <UploadGuard />
+        <TourHost area="tecnico" />
     </div>
 </template>

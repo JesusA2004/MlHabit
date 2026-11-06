@@ -493,9 +493,7 @@ const filledCount = computed(
 <template>
     <Head :title="`Medición v${props.measurement.version}`" />
 
-    <div
-        class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 pb-32 md:py-8"
-    >
+    <div class="flex w-full flex-col gap-5 pb-32">
         <header class="flex flex-col gap-1">
             <div class="flex items-center gap-2">
                 <StatusBadge
@@ -620,41 +618,43 @@ const filledCount = computed(
                 </div>
             </dl>
 
-            <section
-                v-for="area in areas"
-                :key="area"
-                class="rounded-xl border bg-card"
-            >
-                <h2 class="border-b px-4 py-3 font-semibold">{{ area }}</h2>
-                <ul class="divide-y">
-                    <li
-                        v-for="row in rowsOf(area)"
-                        :key="row.key"
-                        class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm"
-                    >
-                        <span>
-                            <span class="font-medium">{{
-                                kindLabel(row.kind)
-                            }}</span>
-                            <span
-                                v-if="row.label"
-                                class="text-muted-foreground"
-                            >
-                                · {{ row.label }}</span
-                            >
-                        </span>
-                        <span class="tabular-nums">{{
-                            formatMm(row.value_mm)
-                        }}</span>
-                        <p
-                            v-if="row.notes"
-                            class="w-full text-muted-foreground"
+            <div class="grid items-start gap-5 xl:grid-cols-2">
+                <section
+                    v-for="area in areas"
+                    :key="area"
+                    class="rounded-xl border bg-card"
+                >
+                    <h2 class="border-b px-4 py-3 font-semibold">{{ area }}</h2>
+                    <ul class="divide-y">
+                        <li
+                            v-for="row in rowsOf(area)"
+                            :key="row.key"
+                            class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm"
                         >
-                            {{ row.notes }}
-                        </p>
-                    </li>
-                </ul>
-            </section>
+                            <span>
+                                <span class="font-medium">{{
+                                    kindLabel(row.kind)
+                                }}</span>
+                                <span
+                                    v-if="row.label"
+                                    class="text-muted-foreground"
+                                >
+                                    · {{ row.label }}</span
+                                >
+                            </span>
+                            <span class="tabular-nums">{{
+                                formatMm(row.value_mm)
+                            }}</span>
+                            <p
+                                v-if="row.notes"
+                                class="w-full text-muted-foreground"
+                            >
+                                {{ row.notes }}
+                            </p>
+                        </li>
+                    </ul>
+                </section>
+            </div>
 
             <section class="flex flex-col gap-3">
                 <h2 class="text-sm font-semibold text-muted-foreground">
@@ -767,225 +767,232 @@ const filledCount = computed(
                 <Switch id="med-unidad" v-model="useCm" />
             </div>
 
-            <section
-                v-for="area in areas"
-                :key="area"
-                class="flex flex-col rounded-xl border bg-card"
-                :aria-label="`Área ${area}`"
-            >
-                <div class="flex items-center gap-2 border-b px-3 py-2">
-                    <Ruler
-                        class="size-4 shrink-0 text-primary"
-                        aria-hidden="true"
-                    />
-                    <Input
-                        :model-value="area"
-                        :aria-label="`Nombre del área ${area}`"
-                        class="h-10 border-transparent bg-transparent px-1 text-base font-semibold shadow-none focus-visible:border-input"
-                        @change="
-                            (e: Event) =>
-                                renameArea(
-                                    area,
-                                    (e.target as HTMLInputElement).value,
-                                )
-                        "
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        class="size-11 shrink-0"
-                        :aria-label="`Quitar área ${area}`"
-                        @click="removeArea(area)"
-                    >
-                        <Trash2 class="size-4" />
-                    </Button>
-                </div>
-
-                <ul class="flex flex-col divide-y">
-                    <li
-                        v-for="row in rowsOf(area)"
-                        :key="row.key"
-                        class="flex flex-col gap-2 px-3 py-3"
-                    >
-                        <div class="flex items-start gap-2">
-                            <Select v-model="row.kind">
-                                <SelectTrigger
-                                    class="h-12 w-40 shrink-0"
-                                    :aria-label="'Tipo de medida'"
-                                >
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="k in props.kinds"
-                                        :key="k.value"
-                                        :value="k.value"
-                                        >{{ k.label }}</SelectItem
-                                    >
-                                </SelectContent>
-                            </Select>
-                            <div class="min-w-0 flex-1">
-                                <div class="relative">
-                                    <Input
-                                        :id="`valor-${row.key}`"
-                                        :model-value="rawFor(row)"
-                                        :inputmode="
-                                            useCm ? 'decimal' : 'numeric'
-                                        "
-                                        autocomplete="off"
-                                        enterkeyhint="next"
-                                        :aria-label="`${kindLabel(row.kind)} en ${useCm ? 'centímetros' : 'milímetros'}`"
-                                        :aria-invalid="
-                                            !!errorFor(row, 'value_mm')
-                                        "
-                                        :aria-describedby="`ayuda-${row.key}`"
-                                        class="h-12 pr-12 text-lg tabular-nums"
-                                        placeholder="0"
-                                        @update:model-value="
-                                            (v: string | number) =>
-                                                onValueInput(row, String(v))
-                                        "
-                                    />
-                                    <span
-                                        class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground"
-                                    >
-                                        {{ useCm ? 'cm' : 'mm' }}
-                                    </span>
-                                </div>
-                                <p
-                                    :id="`ayuda-${row.key}`"
-                                    class="mt-1 text-xs text-muted-foreground tabular-nums"
-                                >
-                                    {{ helper(row) }}
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                class="size-12 shrink-0"
-                                :aria-label="`Quitar ${kindLabel(row.kind)}`"
-                                @click="removeRow(row)"
-                            >
-                                <X class="size-5" />
-                            </Button>
-                        </div>
-                        <p
-                            v-if="errorFor(row, 'value_mm')"
-                            class="text-sm text-danger"
-                        >
-                            {{ errorFor(row, 'value_mm') }}
-                        </p>
-                        <p
-                            v-if="errorFor(row, 'kind')"
-                            class="text-sm text-danger"
-                        >
-                            {{ errorFor(row, 'kind') }}
-                        </p>
-                        <p
-                            v-if="errorFor(row, 'area')"
-                            class="text-sm text-danger"
-                        >
-                            {{ errorFor(row, 'area') }}
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <Input
-                                v-model="row.label"
-                                class="h-11"
-                                :aria-label="`Descripción de ${kindLabel(row.kind)}`"
-                                placeholder="Descripción (opcional): p. ej. a 1100 mm del piso"
-                            />
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                class="h-11 shrink-0"
-                                :aria-expanded="row.showNotes"
-                                @click="row.showNotes = !row.showNotes"
-                            >
-                                Nota
-                            </Button>
-                        </div>
-                        <Textarea
-                            v-if="row.showNotes"
-                            v-model="row.notes"
-                            rows="2"
-                            :aria-label="`Nota de ${kindLabel(row.kind)}`"
-                            placeholder="Observaciones de esta medida"
-                        />
-                    </li>
-                </ul>
-
-                <div
-                    class="flex flex-wrap gap-2 border-t px-3 py-3"
-                    :aria-label="`Agregar medida en ${area}`"
+            <div class="grid items-start gap-5 xl:grid-cols-2">
+                <section
+                    v-for="area in areas"
+                    :key="area"
+                    class="flex flex-col rounded-xl border bg-card"
+                    :aria-label="`Área ${area}`"
                 >
-                    <Button
-                        v-for="k in quickKinds"
-                        :key="k.value"
-                        type="button"
-                        variant="outline"
-                        class="h-11 rounded-full"
-                        @click="addRow(area, k.value)"
-                    >
-                        <Plus class="size-4" /> {{ k.label }}
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        class="h-11 rounded-full"
-                        @click="addRow(area, 'other')"
-                    >
-                        <Plus class="size-4" /> Otra
-                    </Button>
-                </div>
-            </section>
+                    <div class="flex items-center gap-2 border-b px-3 py-2">
+                        <Ruler
+                            class="size-4 shrink-0 text-primary"
+                            aria-hidden="true"
+                        />
+                        <Input
+                            :model-value="area"
+                            :aria-label="`Nombre del área ${area}`"
+                            class="h-10 border-transparent bg-transparent px-1 text-base font-semibold shadow-none focus-visible:border-input"
+                            @change="
+                                (e: Event) =>
+                                    renameArea(
+                                        area,
+                                        (e.target as HTMLInputElement).value,
+                                    )
+                            "
+                        />
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="size-11 shrink-0"
+                            :aria-label="`Quitar área ${area}`"
+                            @click="removeArea(area)"
+                        >
+                            <Trash2 class="size-4" />
+                        </Button>
+                    </div>
 
-            <section
-                class="flex flex-col gap-2 rounded-xl border border-dashed bg-card/60 p-4"
-                aria-labelledby="med-nueva-area"
-            >
-                <Label id="med-nueva-area" for="med-area">{{
-                    areas.length ? 'Agregar otra área' : 'Empieza por un área'
-                }}</Label>
-                <div class="flex gap-2">
-                    <Input
-                        id="med-area"
-                        v-model="newArea"
-                        class="h-12"
-                        :placeholder="suggestArea()"
-                        enterkeyhint="done"
-                        @keydown.enter.prevent="addArea"
-                    />
-                    <Button type="button" class="h-12 shrink-0" @click="addArea"
-                        ><Plus class="size-4" /> Área</Button
+                    <ul class="flex flex-col divide-y">
+                        <li
+                            v-for="row in rowsOf(area)"
+                            :key="row.key"
+                            class="flex flex-col gap-2 px-3 py-3"
+                        >
+                            <div class="flex items-start gap-2">
+                                <Select v-model="row.kind">
+                                    <SelectTrigger
+                                        class="h-12 w-40 shrink-0"
+                                        :aria-label="'Tipo de medida'"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="k in props.kinds"
+                                            :key="k.value"
+                                            :value="k.value"
+                                            >{{ k.label }}</SelectItem
+                                        >
+                                    </SelectContent>
+                                </Select>
+                                <div class="min-w-0 flex-1">
+                                    <div class="relative">
+                                        <Input
+                                            :id="`valor-${row.key}`"
+                                            :model-value="rawFor(row)"
+                                            :inputmode="
+                                                useCm ? 'decimal' : 'numeric'
+                                            "
+                                            autocomplete="off"
+                                            enterkeyhint="next"
+                                            :aria-label="`${kindLabel(row.kind)} en ${useCm ? 'centímetros' : 'milímetros'}`"
+                                            :aria-invalid="
+                                                !!errorFor(row, 'value_mm')
+                                            "
+                                            :aria-describedby="`ayuda-${row.key}`"
+                                            class="h-12 pr-12 text-lg tabular-nums"
+                                            placeholder="0"
+                                            @update:model-value="
+                                                (v: string | number) =>
+                                                    onValueInput(row, String(v))
+                                            "
+                                        />
+                                        <span
+                                            class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground"
+                                        >
+                                            {{ useCm ? 'cm' : 'mm' }}
+                                        </span>
+                                    </div>
+                                    <p
+                                        :id="`ayuda-${row.key}`"
+                                        class="mt-1 text-xs text-muted-foreground tabular-nums"
+                                    >
+                                        {{ helper(row) }}
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="size-12 shrink-0"
+                                    :aria-label="`Quitar ${kindLabel(row.kind)}`"
+                                    @click="removeRow(row)"
+                                >
+                                    <X class="size-5" />
+                                </Button>
+                            </div>
+                            <p
+                                v-if="errorFor(row, 'value_mm')"
+                                class="text-sm text-danger"
+                            >
+                                {{ errorFor(row, 'value_mm') }}
+                            </p>
+                            <p
+                                v-if="errorFor(row, 'kind')"
+                                class="text-sm text-danger"
+                            >
+                                {{ errorFor(row, 'kind') }}
+                            </p>
+                            <p
+                                v-if="errorFor(row, 'area')"
+                                class="text-sm text-danger"
+                            >
+                                {{ errorFor(row, 'area') }}
+                            </p>
+                            <div class="flex items-center gap-2">
+                                <Input
+                                    v-model="row.label"
+                                    class="h-11"
+                                    :aria-label="`Descripción de ${kindLabel(row.kind)}`"
+                                    placeholder="Descripción (opcional): p. ej. a 1100 mm del piso"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    class="h-11 shrink-0"
+                                    :aria-expanded="row.showNotes"
+                                    @click="row.showNotes = !row.showNotes"
+                                >
+                                    Nota
+                                </Button>
+                            </div>
+                            <Textarea
+                                v-if="row.showNotes"
+                                v-model="row.notes"
+                                rows="2"
+                                :aria-label="`Nota de ${kindLabel(row.kind)}`"
+                                placeholder="Observaciones de esta medida"
+                            />
+                        </li>
+                    </ul>
+
+                    <div
+                        class="flex flex-wrap gap-2 border-t px-3 py-3"
+                        :aria-label="`Agregar medida en ${area}`"
                     >
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="s in [
-                            'Muro A',
-                            'Muro B',
-                            'Muro C',
-                            'Ventana',
-                            'Puerta de acceso',
-                        ]"
-                        v-show="!areas.includes(s)"
-                        :key="s"
-                        type="button"
-                        class="h-10 rounded-full border bg-background px-3 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                        @click="
-                            newArea = s;
-                            addArea();
-                        "
-                    >
-                        {{ s }}
-                    </button>
-                </div>
-                <p v-if="newAreaError" class="text-sm text-danger">
-                    {{ newAreaError }}
-                </p>
-            </section>
+                        <Button
+                            v-for="k in quickKinds"
+                            :key="k.value"
+                            type="button"
+                            variant="outline"
+                            class="h-11 rounded-full"
+                            @click="addRow(area, k.value)"
+                        >
+                            <Plus class="size-4" /> {{ k.label }}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-11 rounded-full"
+                            @click="addRow(area, 'other')"
+                        >
+                            <Plus class="size-4" /> Otra
+                        </Button>
+                    </div>
+                </section>
+
+                <section
+                    class="flex flex-col gap-2 rounded-xl border border-dashed bg-card/60 p-4"
+                    aria-labelledby="med-nueva-area"
+                >
+                    <Label id="med-nueva-area" for="med-area">{{
+                        areas.length
+                            ? 'Agregar otra área'
+                            : 'Empieza por un área'
+                    }}</Label>
+                    <div class="flex gap-2">
+                        <Input
+                            id="med-area"
+                            v-model="newArea"
+                            class="h-12"
+                            :placeholder="suggestArea()"
+                            enterkeyhint="done"
+                            @keydown.enter.prevent="addArea"
+                        />
+                        <Button
+                            type="button"
+                            class="h-12 shrink-0"
+                            @click="addArea"
+                            ><Plus class="size-4" /> Área</Button
+                        >
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="s in [
+                                'Muro A',
+                                'Muro B',
+                                'Muro C',
+                                'Ventana',
+                                'Puerta de acceso',
+                            ]"
+                            v-show="!areas.includes(s)"
+                            :key="s"
+                            type="button"
+                            class="h-10 rounded-full border bg-background px-3 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            @click="
+                                newArea = s;
+                                addArea();
+                            "
+                        >
+                            {{ s }}
+                        </button>
+                    </div>
+                    <p v-if="newAreaError" class="text-sm text-danger">
+                        {{ newAreaError }}
+                    </p>
+                </section>
+            </div>
 
             <p
                 v-if="itemsError"
@@ -995,45 +1002,53 @@ const filledCount = computed(
                 {{ itemsError }}
             </p>
 
-            <section class="flex flex-col gap-2 rounded-xl border bg-card p-4">
-                <Label for="med-notas">Notas generales</Label>
-                <Textarea
-                    id="med-notas"
-                    v-model="form.general_notes"
-                    rows="3"
-                    placeholder="Desniveles, muros fuera de escuadra, pendientes por confirmar…"
-                />
-            </section>
+            <div class="grid items-start gap-5 lg:grid-cols-3">
+                <section
+                    class="flex flex-col gap-2 rounded-xl border bg-card p-4"
+                >
+                    <Label for="med-notas">Notas generales</Label>
+                    <Textarea
+                        id="med-notas"
+                        v-model="form.general_notes"
+                        rows="3"
+                        placeholder="Desniveles, muros fuera de escuadra, pendientes por confirmar…"
+                    />
+                </section>
 
-            <section
-                class="flex flex-col gap-3 rounded-xl border bg-card p-4"
-                aria-labelledby="med-fotos"
-            >
-                <h2 id="med-fotos" class="font-semibold">Fotos del espacio</h2>
-                <MeasurementFiles
-                    :measurement-id="props.measurement.id"
-                    role="photo"
-                    :files="props.measurement.photos"
-                    editable
-                />
-            </section>
-            <section
-                class="flex flex-col gap-3 rounded-xl border bg-card p-4"
-                aria-labelledby="med-croquis"
-            >
-                <h2 id="med-croquis" class="font-semibold">Croquis</h2>
-                <MeasurementFiles
-                    :measurement-id="props.measurement.id"
-                    role="sketch"
-                    :files="props.measurement.sketches"
-                    editable
-                />
-            </section>
+                <section
+                    class="flex flex-col gap-3 rounded-xl border bg-card p-4"
+                    aria-labelledby="med-fotos"
+                >
+                    <h2 id="med-fotos" class="font-semibold">
+                        Fotos del espacio
+                    </h2>
+                    <MeasurementFiles
+                        :measurement-id="props.measurement.id"
+                        role="photo"
+                        :files="props.measurement.photos"
+                        editable
+                    />
+                </section>
+                <section
+                    class="flex flex-col gap-3 rounded-xl border bg-card p-4"
+                    aria-labelledby="med-croquis"
+                >
+                    <h2 id="med-croquis" class="font-semibold">Croquis</h2>
+                    <MeasurementFiles
+                        :measurement-id="props.measurement.id"
+                        role="sketch"
+                        :files="props.measurement.sketches"
+                        editable
+                    />
+                </section>
+            </div>
 
             <div
                 class="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t bg-background/95 px-4 py-3 backdrop-blur md:bottom-0"
             >
-                <div class="mx-auto flex max-w-3xl items-center gap-2">
+                <div
+                    class="mx-auto flex max-w-3xl items-center gap-2 md:max-w-none md:px-2 lg:px-4"
+                >
                     <p
                         class="hidden flex-1 text-sm text-muted-foreground sm:block"
                         aria-live="polite"

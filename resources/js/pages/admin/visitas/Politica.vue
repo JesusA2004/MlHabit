@@ -202,7 +202,7 @@ const texts = [
 <template>
     <Head title="Política de visita" />
 
-    <PageContainer width="narrow">
+    <PageContainer>
         <PageHeader
             title="Política de visita técnica"
             description="Tarifa, crédito abonable, agenda y condiciones. Cada versión es inmutable: las visitas ya reservadas conservan los términos con los que se apartaron."
@@ -233,7 +233,10 @@ const texts = [
             </template>
         </EmptyState>
 
-        <ol v-else class="space-y-4">
+        <ol
+            v-else
+            class="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3"
+        >
             <li
                 v-for="v in versions"
                 :key="v.id"

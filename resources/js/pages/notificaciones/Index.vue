@@ -92,7 +92,7 @@ function open(item: NotificationItem) {
 <template>
     <Head title="Notificaciones" />
 
-    <PageContainer width="narrow">
+    <PageContainer>
         <PageHeader
             title="Notificaciones"
             :description="
@@ -190,7 +190,7 @@ function open(item: NotificationItem) {
                         </span>
                         <span
                             v-if="item.body"
-                            class="mt-1 block text-sm text-muted-foreground"
+                            class="mt-1 block max-w-prose text-sm text-muted-foreground"
                             >{{ item.body }}</span
                         >
                         <DateText

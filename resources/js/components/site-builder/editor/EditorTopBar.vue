@@ -38,6 +38,8 @@ const props = defineProps<{
     pageName: string;
     previewUrl: string;
     canPublish: boolean;
+    /** Publicación en curso: el botón se deshabilita con indicador. */
+    publishing?: boolean;
     /** A dónde vuelve la flecha (portada: Sitio web; páginas: pestaña Páginas). */
     backHref?: string;
 }>();
@@ -276,10 +278,16 @@ const mod = isMac ? '⌘' : 'Ctrl';
                     <span>
                         <Button
                             size="sm"
-                            :disabled="!props.canPublish"
+                            :disabled="!props.canPublish || props.publishing"
+                            :aria-busy="props.publishing || undefined"
                             @click="emit('publish')"
                         >
-                            Publicar
+                            <Loader2
+                                v-if="props.publishing"
+                                class="size-4 animate-spin motion-reduce:animate-none"
+                                aria-hidden="true"
+                            />
+                            {{ props.publishing ? 'Publicando…' : 'Publicar' }}
                         </Button>
                     </span>
                 </TooltipTrigger>

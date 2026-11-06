@@ -266,7 +266,7 @@ const WAITING_COPY: Record<string, string> = {
 <template>
     <Head :title="`Instalación ${order.folio}`" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-5 pb-28">
+    <div class="flex w-full flex-col gap-5 pb-28">
         <header class="flex flex-col gap-2">
             <StatusBadge
                 :tone="order.status.tone"
@@ -284,170 +284,197 @@ const WAITING_COPY: Record<string, string> = {
             </p>
         </header>
 
-        <section class="flex flex-col gap-3 rounded-2xl border bg-card p-4">
-            <p
-                v-if="order.scheduledStart"
-                class="flex items-center gap-2 text-sm"
-            >
-                <CalendarClock
-                    class="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                />
-                <DateText :value="order.scheduledStart" format="datetime" />
-                <template v-if="order.scheduledEnd">
-                    a <DateText :value="order.scheduledEnd" format="time"
-                /></template>
-            </p>
-            <p v-if="order.address" class="flex items-start gap-2 text-sm">
-                <MapPin
-                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                />
-                <span>
-                    {{ order.address }}
-                    <span
-                        v-if="order.addressReferences"
-                        class="block text-xs text-muted-foreground"
-                        >{{ order.addressReferences }}</span
-                    >
-                </span>
-            </p>
-            <a
-                v-if="mapsUrl"
-                :href="mapsUrl"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-medium hover:bg-muted"
-            >
-                <Navigation class="size-4" aria-hidden="true" /> Cómo llegar
-            </a>
-            <p
-                v-if="order.notes"
-                class="rounded-lg bg-muted/60 p-3 text-sm whitespace-pre-line"
-            >
-                {{ order.notes }}
-            </p>
-        </section>
-
-        <section
-            v-if="openIncidents.length"
-            class="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning-soft p-4 text-warning-ink"
-            aria-labelledby="pendientes"
+        <div
+            class="grid items-start gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:gap-8"
         >
-            <h2 id="pendientes" class="flex items-center gap-2 font-semibold">
-                <AlertTriangle class="size-5" aria-hidden="true" /> Pendientes
-                por corregir
-            </h2>
-            <ul class="flex flex-col gap-2">
-                <li
-                    v-for="incident in openIncidents"
-                    :key="incident.id"
-                    class="rounded-lg bg-background/70 p-3 text-foreground"
+            <div class="flex min-w-0 flex-col gap-5 xl:sticky xl:top-24">
+                <section
+                    class="flex flex-col gap-3 rounded-2xl border bg-card p-4"
                 >
-                    <span class="flex items-center gap-2 text-sm font-medium">
-                        {{ incident.title }}
-                        <StatusBadge
-                            :tone="incident.severity.tone"
-                            :label="incident.severity.label"
-                            size="sm"
-                        />
-                    </span>
-                    <span
-                        class="mt-1 block text-sm whitespace-pre-line text-muted-foreground"
-                        >{{ incident.description }}</span
+                    <p
+                        v-if="order.scheduledStart"
+                        class="flex items-center gap-2 text-sm"
                     >
-                </li>
-            </ul>
-        </section>
-
-        <p
-            v-if="WAITING_COPY[status]"
-            class="rounded-2xl border bg-muted/40 p-4 text-sm"
-        >
-            {{ WAITING_COPY[status] }}
-        </p>
-
-        <section aria-labelledby="partidas" class="flex flex-col gap-3">
-            <div class="flex items-end justify-between gap-3">
-                <h2
-                    id="partidas"
-                    class="font-display text-lg font-semibold tracking-tight"
-                >
-                    Partidas
-                </h2>
-                <span class="text-sm text-muted-foreground tabular-nums"
-                    >{{ doneCount }} de {{ workable.length }} terminadas</span
-                >
-            </div>
-            <ul class="flex flex-col gap-2">
-                <li v-for="item in order.items" :key="item.id">
-                    <button
-                        type="button"
-                        :disabled="item.status.value === 'rejected'"
-                        :class="
-                            cn(
-                                'flex min-h-16 w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors active:bg-muted/60 disabled:opacity-60',
-                                item.status.value === 'done' &&
-                                    'border-success/30',
-                            )
-                        "
-                        @click="openItem(item)"
-                    >
-                        <CheckCircle2
-                            v-if="item.status.value === 'done'"
-                            class="size-6 shrink-0 text-success"
+                        <CalendarClock
+                            class="size-4 shrink-0 text-muted-foreground"
                             aria-hidden="true"
                         />
-                        <Circle
-                            v-else
-                            class="size-6 shrink-0 text-muted-foreground"
+                        <DateText
+                            :value="order.scheduledStart"
+                            format="datetime"
+                        />
+                        <template v-if="order.scheduledEnd">
+                            a
+                            <DateText :value="order.scheduledEnd" format="time"
+                        /></template>
+                    </p>
+                    <p
+                        v-if="order.address"
+                        class="flex items-start gap-2 text-sm"
+                    >
+                        <MapPin
+                            class="mt-0.5 size-4 shrink-0 text-muted-foreground"
                             aria-hidden="true"
                         />
-                        <span class="flex min-w-0 flex-1 flex-col">
-                            <span class="font-medium">{{
-                                item.description
-                            }}</span>
-                            <span class="text-xs text-muted-foreground">
-                                {{ item.code }} · {{ Number(item.quantity) }}
-                                {{ item.unit }}
-                                <template v-if="item.evidence.length">
-                                    · {{ item.evidence.length }} archivo{{
-                                        item.evidence.length > 1 ? 's' : ''
-                                    }}</template
-                                >
-                            </span>
+                        <span>
+                            {{ order.address }}
+                            <span
+                                v-if="order.addressReferences"
+                                class="block text-xs text-muted-foreground"
+                                >{{ order.addressReferences }}</span
+                            >
                         </span>
-                        <StatusBadge
-                            v-if="item.pendingExtra"
-                            tone="warning"
-                            label="Extra por aprobar"
-                            size="sm"
-                        />
-                        <StatusBadge
-                            v-else-if="
-                                item.isExtra && item.status.value === 'rejected'
-                            "
-                            tone="danger"
-                            label="Extra rechazado"
-                            size="sm"
-                        />
-                        <StatusBadge
-                            v-else-if="item.isExtra"
-                            tone="info"
-                            label="Extra"
-                            size="sm"
-                        />
-                    </button>
-                </li>
-            </ul>
-            <Button
-                v-if="canProposeExtra"
-                variant="outline"
-                class="h-12"
-                @click="openExtra"
-                ><Plus class="size-4" /> Proponer trabajo extra</Button
+                    </p>
+                    <a
+                        v-if="mapsUrl"
+                        :href="mapsUrl"
+                        target="_blank"
+                        rel="noopener"
+                        class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-medium hover:bg-muted"
+                    >
+                        <Navigation class="size-4" aria-hidden="true" /> Cómo
+                        llegar
+                    </a>
+                    <p
+                        v-if="order.notes"
+                        class="rounded-lg bg-muted/60 p-3 text-sm whitespace-pre-line"
+                    >
+                        {{ order.notes }}
+                    </p>
+                </section>
+
+                <section
+                    v-if="openIncidents.length"
+                    class="flex flex-col gap-3 rounded-2xl border border-warning/40 bg-warning-soft p-4 text-warning-ink"
+                    aria-labelledby="pendientes"
+                >
+                    <h2
+                        id="pendientes"
+                        class="flex items-center gap-2 font-semibold"
+                    >
+                        <AlertTriangle class="size-5" aria-hidden="true" />
+                        Pendientes por corregir
+                    </h2>
+                    <ul class="flex flex-col gap-2">
+                        <li
+                            v-for="incident in openIncidents"
+                            :key="incident.id"
+                            class="rounded-lg bg-background/70 p-3 text-foreground"
+                        >
+                            <span
+                                class="flex items-center gap-2 text-sm font-medium"
+                            >
+                                {{ incident.title }}
+                                <StatusBadge
+                                    :tone="incident.severity.tone"
+                                    :label="incident.severity.label"
+                                    size="sm"
+                                />
+                            </span>
+                            <span
+                                class="mt-1 block text-sm whitespace-pre-line text-muted-foreground"
+                                >{{ incident.description }}</span
+                            >
+                        </li>
+                    </ul>
+                </section>
+
+                <p
+                    v-if="WAITING_COPY[status]"
+                    class="rounded-2xl border bg-muted/40 p-4 text-sm"
+                >
+                    {{ WAITING_COPY[status] }}
+                </p>
+            </div>
+
+            <section
+                aria-labelledby="partidas"
+                class="flex min-w-0 flex-col gap-3"
             >
-        </section>
+                <div class="flex items-end justify-between gap-3">
+                    <h2
+                        id="partidas"
+                        class="font-display text-lg font-semibold tracking-tight"
+                    >
+                        Partidas
+                    </h2>
+                    <span class="text-sm text-muted-foreground tabular-nums"
+                        >{{ doneCount }} de
+                        {{ workable.length }} terminadas</span
+                    >
+                </div>
+                <ul class="grid gap-2 2xl:grid-cols-2">
+                    <li v-for="item in order.items" :key="item.id">
+                        <button
+                            type="button"
+                            :disabled="item.status.value === 'rejected'"
+                            :class="
+                                cn(
+                                    'flex min-h-16 w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors active:bg-muted/60 disabled:opacity-60',
+                                    item.status.value === 'done' &&
+                                        'border-success/30',
+                                )
+                            "
+                            @click="openItem(item)"
+                        >
+                            <CheckCircle2
+                                v-if="item.status.value === 'done'"
+                                class="size-6 shrink-0 text-success"
+                                aria-hidden="true"
+                            />
+                            <Circle
+                                v-else
+                                class="size-6 shrink-0 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+                            <span class="flex min-w-0 flex-1 flex-col">
+                                <span class="font-medium">{{
+                                    item.description
+                                }}</span>
+                                <span class="text-xs text-muted-foreground">
+                                    {{ item.code }} ·
+                                    {{ Number(item.quantity) }}
+                                    {{ item.unit }}
+                                    <template v-if="item.evidence.length">
+                                        · {{ item.evidence.length }} archivo{{
+                                            item.evidence.length > 1 ? 's' : ''
+                                        }}</template
+                                    >
+                                </span>
+                            </span>
+                            <StatusBadge
+                                v-if="item.pendingExtra"
+                                tone="warning"
+                                label="Extra por aprobar"
+                                size="sm"
+                            />
+                            <StatusBadge
+                                v-else-if="
+                                    item.isExtra &&
+                                    item.status.value === 'rejected'
+                                "
+                                tone="danger"
+                                label="Extra rechazado"
+                                size="sm"
+                            />
+                            <StatusBadge
+                                v-else-if="item.isExtra"
+                                tone="info"
+                                label="Extra"
+                                size="sm"
+                            />
+                        </button>
+                    </li>
+                </ul>
+                <Button
+                    v-if="canProposeExtra"
+                    variant="outline"
+                    class="h-12"
+                    @click="openExtra"
+                    ><Plus class="size-4" /> Proponer trabajo extra</Button
+                >
+            </section>
+        </div>
     </div>
 
     <!-- Acción principal fija abajo -->
@@ -455,7 +482,9 @@ const WAITING_COPY: Record<string, string> = {
         v-if="status === 'scheduled' || inProgress"
         class="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t bg-background/95 p-3 backdrop-blur md:bottom-0"
     >
-        <div class="mx-auto flex max-w-3xl flex-col gap-1">
+        <div
+            class="mx-auto flex max-w-3xl flex-col gap-1 md:mr-0 md:ml-auto md:max-w-md md:pr-3 lg:pr-5"
+        >
             <Button
                 v-if="status === 'scheduled'"
                 class="h-12 w-full text-base"

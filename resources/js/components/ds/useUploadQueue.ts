@@ -1,11 +1,19 @@
-import { reactive, ref, watch } from 'vue';
-import { useChunkedUpload } from '@/composables/useChunkedUpload';
-import type { UploadedMediaResult } from '@/composables/useChunkedUpload';
+import { onScopeDispose, reactive, ref, watch } from 'vue';
+import {
+    useChunkedUpload,
+    waitForMediaProcessing,
+} from '@/composables/useChunkedUpload';
+import type {
+    ChunkedUploadPhase,
+    UploadedMediaResult,
+} from '@/composables/useChunkedUpload';
 import { formatBytes } from '@/lib/format';
 
 export type UploadStatus =
     | 'queued'
     | 'uploading'
+    /** Ya se subió; el servidor lo procesa (p. ej. miniatura de un video). */
+    | 'processing'
     | 'completed'
     | 'error'
     | 'aborted';
@@ -17,6 +25,13 @@ export type UploadItem = {
     percent: number;
     error: string | null;
     media: UploadedMediaResult | null;
+    /** Bytes enviados hasta ahora. */
+    sentBytes: number;
+    /** Velocidad estimada (bytes/s). */
+    bytesPerSecond: number;
+    /** Segundos restantes estimados. */
+    etaSeconds: number | null;
+    phase: ChunkedUploadPhase | null;
 };
 
 export type UploadQueueOptions = {
@@ -28,6 +43,8 @@ export type UploadQueueOptions = {
     concurrency?: number;
     onUploaded?: (media: UploadedMediaResult, item: UploadItem) => void;
     onError?: (message: string, item: UploadItem | null) => void;
+    /** El servidor terminó de procesar el archivo (solo videos). */
+    onProcessed?: (item: UploadItem) => void;
 };
 
 /** ¿El archivo coincide con la lista `accept` (mime exacto, comodín `image/*` o extensión `.pdf`)? */
@@ -62,6 +79,7 @@ export function matchesAccept(file: File, accept: string[] = []): boolean {
 export function useUploadQueue(options: UploadQueueOptions) {
     const items = ref<UploadItem[]>([]);
     const uploaders = new Map<string, ReturnType<typeof useChunkedUpload>>();
+    const watchers = new Map<string, AbortController>();
     const concurrency = options.concurrency ?? 2;
 
     function validate(file: File): string | null {
@@ -101,6 +119,10 @@ export function useUploadQueue(options: UploadQueueOptions) {
                     percent: 0,
                     error: null,
                     media: null,
+                    sentBytes: 0,
+                    bytesPerSecond: 0,
+                    etaSeconds: null,
+                    phase: null,
                 }) as UploadItem,
             );
         }
@@ -133,8 +155,15 @@ export function useUploadQueue(options: UploadQueueOptions) {
             });
             item.media = media;
             item.percent = 100;
-            item.status = 'completed';
+            item.sentBytes = item.file.size;
+            item.etaSeconds = null;
+            item.status =
+                media.status === 'processing' ? 'processing' : 'completed';
             options.onUploaded?.(media, item);
+
+            if (item.status === 'processing') {
+                void followProcessing(item, media);
+            }
         } catch (error) {
             if ((item.status as UploadStatus) !== 'aborted') {
                 item.status = 'error';
@@ -150,6 +179,33 @@ export function useUploadQueue(options: UploadQueueOptions) {
         }
     }
 
+    async function followProcessing(
+        item: UploadItem,
+        media: UploadedMediaResult,
+    ): Promise<void> {
+        const controller = new AbortController();
+        watchers.set(item.id, controller);
+        const state = await waitForMediaProcessing(media, {
+            signal: controller.signal,
+        });
+        watchers.delete(item.id);
+
+        if (item.status !== 'processing') {
+            return;
+        }
+
+        if (state?.status === 'failed') {
+            item.status = 'error';
+            item.error = 'El archivo se subió, pero no se pudo procesar.';
+
+            return;
+        }
+
+        // Listo, o se dejó de consultar (sigue procesándose en el servidor).
+        item.status = 'completed';
+        options.onProcessed?.(item);
+    }
+
     function watchProgress(
         item: UploadItem,
         uploader: ReturnType<typeof useChunkedUpload>,
@@ -157,6 +213,10 @@ export function useUploadQueue(options: UploadQueueOptions) {
         return watch(uploader.progress, (p) => {
             if (p && item.status === 'uploading') {
                 item.percent = Math.round(p.percent);
+                item.sentBytes = p.sentBytes;
+                item.bytesPerSecond = p.bytesPerSecond ?? 0;
+                item.etaSeconds = p.etaSeconds ?? null;
+                item.phase = p.phase ?? null;
             }
         });
     }
@@ -183,6 +243,8 @@ export function useUploadQueue(options: UploadQueueOptions) {
             void cancel(item);
         }
 
+        watchers.get(item.id)?.abort();
+        watchers.delete(item.id);
         uploaders.delete(item.id);
         items.value = items.value.filter((i) => i.id !== item.id);
     }
@@ -190,6 +252,8 @@ export function useUploadQueue(options: UploadQueueOptions) {
     function clearFinished(): void {
         items.value = items.value.filter((i) => i.status !== 'completed');
     }
+
+    onScopeDispose(() => watchers.forEach((c) => c.abort()));
 
     return { items, add, cancel, retry, remove, clearFinished };
 }

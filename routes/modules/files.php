@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
         Route::get('{uuid}', [UploadSessionController::class, 'show'])->whereUuid('uuid')->name('show');
         Route::post('{uuid}/fragmentos', [UploadSessionController::class, 'appendChunk'])->whereUuid('uuid')->name('fragmentos');
         Route::post('{uuid}/completar', [UploadSessionController::class, 'complete'])->whereUuid('uuid')->name('completar');
+        Route::get('medios/{media:uuid}/estado', [UploadSessionController::class, 'mediaStatus'])->name('estado');
         Route::delete('{uuid}', [UploadSessionController::class, 'destroy'])->whereUuid('uuid')->name('destroy');
     });
 });

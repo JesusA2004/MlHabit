@@ -98,7 +98,7 @@ function reject() {
 <template>
     <Head :title="`Cotización ${quote.folio}`" />
 
-    <PageContainer width="narrow" class="flex flex-col gap-6">
+    <PageContainer class="flex flex-col gap-6">
         <Link
             :href="index().url"
             class="inline-flex items-center gap-1.5 self-start rounded-md text-sm text-muted-foreground hover:text-foreground"
@@ -164,118 +164,146 @@ function reject() {
         </div>
 
         <!-- Partidas -->
-        <SectionCard title="Detalle" flush>
-            <ul class="divide-y">
-                <li
-                    v-for="item in quote.items"
-                    :key="item.id ?? item.description"
-                    class="flex flex-col gap-1 px-4 py-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-5"
-                >
-                    <div class="min-w-0">
-                        <p class="text-sm font-medium text-foreground">
-                            {{ item.description }}
-                        </p>
-                        <p class="text-xs text-muted-foreground">
-                            <template v-if="item.code"
-                                >{{ item.code }} ·
-                            </template>
-                            {{
-                                Number(item.quantity).toLocaleString('es-MX', {
-                                    maximumFractionDigits: 3,
-                                })
-                            }}
-                            {{ item.unit }} ×
-                            <Money :value="item.unit_price" />
-                            <template v-if="Number(item.discount_amount) > 0">
-                                · descuento
-                                <Money :value="item.discount_amount"
-                            /></template>
-                        </p>
-                    </div>
-                    <Money
-                        :value="item.line_total"
-                        class="shrink-0 text-sm font-semibold text-foreground tabular-nums"
-                    />
-                </li>
-            </ul>
-            <dl
-                class="flex flex-col gap-1.5 border-t bg-muted/30 px-4 py-4 text-sm sm:px-5"
-            >
-                <div class="flex justify-between gap-4">
-                    <dt class="text-muted-foreground">Subtotal</dt>
-                    <dd class="tabular-nums">
-                        <Money :value="quote.subtotal" />
-                    </dd>
-                </div>
-                <div v-if="hasDiscount" class="flex justify-between gap-4">
-                    <dt class="text-muted-foreground">Descuento</dt>
-                    <dd class="tabular-nums">
-                        −<Money :value="quote.discount_total" />
-                    </dd>
-                </div>
-                <div class="flex justify-between gap-4">
-                    <dt class="text-muted-foreground">
-                        {{
-                            quote.prices_include_tax
-                                ? `IVA incluido (${quote.tax_percent}%)`
-                                : `IVA (${quote.tax_percent}%)`
-                        }}
-                    </dt>
-                    <dd class="tabular-nums">
-                        <Money :value="quote.tax_total" />
-                    </dd>
-                </div>
-                <div
-                    class="mt-1 flex items-baseline justify-between gap-4 border-t pt-2.5"
-                >
-                    <dt class="font-semibold text-foreground">Total</dt>
-                    <dd
-                        class="text-xl font-semibold text-foreground tabular-nums"
+        <div
+            class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]"
+        >
+            <div class="flex min-w-0 flex-col gap-6">
+                <SectionCard title="Detalle" flush>
+                    <ul class="divide-y">
+                        <li
+                            v-for="item in quote.items"
+                            :key="item.id ?? item.description"
+                            class="flex flex-col gap-1 px-4 py-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-5"
+                        >
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-foreground">
+                                    {{ item.description }}
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    <template v-if="item.code"
+                                        >{{ item.code }} ·
+                                    </template>
+                                    {{
+                                        Number(item.quantity).toLocaleString(
+                                            'es-MX',
+                                            {
+                                                maximumFractionDigits: 3,
+                                            },
+                                        )
+                                    }}
+                                    {{ item.unit }} ×
+                                    <Money :value="item.unit_price" />
+                                    <template
+                                        v-if="Number(item.discount_amount) > 0"
+                                    >
+                                        · descuento
+                                        <Money :value="item.discount_amount"
+                                    /></template>
+                                </p>
+                            </div>
+                            <Money
+                                :value="item.line_total"
+                                class="shrink-0 text-sm font-semibold text-foreground tabular-nums"
+                            />
+                        </li>
+                    </ul>
+                    <dl
+                        class="flex flex-col gap-1.5 border-t bg-muted/30 px-4 py-4 text-sm sm:px-5"
                     >
-                        <Money
-                            :value="quote.total"
-                            :currency="quote.currency"
-                            show-currency
-                        />
-                    </dd>
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-muted-foreground">Subtotal</dt>
+                            <dd class="tabular-nums">
+                                <Money :value="quote.subtotal" />
+                            </dd>
+                        </div>
+                        <div
+                            v-if="hasDiscount"
+                            class="flex justify-between gap-4"
+                        >
+                            <dt class="text-muted-foreground">Descuento</dt>
+                            <dd class="tabular-nums">
+                                −<Money :value="quote.discount_total" />
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-muted-foreground">
+                                {{
+                                    quote.prices_include_tax
+                                        ? `IVA incluido (${quote.tax_percent}%)`
+                                        : `IVA (${quote.tax_percent}%)`
+                                }}
+                            </dt>
+                            <dd class="tabular-nums">
+                                <Money :value="quote.tax_total" />
+                            </dd>
+                        </div>
+                        <div
+                            class="mt-1 flex items-baseline justify-between gap-4 border-t pt-2.5"
+                        >
+                            <dt class="font-semibold text-foreground">Total</dt>
+                            <dd
+                                class="text-xl font-semibold text-foreground tabular-nums"
+                            >
+                                <Money
+                                    :value="quote.total"
+                                    :currency="quote.currency"
+                                    show-currency
+                                />
+                            </dd>
+                        </div>
+                    </dl>
+                </SectionCard>
+
+                <div
+                    v-if="texts.length"
+                    class="grid items-start gap-6 lg:grid-cols-2"
+                >
+                    <SectionCard
+                        v-for="t in texts"
+                        :key="t.key"
+                        :title="t.title"
+                    >
+                        <p
+                            class="max-w-prose text-sm whitespace-pre-line text-foreground"
+                        >
+                            {{ t.body }}
+                        </p>
+                    </SectionCard>
                 </div>
-            </dl>
-        </SectionCard>
-
-        <SectionCard v-for="t in texts" :key="t.key" :title="t.title">
-            <p class="text-sm whitespace-pre-line text-foreground">
-                {{ t.body }}
-            </p>
-        </SectionCard>
-
-        <!-- Respuesta -->
-        <SectionCard
-            v-if="can.respond"
-            title="¿Qué te parece?"
-            description="Al aceptar generamos tu contrato y te mostramos el anticipo."
-        >
-            <div class="flex flex-col gap-2 sm:flex-row">
-                <Button class="sm:flex-1" @click="acceptOpen = true"
-                    >Aceptar cotización</Button
-                >
-                <Button
-                    variant="outline"
-                    class="sm:flex-1"
-                    @click="rejectOpen = true"
-                    >No me convence</Button
-                >
             </div>
-        </SectionCard>
 
-        <p
-            v-else-if="
-                quote.status.value === 'rejected' && quote.rejection_reason
-            "
-            class="text-sm text-muted-foreground"
-        >
-            Nos dijiste: «{{ quote.rejection_reason }}». Tu asesor te contactará
-            con una nueva propuesta.
-        </p>
+            <div class="flex flex-col gap-6 xl:sticky xl:top-24">
+                <!-- Respuesta -->
+                <SectionCard
+                    v-if="can.respond"
+                    title="¿Qué te parece?"
+                    description="Al aceptar generamos tu contrato y te mostramos el anticipo."
+                >
+                    <div class="flex flex-col gap-2 sm:flex-row">
+                        <Button class="sm:flex-1" @click="acceptOpen = true"
+                            >Aceptar cotización</Button
+                        >
+                        <Button
+                            variant="outline"
+                            class="sm:flex-1"
+                            @click="rejectOpen = true"
+                            >No me convence</Button
+                        >
+                    </div>
+                </SectionCard>
+
+                <p
+                    v-else-if="
+                        quote.status.value === 'rejected' &&
+                        quote.rejection_reason
+                    "
+                    class="text-sm text-muted-foreground"
+                >
+                    Nos dijiste: «{{ quote.rejection_reason }}». Tu asesor te
+                    contactará con una nueva propuesta.
+                </p>
+            </div>
+        </div>
     </PageContainer>
 
     <ConfirmDialog

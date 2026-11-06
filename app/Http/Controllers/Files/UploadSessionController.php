@@ -142,6 +142,26 @@ class UploadSessionController extends Controller
         ], 201);
     }
 
+    /**
+     * Estado de procesamiento de un archivo ya subido (p. ej. un video
+     * mientras FFmpeg genera la miniatura). Solo para quien lo subió o
+     * quien administra la biblioteca. Lo consulta la interfaz de subida.
+     */
+    public function mediaStatus(Request $request, Media $media): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        abort_unless($media->uploaded_by === $user->id || $user->can('create', Media::class), 404);
+
+        return response()->json([
+            'id' => $media->id,
+            'uuid' => $media->uuid,
+            'status' => $media->status->value,
+            'url' => $media->url(),
+            'posterUrl' => $media->variantUrl('poster'),
+        ]);
+    }
+
     public function destroy(Request $request, string $uuid, ChunkedUploadService $chunks): JsonResponse
     {
         $session = $this->ownSession($request, $uuid);

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { LayoutGrid, Plus } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, provide, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import '../../css/portal.css';
 import AppLogo from '@/components/AppLogo.vue';
 import AccountMenu from '@/components/ds/AccountMenu.vue';
 import AppToaster from '@/components/ds/AppToaster.vue';
+import UploadGuard from '@/components/feedback/UploadGuard.vue';
 import NotificationsMenu from '@/components/platform/NotificationsMenu.vue';
 import {
     portalNavGroups,
@@ -15,6 +16,9 @@ import {
 } from '@/components/portal/nav';
 import type { PortalNavItem } from '@/components/portal/nav';
 import PortalSkeleton from '@/components/portal/PortalSkeleton.vue';
+import HelpMenu from '@/components/tour/HelpMenu.vue';
+import { navTourKey, tabTourKey } from '@/components/tour/keys';
+import TourHost from '@/components/tour/TourHost.vue';
 import {
     Sheet,
     SheetContent,
@@ -23,6 +27,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { isActivePath, normalizePath } from '@/lib/navigation';
+import { pageContainerContextKey } from '@/components/ds/pageContext';
 import { cn } from '@/lib/utils';
 
 /**
@@ -32,6 +37,9 @@ import { cn } from '@/lib/utils';
  * con una cascada suave y, si una navegación tarda, se muestra un
  * esqueleto (todo se apaga con prefers-reduced-motion).
  */
+// Las pantallas usan todo el ancho disponible (sin tope).
+provide(pageContainerContextKey, { defaultWidth: 'full', animate: false });
+
 const page = usePage();
 const year = new Date().getFullYear();
 
@@ -137,6 +145,7 @@ watch(pageKey, () => (moreOpen.value = false));
 
             <nav
                 aria-label="Portal"
+                data-tour="portal-nav"
                 class="flex-1 overflow-y-auto px-4 pt-2 pb-4"
             >
                 <div
@@ -154,6 +163,7 @@ watch(pageKey, () => (moreOpen.value = false));
                         <li v-for="item in group.items" :key="item.href">
                             <Link
                                 :href="item.href"
+                                :data-tour="navTourKey(item.href)"
                                 :aria-current="
                                     isActive(item) ? 'page' : undefined
                                 "
@@ -181,6 +191,7 @@ watch(pageKey, () => (moreOpen.value = false));
 
             <div class="shrink-0 p-4">
                 <div
+                    data-tour="portal-new-request"
                     class="portal-hero relative overflow-hidden rounded-xl p-4 text-white"
                 >
                     <div
@@ -245,6 +256,7 @@ watch(pageKey, () => (moreOpen.value = false));
                     </Transition>
 
                     <div class="ml-auto flex shrink-0 items-center gap-1">
+                        <HelpMenu area="portal" />
                         <NotificationsMenu />
                         <AccountMenu />
                     </div>
@@ -286,6 +298,7 @@ watch(pageKey, () => (moreOpen.value = false));
         <!-- Pestañas inferiores (móvil y tableta) -->
         <nav
             aria-label="Navegación del portal"
+            data-tour="portal-tabs"
             class="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 lg:hidden"
         >
             <ul class="mx-auto flex max-w-lg items-stretch justify-around px-1">
@@ -296,6 +309,7 @@ watch(pageKey, () => (moreOpen.value = false));
                 >
                     <Link
                         :href="item.href"
+                        :data-tour="tabTourKey(item.href)"
                         :aria-current="isActive(item) ? 'page' : undefined"
                         :class="
                             cn(
@@ -331,6 +345,7 @@ watch(pageKey, () => (moreOpen.value = false));
                 <li class="min-w-0 flex-1">
                     <button
                         type="button"
+                        data-tour="portal-more"
                         :aria-expanded="moreOpen"
                         aria-haspopup="dialog"
                         :class="
@@ -416,5 +431,7 @@ watch(pageKey, () => (moreOpen.value = false));
         </Sheet>
 
         <AppToaster />
+        <UploadGuard />
+        <TourHost area="portal" />
     </div>
 </template>

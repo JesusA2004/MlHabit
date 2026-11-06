@@ -30,7 +30,7 @@ function progress(row: Row): number {
 <template>
     <Head title="Instalaciones" />
 
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
+    <div class="flex w-full flex-col gap-8">
         <section aria-labelledby="activas" class="flex flex-col gap-3">
             <h1
                 id="activas"
@@ -46,13 +46,13 @@ function progress(row: Row): number {
                 description="Cuando la oficina te asigne una instalación aparecerá aquí con su dirección y partidas."
             />
 
-            <ul v-else class="flex flex-col gap-3">
+            <ul v-else class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                 <li v-for="row in active" :key="row.id">
                     <Link
                         :href="instalaciones.show(row.id).url"
                         :class="
                             cn(
-                                'flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-xs transition-colors active:bg-muted/60',
+                                'flex h-full flex-col gap-3 rounded-2xl border bg-card p-4 shadow-xs transition-colors hover:bg-muted/30 active:bg-muted/60',
                                 row.status.value === 'in_progress' &&
                                     'border-primary/50 ring-2 ring-primary/15',
                             )
@@ -159,11 +159,11 @@ function progress(row: Row): number {
             >
                 Enviadas y cerradas
             </h2>
-            <ul class="flex flex-col divide-y rounded-2xl border bg-card">
+            <ul class="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
                 <li v-for="row in history" :key="row.id">
                     <Link
                         :href="instalaciones.show(row.id).url"
-                        class="flex min-h-14 items-center gap-3 px-4 py-3 active:bg-muted/60"
+                        class="flex min-h-14 items-center gap-3 rounded-xl border bg-card px-4 py-3 hover:bg-muted/30 active:bg-muted/60"
                     >
                         <span class="flex min-w-0 flex-1 flex-col">
                             <span class="truncate text-sm font-medium">{{

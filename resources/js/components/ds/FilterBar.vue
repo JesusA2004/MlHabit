@@ -64,6 +64,7 @@ function applyMobile() {
 <template>
     <div
         data-slot="filter-bar"
+        data-tour="filters"
         role="search"
         :class="
             cn(

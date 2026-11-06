@@ -112,7 +112,11 @@ const alignClass = {
 </script>
 
 <template>
-    <div data-slot="data-view" :class="cn('flex flex-col gap-4', props.class)">
+    <div
+        data-slot="data-view"
+        data-tour="data-view"
+        :class="cn('flex flex-col gap-4', props.class)"
+    >
         <!-- Escritorio: tabla -->
         <div
             v-if="props.loading || items.length > 0"

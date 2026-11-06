@@ -21,12 +21,7 @@ const props = withDefaults(
     <main
         v-else
         id="contenido"
-        :class="
-            cn(
-                'mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4',
-                props.class,
-            )
-        "
+        :class="cn('flex h-full w-full flex-1 flex-col gap-4', props.class)"
     >
         <slot />
     </main>

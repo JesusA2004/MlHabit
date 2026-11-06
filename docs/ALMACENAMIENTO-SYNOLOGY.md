@@ -19,21 +19,21 @@ Solo pueden entrar personas con el permiso «Configuración del sistema»
   notificaciones).
 - **¿En cuanto conecte se pasa la información al Synology?** Sí, de dos
   formas:
-  1. Lo que quedó pendiente por una falla se sube **solo**: la plataforma
-     revisa cada 10 minutos y también al pulsar «Probar conexión» o
-     «Sincronizar ahora».
-  2. Lo que **ya existía** en el servidor se mueve con el botón **«Mover
-     multimedia del servidor al Synology»**. Cada archivo se copia, se
-     verifica y solo entonces cambia de lugar.
+    1. Lo que quedó pendiente por una falla se sube **solo**: la plataforma
+       revisa cada 10 minutos y también al pulsar «Probar conexión» o
+       «Sincronizar ahora».
+    2. Lo que **ya existía** en el servidor se mueve con el botón **«Mover
+       multimedia del servidor al Synology»**. Cada archivo se copia, se
+       verifica y solo entonces cambia de lugar.
 
 ---
 
 ## 1. Cómo funciona
 
 - Hay dos lugares posibles para la multimedia del sitio:
-  - **Servidor** (disco `media_local`): siempre disponible, es el respaldo.
-  - **Synology** (disco `media_synology`): el NAS de la oficina, conectado por
-    SFTP a través de la red privada Tailscale.
+    - **Servidor** (disco `media_local`): siempre disponible, es el respaldo.
+    - **Synology** (disco `media_synology`): el NAS de la oficina, conectado por
+      SFTP a través de la red privada Tailscale.
 - El **proveedor activo** es el que recibe las subidas nuevas. Se cambia con
   «Activar proveedor».
 - **Cada archivo recuerda en qué disco vive.** Por eso puede haber archivos
@@ -66,6 +66,7 @@ espacio hay en cada lugar, y cuántos están esperando subir al Synology.
    borra la del servidor. Queda registro (`almacenamiento.sincronizado`).
 
 También puedes forzarlo:
+
 - **«Sincronizar ahora»** en la tarjeta «Esperando subir al Synology».
 - **«Probar conexión»** del Synology: si sale bien, arranca la subida de
   pendientes de inmediato.
@@ -80,16 +81,16 @@ También puedes forzarlo:
 
 ### 3.1 En el NAS (DSM)
 
-1. **Habilitar SFTP**: *Panel de control → Servicios de archivos → FTP →
-   SFTP → Habilitar servicio SFTP*. Puerto: 22 (o el que elijas, p. ej. 2222).
-2. **Carpeta compartida**: *Panel de control → Carpeta compartida → Crear*,
+1. **Habilitar SFTP**: _Panel de control → Servicios de archivos → FTP →
+   SFTP → Habilitar servicio SFTP_. Puerto: 22 (o el que elijas, p. ej. 2222).
+2. **Carpeta compartida**: _Panel de control → Carpeta compartida → Crear_,
    por ejemplo `ml-habitat`.
-3. **Usuario dedicado**: *Panel de control → Usuario y grupo → Crear*, por
+3. **Usuario dedicado**: _Panel de control → Usuario y grupo → Crear_, por
    ejemplo `mlhabitat`, con contraseña larga.
-   - Permisos: **Lectura/Escritura** solo en `ml-habitat`; **Sin acceso** en las
-     demás carpetas.
-   - Aplicaciones: permitir **SFTP**; negar las demás (File Station, SMB, etc.)
-     si no se usan.
+    - Permisos: **Lectura/Escritura** solo en `ml-habitat`; **Sin acceso** en las
+      demás carpetas.
+    - Aplicaciones: permitir **SFTP**; negar las demás (File Station, SMB, etc.)
+      si no se usan.
 4. **Tailscale**: instala el paquete Tailscale en el NAS y en el servidor, en
    la misma red (tailnet). Usa el nombre MagicDNS del NAS (p. ej.
    `nas.tu-tailnet.ts.net`) o su IP 100.x.y.z.
@@ -116,7 +117,7 @@ lo del panel tiene prioridad sobre `.env`.
 
 Para usar llave en vez de contraseña: genera la llave en el servidor
 (`ssh-keygen -t ed25519`), agrega la pública al usuario del NAS
-(*Usuario → Avanzado → Claves SSH* o `~/.ssh/authorized_keys` del usuario) y
+(_Usuario → Avanzado → Claves SSH_ o `~/.ssh/authorized_keys` del usuario) y
 captura en el panel la **ruta** del archivo de la llave privada en el
 servidor.
 
@@ -153,7 +154,7 @@ Activar el Synology **no mueve** lo que ya existe; eso es el siguiente paso.
    de conexión salió bien.)
 2. Confirma. Deja encendido **«Conservar copia en el servidor»**
    (recomendado): así, si algo sale mal, el original sigue en el servidor.
-3. Verás el avance en vivo: *X de Y archivos*, MB transferidos, errores y
+3. Verás el avance en vivo: _X de Y archivos_, MB transferidos, errores y
    tiempo restante. Puedes cerrar la página y volver.
 4. Durante el traslado el sitio sigue funcionando: cada archivo cambia de
    lugar solo cuando su copia ya está verificada.
@@ -163,6 +164,7 @@ Activar el Synology **no mueve** lo que ya existe; eso es el siguiente paso.
    funciona; lo pendiente se queda en el servidor. Puedes reanudar después.
 
 Cómo se protege cada archivo:
+
 - Se copia por partes (sin cargarlo completo en memoria), respetando el
   **límite de transferencia (KB/s)** configurado para no saturar el internet
   de la oficina.
@@ -220,13 +222,13 @@ Este paso no se puede deshacer.
 
 ## 8. Problemas comunes
 
-| Síntoma | Qué revisar |
-| --- | --- |
-| «No se pudo conectar con el NAS» | Tailscale encendido en NAS y servidor; host y puerto; servicio SFTP habilitado. |
-| Conecta pero no escribe | Permiso Lectura/Escritura del usuario en la carpeta; `NAS_SFTP_ROOT` correcto. |
-| Traslado «En cola» sin avanzar | `queue:work` apagado en el servidor. |
-| Archivos «esperando subir» que no bajan | El NAS sigue sin responder (ver «Último error»); `schedule:run` apagado. |
-| Un archivo falla con «huella distinta» | Se reintenta solo; si persiste, revisa el disco del NAS. El original sigue intacto. |
+| Síntoma                                  | Qué revisar                                                                             |
+| ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| «No se pudo conectar con el NAS»         | Tailscale encendido en NAS y servidor; host y puerto; servicio SFTP habilitado.         |
+| Conecta pero no escribe                  | Permiso Lectura/Escritura del usuario en la carpeta; `NAS_SFTP_ROOT` correcto.          |
+| Traslado «En cola» sin avanzar           | `queue:work` apagado en el servidor.                                                    |
+| Archivos «esperando subir» que no bajan  | El NAS sigue sin responder (ver «Último error»); `schedule:run` apagado.                |
+| Un archivo falla con «huella distinta»   | Se reintenta solo; si persiste, revisa el disco del NAS. El original sigue intacto.     |
 | «No se encontró el archivo en el origen» | El archivo ya no existía en disco antes del traslado; no se puede recuperar desde aquí. |
 
 ---

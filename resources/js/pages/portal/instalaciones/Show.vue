@@ -78,7 +78,7 @@ function submit() {
 <template>
     <Head title="Revisa tu instalación" />
 
-    <PageContainer width="narrow" class="flex flex-col gap-6 py-6 md:py-10">
+    <PageContainer class="flex flex-col gap-6 py-6 md:py-10">
         <header class="flex flex-col gap-2">
             <p class="text-sm text-muted-foreground">
                 {{ order.project.name }} · {{ order.folio }}
@@ -90,7 +90,7 @@ function submit() {
                         : 'Tu instalación'
                 }}
             </h1>
-            <p v-if="canRespond" class="text-muted-foreground">
+            <p v-if="canRespond" class="max-w-prose text-muted-foreground">
                 Nuestro equipo terminó y tomó fotos de cada módulo. Revísalas
                 con calma y cuéntanos si todo quedó como esperabas.
             </p>
@@ -183,180 +183,206 @@ function submit() {
             </div>
         </section>
 
-        <!-- Evidencia por módulo -->
-        <section aria-labelledby="modulos" class="flex flex-col gap-4">
-            <h2
-                id="modulos"
-                class="font-display text-xl font-semibold tracking-tight"
-            >
-                Módulos instalados
-            </h2>
-            <p
-                v-if="items.every((i) => i.evidence.length === 0)"
-                class="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground"
-            >
-                Las fotos aparecerán aquí cuando el equipo termine la
-                instalación.
-            </p>
-            <SectionCard
-                v-for="item in items"
-                v-else
-                :key="item.id"
-                :title="item.description"
-            >
-                <template #actions>
-                    <StatusBadge
-                        v-if="item.status.value === 'done'"
-                        tone="success"
-                        label="Terminado"
-                        size="sm"
-                    />
-                </template>
-                <MediaGrid
-                    :items="item.evidence"
-                    empty-text="Sin fotos de este módulo."
-                />
-            </SectionCard>
-        </section>
-
-        <!-- Respuesta del cliente -->
-        <section
-            v-if="canRespond"
-            aria-labelledby="respuesta"
-            class="flex flex-col gap-4 rounded-2xl border bg-card p-5 md:p-6"
+        <div
+            :class="
+                cn(
+                    'grid items-start gap-6',
+                    canRespond &&
+                        'xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_28rem]',
+                )
+            "
         >
-            <h2
-                id="respuesta"
-                class="font-display text-xl font-semibold tracking-tight"
+            <!-- Evidencia por módulo -->
+            <section
+                aria-labelledby="modulos"
+                class="flex min-w-0 flex-col gap-4"
             >
-                Tu respuesta
-            </h2>
-
-            <p
-                class="flex items-start gap-2 rounded-xl bg-primary-soft/60 p-4 text-sm font-medium text-foreground"
-            >
-                <ShieldCheck
-                    class="mt-0.5 size-5 shrink-0 text-primary"
-                    aria-hidden="true"
-                />
-                {{ rightsNotice }}
-            </p>
-
-            <div
-                class="grid gap-3 sm:grid-cols-2"
-                role="radiogroup"
-                aria-labelledby="respuesta"
-            >
-                <button
-                    type="button"
-                    role="radio"
-                    :aria-checked="form.conformity === 'conforming'"
+                <h2
+                    id="modulos"
+                    class="font-display text-xl font-semibold tracking-tight"
+                >
+                    Módulos instalados
+                </h2>
+                <p
+                    v-if="items.every((i) => i.evidence.length === 0)"
+                    class="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground"
+                >
+                    Las fotos aparecerán aquí cuando el equipo termine la
+                    instalación.
+                </p>
+                <div
+                    v-else
                     :class="
                         cn(
-                            'flex min-h-24 flex-col items-start gap-1 rounded-2xl border-2 p-4 text-left transition-colors',
-                            form.conformity === 'conforming'
-                                ? 'border-success bg-success-soft'
-                                : 'hover:border-success/50',
+                            'grid items-start gap-4 lg:grid-cols-2',
+                            !canRespond && '2xl:grid-cols-3',
                         )
                     "
-                    @click="form.conformity = 'conforming'"
                 >
-                    <CheckCircle2
-                        class="size-6 text-success"
-                        aria-hidden="true"
-                    />
-                    <span class="font-semibold">Todo conforme</span>
-                    <span class="text-sm text-muted-foreground"
-                        >La instalación quedó como esperaba.</span
-                    >
-                </button>
-                <button
-                    type="button"
-                    role="radio"
-                    :aria-checked="form.conformity === 'pending_items'"
-                    :class="
-                        cn(
-                            'flex min-h-24 flex-col items-start gap-1 rounded-2xl border-2 p-4 text-left transition-colors',
-                            form.conformity === 'pending_items'
-                                ? 'border-warning bg-warning-soft'
-                                : 'hover:border-warning/50',
-                        )
-                    "
-                    @click="form.conformity = 'pending_items'"
-                >
-                    <MessageSquareWarning
-                        class="size-6 text-warning"
-                        aria-hidden="true"
-                    />
-                    <span class="font-semibold">Hay pendientes</span>
-                    <span class="text-sm text-muted-foreground"
-                        >Algo falta o no quedó bien.</span
-                    >
-                </button>
-            </div>
-            <InputError :message="form.errors.conformity" />
-
-            <div
-                v-if="form.conformity === 'pending_items'"
-                class="flex flex-col gap-4"
-            >
-                <fieldset class="flex flex-col gap-2">
-                    <legend class="mb-1 text-sm font-medium">
-                        ¿En qué módulos? (opcional)
-                    </legend>
-                    <label
+                    <SectionCard
                         v-for="item in items"
                         :key="item.id"
-                        class="flex min-h-12 items-center gap-3 rounded-xl border px-3"
+                        :title="item.description"
                     >
-                        <Checkbox
-                            :model-value="
-                                form.pending_item_ids.includes(item.id)
-                            "
-                            @update:model-value="togglePending(item.id, $event)"
+                        <template #actions>
+                            <StatusBadge
+                                v-if="item.status.value === 'done'"
+                                tone="success"
+                                label="Terminado"
+                                size="sm"
+                            />
+                        </template>
+                        <MediaGrid
+                            :items="item.evidence"
+                            empty-text="Sin fotos de este módulo."
                         />
-                        <span class="text-sm">{{ item.description }}</span>
-                    </label>
-                </fieldset>
-
-                <div class="grid gap-1.5">
-                    <Label for="comment">Cuéntanos qué está pendiente</Label>
-                    <Textarea
-                        id="comment"
-                        v-model="form.comment"
-                        rows="4"
-                        placeholder="Ej. La puerta del módulo de la esquina roza al cerrar."
-                    />
-                    <InputError :message="form.errors.comment" />
+                    </SectionCard>
                 </div>
+            </section>
 
-                <div class="grid gap-1.5">
-                    <Label>Fotos (opcional)</Label>
-                    <EvidenceUploader
-                        v-model="form.media_ids"
-                        :max-size="maxPhotoBytes"
-                        :allow-video="true"
-                        :max-files="10"
-                        collection="privado/conformidad"
-                        @busy="uploading = $event"
-                    />
-                    <InputError :message="form.errors.media_ids" />
-                </div>
-            </div>
-
-            <Button
-                class="h-12 text-base"
-                :disabled="!canSubmit || form.processing"
-                @click="submit"
+            <!-- Respuesta del cliente -->
+            <section
+                v-if="canRespond"
+                aria-labelledby="respuesta"
+                class="flex flex-col gap-4 rounded-2xl border bg-card p-5 md:p-6 xl:sticky xl:top-24"
             >
-                {{
-                    form.processing
-                        ? 'Enviando…'
-                        : form.conformity === 'pending_items'
-                          ? 'Enviar pendientes'
-                          : 'Confirmar que todo quedó conforme'
-                }}
-            </Button>
-        </section>
+                <h2
+                    id="respuesta"
+                    class="font-display text-xl font-semibold tracking-tight"
+                >
+                    Tu respuesta
+                </h2>
+
+                <p
+                    class="flex items-start gap-2 rounded-xl bg-primary-soft/60 p-4 text-sm font-medium text-foreground"
+                >
+                    <ShieldCheck
+                        class="mt-0.5 size-5 shrink-0 text-primary"
+                        aria-hidden="true"
+                    />
+                    {{ rightsNotice }}
+                </p>
+
+                <div
+                    class="grid gap-3 sm:grid-cols-2"
+                    role="radiogroup"
+                    aria-labelledby="respuesta"
+                >
+                    <button
+                        type="button"
+                        role="radio"
+                        :aria-checked="form.conformity === 'conforming'"
+                        :class="
+                            cn(
+                                'flex min-h-24 flex-col items-start gap-1 rounded-2xl border-2 p-4 text-left transition-colors',
+                                form.conformity === 'conforming'
+                                    ? 'border-success bg-success-soft'
+                                    : 'hover:border-success/50',
+                            )
+                        "
+                        @click="form.conformity = 'conforming'"
+                    >
+                        <CheckCircle2
+                            class="size-6 text-success"
+                            aria-hidden="true"
+                        />
+                        <span class="font-semibold">Todo conforme</span>
+                        <span class="text-sm text-muted-foreground"
+                            >La instalación quedó como esperaba.</span
+                        >
+                    </button>
+                    <button
+                        type="button"
+                        role="radio"
+                        :aria-checked="form.conformity === 'pending_items'"
+                        :class="
+                            cn(
+                                'flex min-h-24 flex-col items-start gap-1 rounded-2xl border-2 p-4 text-left transition-colors',
+                                form.conformity === 'pending_items'
+                                    ? 'border-warning bg-warning-soft'
+                                    : 'hover:border-warning/50',
+                            )
+                        "
+                        @click="form.conformity = 'pending_items'"
+                    >
+                        <MessageSquareWarning
+                            class="size-6 text-warning"
+                            aria-hidden="true"
+                        />
+                        <span class="font-semibold">Hay pendientes</span>
+                        <span class="text-sm text-muted-foreground"
+                            >Algo falta o no quedó bien.</span
+                        >
+                    </button>
+                </div>
+                <InputError :message="form.errors.conformity" />
+
+                <div
+                    v-if="form.conformity === 'pending_items'"
+                    class="flex flex-col gap-4"
+                >
+                    <fieldset class="flex flex-col gap-2">
+                        <legend class="mb-1 text-sm font-medium">
+                            ¿En qué módulos? (opcional)
+                        </legend>
+                        <label
+                            v-for="item in items"
+                            :key="item.id"
+                            class="flex min-h-12 items-center gap-3 rounded-xl border px-3"
+                        >
+                            <Checkbox
+                                :model-value="
+                                    form.pending_item_ids.includes(item.id)
+                                "
+                                @update:model-value="
+                                    togglePending(item.id, $event)
+                                "
+                            />
+                            <span class="text-sm">{{ item.description }}</span>
+                        </label>
+                    </fieldset>
+
+                    <div class="grid gap-1.5">
+                        <Label for="comment"
+                            >Cuéntanos qué está pendiente</Label
+                        >
+                        <Textarea
+                            id="comment"
+                            v-model="form.comment"
+                            rows="4"
+                            placeholder="Ej. La puerta del módulo de la esquina roza al cerrar."
+                        />
+                        <InputError :message="form.errors.comment" />
+                    </div>
+
+                    <div class="grid gap-1.5">
+                        <Label>Fotos (opcional)</Label>
+                        <EvidenceUploader
+                            v-model="form.media_ids"
+                            :max-size="maxPhotoBytes"
+                            :allow-video="true"
+                            :max-files="10"
+                            collection="privado/conformidad"
+                            @busy="uploading = $event"
+                        />
+                        <InputError :message="form.errors.media_ids" />
+                    </div>
+                </div>
+
+                <Button
+                    class="h-12 text-base"
+                    :disabled="!canSubmit || form.processing"
+                    @click="submit"
+                >
+                    {{
+                        form.processing
+                            ? 'Enviando…'
+                            : form.conformity === 'pending_items'
+                              ? 'Enviar pendientes'
+                              : 'Confirmar que todo quedó conforme'
+                    }}
+                </Button>
+            </section>
+        </div>
     </PageContainer>
 </template>

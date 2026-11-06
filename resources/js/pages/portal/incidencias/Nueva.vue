@@ -77,12 +77,12 @@ function submit() {
 <template>
     <Head title="Reportar un problema" />
 
-    <PageContainer width="narrow" class="flex flex-col gap-6 py-6 md:py-10">
+    <PageContainer class="flex flex-col gap-6 py-6 md:py-10">
         <header class="flex flex-col gap-2">
             <h1 class="font-display text-3xl font-semibold tracking-tight">
                 Reportar un problema
             </h1>
-            <p class="text-muted-foreground">
+            <p class="max-w-prose text-muted-foreground">
                 Cuéntanos qué pasó y, si puedes, agrega fotos. Te contactaremos
                 para darle solución.
             </p>
@@ -101,105 +101,118 @@ function submit() {
             </template>
         </EmptyState>
 
-        <form v-else class="flex flex-col gap-6" @submit.prevent="submit">
-            <div v-if="projects.length > 1" class="grid gap-1.5">
-                <Label for="project">Proyecto</Label>
-                <Select v-model="form.project_id">
-                    <SelectTrigger id="project" class="h-12 w-full"
-                        ><SelectValue placeholder="Elige tu proyecto"
-                    /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem
-                            v-for="p in projects"
-                            :key="p.id"
-                            :value="String(p.id)"
-                            >{{ p.name }} ({{ p.folio }})</SelectItem
-                        >
-                    </SelectContent>
-                </Select>
-                <InputError :message="form.errors.project_id" />
-            </div>
-            <p v-else class="text-sm text-muted-foreground">
-                Proyecto:
-                <span class="font-medium text-foreground">{{
-                    projects[0].name
-                }}</span>
-            </p>
-
-            <fieldset class="flex flex-col gap-2">
-                <legend class="mb-2 text-sm font-medium">
-                    ¿Qué tipo de problema es?
-                </legend>
-                <div class="grid gap-2 sm:grid-cols-2" role="radiogroup">
-                    <button
-                        v-for="c in categories"
-                        :key="c.value"
-                        type="button"
-                        role="radio"
-                        :aria-checked="form.category === c.value"
-                        :class="
-                            cn(
-                                'flex min-h-16 items-center gap-3 rounded-2xl border-2 p-4 text-left text-sm font-medium transition-colors',
-                                form.category === c.value
-                                    ? 'border-primary bg-primary-soft'
-                                    : 'hover:border-primary/40',
-                            )
-                        "
-                        @click="form.category = c.value"
-                    >
-                        <component
-                            :is="ICONS[c.value] ?? TriangleAlert"
-                            class="size-5 shrink-0 text-primary"
-                            aria-hidden="true"
-                        />
-                        {{ c.label }}
-                    </button>
+        <form
+            v-else
+            class="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8"
+            @submit.prevent="submit"
+        >
+            <div class="flex min-w-0 flex-col gap-6">
+                <div v-if="projects.length > 1" class="grid gap-1.5">
+                    <Label for="project">Proyecto</Label>
+                    <Select v-model="form.project_id">
+                        <SelectTrigger id="project" class="h-12 w-full"
+                            ><SelectValue placeholder="Elige tu proyecto"
+                        /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="p in projects"
+                                :key="p.id"
+                                :value="String(p.id)"
+                                >{{ p.name }} ({{ p.folio }})</SelectItem
+                            >
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="form.errors.project_id" />
                 </div>
-                <InputError :message="form.errors.category" />
-            </fieldset>
+                <p v-else class="text-sm text-muted-foreground">
+                    Proyecto:
+                    <span class="font-medium text-foreground">{{
+                        projects[0].name
+                    }}</span>
+                </p>
 
-            <div class="grid gap-1.5">
-                <Label for="title">Resumen en pocas palabras</Label>
-                <Input
-                    id="title"
-                    v-model="form.title"
-                    maxlength="200"
-                    class="h-12"
-                    placeholder="Ej. Cajón de la isla no cierra"
-                />
-                <InputError :message="form.errors.title" />
+                <fieldset class="flex flex-col gap-2">
+                    <legend class="mb-2 text-sm font-medium">
+                        ¿Qué tipo de problema es?
+                    </legend>
+                    <div
+                        class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3"
+                        role="radiogroup"
+                    >
+                        <button
+                            v-for="c in categories"
+                            :key="c.value"
+                            type="button"
+                            role="radio"
+                            :aria-checked="form.category === c.value"
+                            :class="
+                                cn(
+                                    'flex min-h-16 items-center gap-3 rounded-2xl border-2 p-4 text-left text-sm font-medium transition-colors',
+                                    form.category === c.value
+                                        ? 'border-primary bg-primary-soft'
+                                        : 'hover:border-primary/40',
+                                )
+                            "
+                            @click="form.category = c.value"
+                        >
+                            <component
+                                :is="ICONS[c.value] ?? TriangleAlert"
+                                class="size-5 shrink-0 text-primary"
+                                aria-hidden="true"
+                            />
+                            {{ c.label }}
+                        </button>
+                    </div>
+                    <InputError :message="form.errors.category" />
+                </fieldset>
+
+                <div class="grid gap-1.5">
+                    <Label for="title">Resumen en pocas palabras</Label>
+                    <Input
+                        id="title"
+                        v-model="form.title"
+                        maxlength="200"
+                        class="h-12"
+                        placeholder="Ej. Cajón de la isla no cierra"
+                    />
+                    <InputError :message="form.errors.title" />
+                </div>
+
+                <div class="grid gap-1.5">
+                    <Label for="description">¿Qué pasó?</Label>
+                    <Textarea
+                        id="description"
+                        v-model="form.description"
+                        rows="5"
+                        placeholder="Dónde está el problema, desde cuándo y cualquier detalle que nos ayude."
+                    />
+                    <InputError :message="form.errors.description" />
+                </div>
             </div>
 
-            <div class="grid gap-1.5">
-                <Label for="description">¿Qué pasó?</Label>
-                <Textarea
-                    id="description"
-                    v-model="form.description"
-                    rows="5"
-                    placeholder="Dónde está el problema, desde cuándo y cualquier detalle que nos ayude."
-                />
-                <InputError :message="form.errors.description" />
-            </div>
-
-            <div class="grid gap-1.5">
-                <Label>Fotos o video (opcional)</Label>
-                <EvidenceUploader
-                    v-model="form.media_ids"
-                    :max-size="maxPhotoBytes"
-                    :max-files="10"
-                    collection="privado/incidencias"
-                    @busy="uploading = $event"
-                />
-                <InputError :message="form.errors.media_ids" />
-            </div>
-
-            <Button
-                type="submit"
-                class="h-12 text-base"
-                :disabled="!ready || form.processing"
+            <div
+                class="flex min-w-0 flex-col gap-6 rounded-2xl border bg-card p-5 lg:sticky lg:top-24"
             >
-                {{ form.processing ? 'Enviando…' : 'Enviar reporte' }}
-            </Button>
+                <div class="grid gap-1.5">
+                    <Label>Fotos o video (opcional)</Label>
+                    <EvidenceUploader
+                        v-model="form.media_ids"
+                        :max-size="maxPhotoBytes"
+                        :max-files="10"
+                        collection="privado/incidencias"
+                        @busy="uploading = $event"
+                    />
+                    <InputError :message="form.errors.media_ids" />
+                </div>
+
+                <Button
+                    type="submit"
+                    class="h-12 text-base"
+                    :disabled="!ready || form.processing"
+                >
+                    {{ form.processing ? 'Enviando…' : 'Enviar reporte' }}
+                </Button>
+            </div>
         </form>
     </PageContainer>
 </template>

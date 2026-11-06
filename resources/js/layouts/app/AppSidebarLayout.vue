@@ -5,17 +5,19 @@ import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
 import AppToaster from '@/components/ds/AppToaster.vue';
+import UploadGuard from '@/components/feedback/UploadGuard.vue';
 import { pageContainerContextKey } from '@/components/ds/pageContext';
+import TourHost from '@/components/tour/TourHost.vue';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(defineProps<{ breadcrumbs?: BreadcrumbItem[] }>(), {
     breadcrumbs: () => [],
 });
 
-// Las pantallas del panel usan todo el ancho disponible y entran con una
+// Las pantallas del panel usan TODO el ancho disponible (sin tope) y entran con una
 // animación breve al navegar (ver `admin-enter` en app.css).
 provide(pageContainerContextKey, {
-    defaultWidth: 'fluid',
+    defaultWidth: 'full',
     animate: true,
     sectionIcons: true,
 });
@@ -40,5 +42,7 @@ provide(pageContainerContextKey, {
             <slot />
         </AppContent>
         <AppToaster />
+        <UploadGuard />
+        <TourHost area="admin" />
     </AppShell>
 </template>

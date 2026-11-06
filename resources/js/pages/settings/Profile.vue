@@ -92,8 +92,10 @@ const linkSent = computed(() => props.status === 'verification-link-sent');
                     title="Datos de contacto"
                     description="Usa el correo con el que inicias sesión: ahí llegan los avisos y los enlaces de recuperación."
                 >
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="grid content-start gap-2 sm:col-span-2">
+                    <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                        <div
+                            class="grid content-start gap-2 sm:col-span-2 2xl:col-span-1"
+                        >
                             <Label for="name">Nombre completo</Label>
                             <Input
                                 id="name"

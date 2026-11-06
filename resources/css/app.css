@@ -640,6 +640,29 @@
 }
 
 /* ---------------------------------------------------------------------- */
+/* Carga: barra superior de Inertia y envíos lentos (lib/submitBusy.ts)    */
+/* ---------------------------------------------------------------------- */
+#nprogress .bar {
+    height: 3px !important;
+    background: linear-gradient(
+        90deg,
+        var(--primary),
+        var(--oak),
+        var(--primary)
+    ) !important;
+    border-radius: 0 999px 999px 0;
+}
+
+html[data-submitting] body {
+    cursor: progress;
+}
+
+html[data-submitting] button[type='submit']:not(:disabled) {
+    pointer-events: none;
+    opacity: 0.75;
+}
+
+/* ---------------------------------------------------------------------- */
 /* Accesibilidad de movimiento                                             */
 /* ---------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {

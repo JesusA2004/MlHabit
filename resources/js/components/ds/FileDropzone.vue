@@ -64,7 +64,12 @@ const queue = useUploadQueue({
         const all = queue.items.value;
 
         if (
-            all.every((i) => i.status === 'completed' || i.status === 'aborted')
+            all.every(
+                (i) =>
+                    i.status === 'completed' ||
+                    i.status === 'processing' ||
+                    i.status === 'aborted',
+            )
         ) {
             emit(
                 'all-completed',

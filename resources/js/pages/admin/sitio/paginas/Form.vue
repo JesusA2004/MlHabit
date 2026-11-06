@@ -9,6 +9,7 @@ import PageContainer from '@/components/ds/PageContainer.vue';
 import PageHeader from '@/components/ds/PageHeader.vue';
 import SectionCard from '@/components/ds/SectionCard.vue';
 import StatusBadge from '@/components/ds/StatusBadge.vue';
+import BusyOverlay from '@/components/feedback/BusyOverlay.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import RichTextEditor from '@/components/web/admin/RichTextEditor.vue';
+import { useLongTask } from '@/composables/useLongTask';
 import paginas from '@/routes/admin/sitio/paginas';
 
 type PageData = {
@@ -57,10 +59,22 @@ const form = useForm({
 
 const locked = !!props.page?.isPublished && !props.can.publish;
 
+const task = useLongTask();
+
 function submit() {
+    const message = props.page?.isPublished
+        ? {
+              title: 'Guardando y publicando…',
+              description: 'La nueva versión se verá en el sitio al terminar.',
+          }
+        : { title: 'Guardando borrador…' };
+
     if (props.page)
-        form.put(paginas.update(props.page.id).url, { preserveScroll: true });
-    else form.post(paginas.store().url);
+        form.put(
+            paginas.update(props.page.id).url,
+            task.visit(message, { preserveScroll: true }),
+        );
+    else form.post(paginas.store().url, task.visit(message));
 }
 
 const publishOpen = ref(false);
@@ -69,12 +83,26 @@ const deleteOpen = ref(false);
 
 function action(url: string, method: 'post' | 'delete'): Promise<void> {
     return new Promise((resolve, reject) => {
-        router.visit(url, {
-            method,
-            preserveScroll: true,
-            onSuccess: () => resolve(),
-            onError: () => reject(new Error('No se pudo completar la acción.')),
-        });
+        router.visit(
+            url,
+            task.visit(
+                {
+                    title:
+                        method === 'delete'
+                            ? 'Eliminando la página…'
+                            : url.includes('despublicar')
+                              ? 'Despublicando…'
+                              : 'Publicando la página…',
+                },
+                {
+                    method,
+                    preserveScroll: true,
+                    onSuccess: () => resolve(),
+                    onError: () =>
+                        reject(new Error('No se pudo completar la acción.')),
+                },
+            ),
+        );
     });
 }
 </script>
@@ -82,7 +110,7 @@ function action(url: string, method: 'post' | 'delete'): Promise<void> {
 <template>
     <Head :title="props.page ? props.page.title : 'Nueva página'" />
 
-    <PageContainer width="narrow" class="flex flex-col gap-6">
+    <PageContainer>
         <PageHeader
             :title="props.page ? props.page.title : 'Nueva página'"
             description="El texto se publica tal como lo ves. Revisa con tu asesor legal antes de publicar documentos legales."
@@ -144,7 +172,10 @@ function action(url: string, method: 'post' | 'delete'): Promise<void> {
             publica una nueva versión.
         </p>
 
-        <form class="flex flex-col gap-6" @submit.prevent="submit">
+        <form
+            class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:grid-cols-[minmax(0,1fr)_26rem]"
+            @submit.prevent="submit"
+        >
             <SectionCard title="Contenido">
                 <div class="grid gap-5">
                     <div class="grid gap-1.5">
@@ -182,57 +213,60 @@ function action(url: string, method: 'post' | 'delete'): Promise<void> {
                 </div>
             </SectionCard>
 
-            <SectionCard title="Publicación">
-                <div class="grid gap-5">
-                    <div class="grid gap-1.5">
-                        <Label for="page-slug">Dirección (URL)</Label>
-                        <div class="flex items-center gap-2">
-                            <span class="shrink-0 text-sm text-muted-foreground"
-                                >/legal/</span
-                            >
-                            <Input
-                                id="page-slug"
-                                v-model="form.slug"
-                                maxlength="140"
-                                placeholder="se-genera-del-titulo"
+            <div class="flex flex-col gap-6 xl:sticky xl:top-20">
+                <SectionCard title="Publicación">
+                    <div class="grid gap-5">
+                        <div class="grid gap-1.5">
+                            <Label for="page-slug">Dirección (URL)</Label>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="shrink-0 text-sm text-muted-foreground"
+                                    >/legal/</span
+                                >
+                                <Input
+                                    id="page-slug"
+                                    v-model="form.slug"
+                                    maxlength="140"
+                                    placeholder="se-genera-del-titulo"
+                                    :disabled="locked"
+                                />
+                            </div>
+                            <InputError :message="form.errors.slug" />
+                        </div>
+                        <label
+                            class="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm"
+                        >
+                            Mostrar en el pie de página
+                            <Switch
+                                v-model="form.show_in_footer"
                                 :disabled="locked"
                             />
-                        </div>
-                        <InputError :message="form.errors.slug" />
+                        </label>
                     </div>
-                    <label
-                        class="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm"
-                    >
-                        Mostrar en el pie de página
-                        <Switch
-                            v-model="form.show_in_footer"
-                            :disabled="locked"
-                        />
-                    </label>
-                </div>
-            </SectionCard>
+                </SectionCard>
 
-            <div
-                class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"
-            >
-                <Button
-                    v-if="props.page && !props.page.isPublished"
-                    type="button"
-                    variant="ghost"
-                    class="text-danger-ink"
-                    @click="deleteOpen = true"
+                <div
+                    class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between xl:flex-col-reverse xl:items-stretch"
                 >
-                    <Trash2 class="size-4" /> Eliminar
-                </Button>
-                <span v-else />
-                <Button type="submit" :disabled="form.processing || locked"
-                    ><Spinner v-if="form.processing" />
-                    {{
-                        props.page?.isPublished
-                            ? 'Guardar y publicar'
-                            : 'Guardar borrador'
-                    }}</Button
-                >
+                    <Button
+                        v-if="props.page && !props.page.isPublished"
+                        type="button"
+                        variant="ghost"
+                        class="text-danger-ink"
+                        @click="deleteOpen = true"
+                    >
+                        <Trash2 class="size-4" /> Eliminar
+                    </Button>
+                    <span v-else />
+                    <Button type="submit" :disabled="form.processing || locked"
+                        ><Spinner v-if="form.processing" />
+                        {{
+                            props.page?.isPublished
+                                ? 'Guardar y publicar'
+                                : 'Guardar borrador'
+                        }}</Button
+                    >
+                </div>
             </div>
         </form>
 
@@ -267,5 +301,10 @@ function action(url: string, method: 'post' | 'delete'): Promise<void> {
                 "
             />
         </template>
+        <BusyOverlay
+            :open="task.visible.value"
+            :title="task.title.value"
+            :description="task.description.value"
+        />
     </PageContainer>
 </template>
