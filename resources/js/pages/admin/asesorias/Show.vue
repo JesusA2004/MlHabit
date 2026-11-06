@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from "@inertiajs/vue3";
 import {
     ArrowRight,
     CalendarClock,
@@ -17,11 +17,11 @@ import {
     Timer,
     UserX,
     Video,
-} from '@lucide/vue';
-import type { Component } from 'vue';
-import { computed, ref, watch } from 'vue';
-import { toast } from 'vue-sonner';
-import ConsultationSlotPicker from '@/components/crm/ConsultationSlotPicker.vue';
+} from "@lucide/vue";
+import type { Component } from "vue";
+import { computed, ref, watch } from "vue";
+import { toast } from "vue-sonner";
+import ConsultationSlotPicker from "@/components/crm/ConsultationSlotPicker.vue";
 import {
     ConfirmDialog,
     FormSheet,
@@ -30,26 +30,26 @@ import {
     PageHeader,
     SectionCard,
     StatusBadge,
-} from '@/components/ds';
-import type { KeyValueItem, Tone } from '@/components/ds';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+} from "@/components/ds";
+import type { KeyValueItem, Tone } from "@/components/ds";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
-import { todayDate } from '@/lib/dates';
-import { formatMoney, TIME_ZONE } from '@/lib/format';
-import { cn } from '@/lib/utils';
-import type { BreadcrumbItem } from '@/types';
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { todayDate } from "@/lib/dates";
+import { formatMoney, TIME_ZONE } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { BreadcrumbItem } from "@/types";
 
 type Option = { value: string; label: string; tone?: Tone };
 type Ref = { uuid: string; folio: string } | null;
@@ -64,6 +64,8 @@ type Consultation = {
     outcome: Option | null;
     advisor: { id: number; name: string } | null;
     meetingUrl: string | null;
+    meetingProvider?: string | null;
+    generateMeetingUrl?: string;
     isActive: boolean;
     customerNotes: string | null;
     internalNotes: string | null;
@@ -127,9 +129,9 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Panel', href: '/admin' },
-            { title: 'Asesorías', href: '/admin/asesorias' },
-            { title: 'Detalle', href: '#' },
+            { title: "Panel", href: "/admin" },
+            { title: "Asesorías", href: "/admin/asesorias" },
+            { title: "Detalle", href: "#" },
         ] as BreadcrumbItem[],
     },
 });
@@ -137,16 +139,16 @@ defineOptions({
 const c = computed(() => props.consultation);
 const base = computed(() => `/admin/asesorias/${c.value.uuid}`);
 
-const dateFmt = new Intl.DateTimeFormat('es-MX', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+const dateFmt = new Intl.DateTimeFormat("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
     timeZone: TIME_ZONE,
 });
-const timeFmt = new Intl.DateTimeFormat('es-MX', {
-    hour: 'numeric',
-    minute: '2-digit',
+const timeFmt = new Intl.DateTimeFormat("es-MX", {
+    hour: "numeric",
+    minute: "2-digit",
     timeZone: TIME_ZONE,
 });
 const longDate = computed(() => dateFmt.format(new Date(c.value.startsAt)));
@@ -168,16 +170,16 @@ const phone = computed(
     () => c.value.lead.customer.phone ?? c.value.customerPhone,
 );
 const contactItems = computed<KeyValueItem[]>(() => [
-    { key: 'name', label: 'Nombre', value: c.value.lead.customer.name },
-    { key: 'phone', label: 'Teléfono', value: phone.value },
-    { key: 'email', label: 'Correo', value: c.value.lead.customer.email },
-    { key: 'lead', label: 'Prospecto', value: c.value.lead.folio },
+    { key: "name", label: "Nombre", value: c.value.lead.customer.name },
+    { key: "phone", label: "Teléfono", value: phone.value },
+    { key: "email", label: "Correo", value: c.value.lead.customer.email },
+    { key: "lead", label: "Prospecto", value: c.value.lead.folio },
 ]);
 
 // ------------------------------------------------------------ Enlace y notas
 const detailsForm = useForm({
-    meeting_url: c.value.meetingUrl ?? '',
-    internal_notes: c.value.internalNotes ?? '',
+    meeting_url: c.value.meetingUrl ?? "",
+    internal_notes: c.value.internalNotes ?? "",
 });
 
 function saveDetails() {
@@ -189,12 +191,42 @@ function saveDetails() {
         .patch(base.value, { preserveScroll: true });
 }
 
+const generatingMeeting = ref(false);
+
+function generateMeeting() {
+    if (!c.value.generateMeetingUrl) {
+        return;
+    }
+
+    router.post(
+        c.value.generateMeetingUrl,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (generatingMeeting.value = true),
+            onFinish: () => (generatingMeeting.value = false),
+            onSuccess: () => {
+                detailsForm.defaults("meeting_url", c.value.meetingUrl ?? "");
+                detailsForm.reset("meeting_url");
+            },
+        },
+    );
+}
+
+const meetingProviderLabel = computed(() =>
+    c.value.meetingProvider === "jitsi"
+        ? "Jitsi Meet (automático)"
+        : c.value.meetingProvider === "manual"
+          ? "Manual"
+          : null,
+);
+
 // ------------------------------------------------------------ Estado
 const statusBusy = ref<string | null>(null);
 const noShowOpen = ref(false);
 
 function setStatus(
-    status: 'confirmed' | 'completed' | 'no_show',
+    status: "confirmed" | "completed" | "no_show",
 ): Promise<void> {
     statusBusy.value = status;
 
@@ -209,7 +241,7 @@ function setStatus(
                     reject(
                         new Error(
                             Object.values(errors)[0] ??
-                                'No se pudo actualizar el estado.',
+                                "No se pudo actualizar el estado.",
                         ),
                     ),
                 onFinish: () => (statusBusy.value = null),
@@ -218,17 +250,17 @@ function setStatus(
     });
 }
 
-function setStatusSafe(status: 'confirmed' | 'completed') {
+function setStatusSafe(status: "confirmed" | "completed") {
     setStatus(status).catch((e: Error) => toast.error(e.message));
 }
 
 // ------------------------------------------------------------ Resultado
 const outcomeOpen = ref(false);
 const outcomeForm = useForm({
-    outcome: c.value.outcome?.value ?? '',
-    notes: c.value.outcomeNotes ?? '',
+    outcome: c.value.outcome?.value ?? "",
+    notes: c.value.outcomeNotes ?? "",
 });
-const advancingOutcomes = ['interested_visit', 'prequalification'];
+const advancingOutcomes = ["interested_visit", "prequalification"];
 
 function submitOutcome() {
     outcomeForm.post(`${base.value}/resultado`, {
@@ -238,7 +270,7 @@ function submitOutcome() {
 }
 
 // ------------------------------------------------------------ Reprogramar
-const ANY = '__cualquiera__';
+const ANY = "__cualquiera__";
 const rescheduleOpen = ref(false);
 const rescheduleDate = ref<string | null>(null);
 const rescheduleAdvisor = ref<string>(
@@ -274,7 +306,7 @@ function submitReschedule() {
 
 // ------------------------------------------------------------ Cancelar
 const cancelOpen = ref(false);
-const cancelForm = useForm({ reason: '' });
+const cancelForm = useForm({ reason: "" });
 
 function submitCancel() {
     cancelForm.post(`${base.value}/cancelar`, {
@@ -290,39 +322,39 @@ function submitCancel() {
 async function copyManageLink() {
     try {
         await navigator.clipboard.writeText(props.customerManageUrl);
-        toast.success('Enlace copiado', {
+        toast.success("Enlace copiado", {
             description:
-                'Compártelo con el cliente para que reprograme o cancele.',
+                "Compártelo con el cliente para que reprograme o cancele.",
         });
     } catch {
         toast.error(
-            'No pudimos copiar el enlace. Selecciónalo y cópialo manualmente.',
+            "No pudimos copiar el enlace. Selecciónalo y cópialo manualmente.",
         );
     }
 }
 
 const awaitingPayment = computed(
-    () => c.value.status.value === 'pending_payment',
+    () => c.value.status.value === "pending_payment",
 );
 const showActions = computed(() => props.can.update && c.value.isActive);
 
 // ------------------------------------------------------------ Pago
-const SETTLED = ['paid', 'partially_refunded', 'refunded', 'disputed'];
+const SETTLED = ["paid", "partially_refunded", "refunded", "disputed"];
 const paymentSettled = computed(() =>
-    SETTLED.includes(props.payment?.status.value ?? ''),
+    SETTLED.includes(props.payment?.status.value ?? ""),
 );
 const paymentTone = computed<Tone>(() => {
     const p = props.payment;
 
     if (!p) {
-        return 'neutral';
+        return "neutral";
     }
 
     if (paymentSettled.value) {
-        return p.status.tone ?? 'success';
+        return p.status.tone ?? "success";
     }
 
-    return p.status.value === 'failed' ? 'danger' : 'warning';
+    return p.status.value === "failed" ? "danger" : "warning";
 });
 const when = (iso: string) =>
     `${dateFmt.format(new Date(iso))}, ${timeFmt.format(new Date(iso))}`;
@@ -334,28 +366,28 @@ const paymentItems = computed<KeyValueItem[]>(() => {
     }
 
     const items: KeyValueItem[] = [
-        { key: 'amount', label: 'Monto', value: formatMoney(p.amount) },
-        { key: 'folio', label: 'Folio de pago', value: p.folio },
+        { key: "amount", label: "Monto", value: formatMoney(p.amount) },
+        { key: "folio", label: "Folio de pago", value: p.folio },
         {
-            key: 'card',
-            label: 'Método',
+            key: "card",
+            label: "Método",
             value: p.cardLast4
-                ? `${p.method} · ${p.cardBrand ?? 'tarjeta'} •••• ${p.cardLast4}`
+                ? `${p.method} · ${p.cardBrand ?? "tarjeta"} •••• ${p.cardLast4}`
                 : p.method,
         },
         {
-            key: 'paidAt',
-            label: 'Pagado',
+            key: "paidAt",
+            label: "Pagado",
             value: p.paidAt ? when(p.paidAt) : null,
         },
         {
-            key: 'authorization',
-            label: 'Autorización',
+            key: "authorization",
+            label: "Autorización",
             value: p.authorization,
         },
     ];
 
-    return items.filter((item) => item.value !== null && item.value !== '');
+    return items.filter((item) => item.value !== null && item.value !== "");
 });
 const holdText = computed(() =>
     c.value.holdExpiresAt ? when(c.value.holdExpiresAt) : null,
@@ -373,7 +405,7 @@ function resendPaymentLink() {
             onError: (errors) =>
                 toast.error(
                     Object.values(errors)[0] ??
-                        'No se pudo reenviar el enlace de pago.',
+                        "No se pudo reenviar el enlace de pago.",
                 ),
         },
     );
@@ -386,12 +418,12 @@ async function copyPayLink() {
 
     try {
         await navigator.clipboard.writeText(props.payUrl);
-        toast.success('Enlace de pago copiado', {
+        toast.success("Enlace de pago copiado", {
             description:
-                'El cliente paga con tarjeta; no guardamos los datos de la tarjeta.',
+                "El cliente paga con tarjeta; no guardamos los datos de la tarjeta.",
         });
     } catch {
-        toast.error('No pudimos copiar el enlace.');
+        toast.error("No pudimos copiar el enlace.");
     }
 }
 </script>
@@ -436,8 +468,8 @@ async function copyPayLink() {
                     <CheckCircle2 class="size-4" />
                     {{
                         consultation.outcome
-                            ? 'Editar resultado'
-                            : 'Registrar resultado'
+                            ? "Editar resultado"
+                            : "Registrar resultado"
                     }}
                 </Button>
             </template>
@@ -509,7 +541,7 @@ async function copyPayLink() {
                                 Asesor
                             </dt>
                             <dd class="mt-1 text-sm">
-                                {{ consultation.advisor?.name ?? 'Sin asesor' }}
+                                {{ consultation.advisor?.name ?? "Sin asesor" }}
                             </dd>
                         </div>
                         <div>
@@ -632,6 +664,39 @@ async function copyPayLink() {
                                 id="meeting-url-error"
                                 :message="detailsForm.errors.meeting_url"
                             />
+                            <div
+                                v-if="c.channel.value === 'video' && c.isActive"
+                                class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                            >
+                                <span v-if="meetingProviderLabel"
+                                    >Origen: {{ meetingProviderLabel }}.</span
+                                >
+                                <span v-if="!c.paidAt && c.meetingUrl"
+                                    >El cliente lo verá al confirmarse el
+                                    pago.</span
+                                >
+                                <Button
+                                    v-if="c.generateMeetingUrl"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2"
+                                    :disabled="generatingMeeting"
+                                    @click="generateMeeting"
+                                >
+                                    <Spinner v-if="generatingMeeting" />
+                                    <Video v-else class="size-3.5" />
+                                    {{
+                                        c.meetingUrl
+                                            ? "Generar enlace nuevo de Jitsi"
+                                            : "Generar enlace de Jitsi"
+                                    }}
+                                </Button>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Puedes pegar tu propio enlace (Meet, Zoom,
+                                Teams): reemplaza al automático.
+                            </p>
                         </div>
                         <div class="grid gap-1.5">
                             <Label for="internal-notes">Notas internas</Label>
@@ -657,8 +722,8 @@ async function copyPayLink() {
                                 <Spinner v-if="detailsForm.processing" />
                                 {{
                                     detailsForm.processing
-                                        ? 'Guardando…'
-                                        : 'Guardar cambios'
+                                        ? "Guardando…"
+                                        : "Guardar cambios"
                                 }}
                             </Button>
                         </div>
@@ -988,7 +1053,7 @@ async function copyPayLink() {
             >
                 <Spinner v-if="outcomeForm.processing" />
                 {{
-                    outcomeForm.processing ? 'Guardando…' : 'Guardar resultado'
+                    outcomeForm.processing ? "Guardando…" : "Guardar resultado"
                 }}
             </Button>
         </template>
@@ -1074,7 +1139,7 @@ async function copyPayLink() {
             >
                 <Spinner v-if="rescheduleForm.processing" />
                 {{
-                    rescheduleForm.processing ? 'Reprogramando…' : 'Reprogramar'
+                    rescheduleForm.processing ? "Reprogramando…" : "Reprogramar"
                 }}
             </Button>
         </template>
@@ -1123,7 +1188,7 @@ async function copyPayLink() {
             >
                 <Spinner v-if="cancelForm.processing" />
                 {{
-                    cancelForm.processing ? 'Cancelando…' : 'Cancelar asesoría'
+                    cancelForm.processing ? "Cancelando…" : "Cancelar asesoría"
                 }}
             </Button>
         </template>

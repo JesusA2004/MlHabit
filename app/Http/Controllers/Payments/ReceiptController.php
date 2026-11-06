@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Payments;
 
+use App\Enums\PaymentConcept;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\SiteVisit;
 use App\Models\User;
+use App\Notifications\Crm\When;
 use App\Notifications\Visits\VisitText;
+use App\Services\Crm\ConsultationPaymentHandler;
 use App\Services\PublicSiteDataService;
 use App\Services\Web\Seo;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +44,7 @@ class ReceiptController extends Controller
 
         $payment->load('customer');
         $visit = $payment->site_visit_id ? SiteVisit::query()->with('address')->find($payment->site_visit_id) : null;
+        $consultation = $payment->concept === PaymentConcept::ConsultationFee ? ConsultationPaymentHandler::consultationFor($payment) : null;
 
         return Inertia::render('public/pagos/Comprobante', [
             'seo' => app(Seo::class)->private('Comprobante de pago'),
@@ -64,6 +68,11 @@ class ReceiptController extends Controller
                     'folio' => $visit->folio,
                     'when' => VisitText::when($visit),
                     'address' => $visit->address->one_line,
+                ] : null,
+                'consultation' => $consultation ? [
+                    'folio' => $consultation->folio,
+                    'when' => When::long($consultation->starts_at).' (hora del centro de México)',
+                    'channel' => $consultation->channel->label(),
                 ] : null,
             ],
         ]);

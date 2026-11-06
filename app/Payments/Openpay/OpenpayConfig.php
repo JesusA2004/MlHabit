@@ -3,9 +3,14 @@
 namespace App\Payments\Openpay;
 
 /**
- * Lectura centralizada de config('services.openpay'). Expone solo lo que
+ * Lectura centralizada de las credenciales de Openpay. Expone solo lo que
  * cada capa necesita: el frontend recibe jsConfig() (merchant, llave
  * pública y modo sandbox), nunca la llave privada.
+ *
+ * Origen de cada valor (precedencia): lo capturado en /admin/openpay
+ * (OpenpayCredentialStore, cifrado en la base de datos) → config
+ * ('services.openpay', que lee el .env) → vacío. Compatible con
+ * `config:cache`: la parte de base de datos no pasa por config().
  */
 class OpenpayConfig
 {
@@ -15,24 +20,30 @@ class OpenpayConfig
 
     public const THREE_DS_MODES = ['always', 'auto', 'never'];
 
+    public const SOURCE_PANEL = 'panel';
+
+    public const SOURCE_ENV = 'env';
+
+    public function __construct(private readonly OpenpayCredentialStore $store) {}
+
     public function merchantId(): string
     {
-        return trim((string) config('services.openpay.merchant_id'));
+        return $this->text('merchant_id');
     }
 
     public function publicKey(): string
     {
-        return trim((string) config('services.openpay.public_key'));
+        return $this->text('public_key');
     }
 
     public function privateKey(): string
     {
-        return trim((string) config('services.openpay.private_key'));
+        return $this->text('private_key');
     }
 
     public function isProduction(): bool
     {
-        return (bool) config('services.openpay.production', false);
+        return $this->store->production() ?? (bool) config('services.openpay.production', false);
     }
 
     public function isConfigured(): bool
@@ -48,7 +59,7 @@ class OpenpayConfig
 
     public function threeDsMode(): string
     {
-        $mode = strtolower((string) config('services.openpay.3ds_mode', 'auto'));
+        $mode = $this->store->threeDsMode() ?? strtolower((string) config('services.openpay.3ds_mode', 'auto'));
 
         return in_array($mode, self::THREE_DS_MODES, true) ? $mode : 'auto';
     }
@@ -75,12 +86,12 @@ class OpenpayConfig
 
     public function webhookUser(): string
     {
-        return (string) config('services.openpay.webhook_user');
+        return $this->text('webhook_user');
     }
 
     public function webhookPassword(): string
     {
-        return (string) config('services.openpay.webhook_password');
+        return $this->text('webhook_password');
     }
 
     public function webhookConfigured(): bool
@@ -106,8 +117,51 @@ class OpenpayConfig
     /** Últimos 4 caracteres del merchant id para el diagnóstico (nunca el valor completo). */
     public function maskedMerchantId(): ?string
     {
-        $id = $this->merchantId();
+        return self::mask($this->merchantId());
+    }
 
-        return $id === '' ? null : '••••'.substr($id, -4);
+    /**
+     * De dónde sale el valor efectivo de un campo: 'panel', 'env' o null (vacío).
+     */
+    public function source(string $field): ?string
+    {
+        if ($field === 'production') {
+            return $this->store->production() !== null ? self::SOURCE_PANEL : self::SOURCE_ENV;
+        }
+        if ($field === 'three_ds_mode') {
+            return $this->store->threeDsMode() !== null ? self::SOURCE_PANEL : self::SOURCE_ENV;
+        }
+
+        return match (true) {
+            $this->store->text($field) !== '' => self::SOURCE_PANEL,
+            trim((string) config('services.openpay.'.$field)) !== '' => self::SOURCE_ENV,
+            default => null,
+        };
+    }
+
+    /**
+     * Huella (no reversible) de las credenciales activas: sirve para saber si
+     * la última prueba de conexión corresponde a lo configurado hoy.
+     */
+    public function fingerprint(): string
+    {
+        $material = implode('|', [$this->merchantId(), $this->privateKey(), $this->publicKey(), $this->isProduction() ? 'production' : 'sandbox']);
+
+        return substr(hash_hmac('sha256', $material, (string) config('app.key')), 0, 16);
+    }
+
+    /** "••••1234" con los últimos 4 caracteres, o null si está vacío. */
+    public static function mask(string $value): ?string
+    {
+        $value = trim($value);
+
+        return $value === '' ? null : '••••'.mb_substr($value, -4);
+    }
+
+    private function text(string $field): string
+    {
+        $stored = $this->store->text($field);
+
+        return $stored !== '' ? $stored : trim((string) config('services.openpay.'.$field));
     }
 }

@@ -33,6 +33,12 @@ final class VisitCheckoutUrls
         return URL::temporarySignedRoute('public.visita.estado', now()->addDays(30), ['payment' => $payment->uuid]);
     }
 
+    /** "Agregar a mi calendario" (.ics) de la visita pagada. */
+    public static function calendar(Payment $payment): string
+    {
+        return URL::temporarySignedRoute('public.visita.calendario', now()->addDays(90), ['payment' => $payment->uuid]);
+    }
+
     /** Retorno de 3D Secure: sin firma (Openpay agrega ?id=…); solo concilia y redirige. */
     public static function threeDsReturn(Payment $payment): string
     {

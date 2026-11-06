@@ -29,11 +29,13 @@ use App\Services\Visits\VisitNotifier;
 use App\Services\Visits\VisitPaymentHandler;
 use App\Services\Visits\VisitPresenter;
 use App\Services\Web\Seo;
+use App\Support\Calendar\CalendarEvent;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -236,15 +238,42 @@ class VisitCheckoutController extends Controller
             }
         }
 
+        $visit = $visit->fresh(['address', 'zone', 'technician', 'policy', 'customer']) ?? $visit;
+        $confirmed = self::isConfirmedForCustomer($visit, $payment);
+
         return Inertia::render('public/visita/Estado', [
             'seo' => app(Seo::class)->private('Estado de tu visita técnica'),
             ...$this->publicBase(),
-            'visit' => VisitPresenter::forCustomer($visit->fresh(['address', 'zone', 'technician', 'policy', 'customer']) ?? $visit),
+            'visit' => VisitPresenter::forCustomer($visit),
             'payment' => $this->paymentProps($payment),
             'receiptUrl' => $payment->status->isSettled() ? $notifier->receiptUrl($payment) : null,
             'payUrl' => $visit->status->isAwaitingPayment() && $visit->holdIsActive() && ! $payment->status->isSettled() ? VisitCheckoutUrls::pay($payment) : null,
             'restartUrl' => route('public.visita.abierta'),
+            'calendar' => $confirmed && $visit->ends_at->isFuture() ? [
+                'icsUrl' => VisitCheckoutUrls::calendar($payment),
+                'googleUrl' => CalendarEvent::forVisit($visit, VisitCheckoutUrls::status($payment))->googleCalendarUrl(),
+            ] : null,
+            'portalUrl' => route('portal.citas'),
         ]);
+    }
+
+    /** GET /agendar-visita/pago/{payment}/calendario.ics (firmado): solo de una visita pagada y vigente. */
+    public function calendar(Payment $payment): HttpResponse
+    {
+        $visit = $this->visitFor($payment);
+        abort_unless(self::isConfirmedForCustomer($visit, $payment), 404);
+
+        return response(CalendarEvent::forVisit($visit, VisitCheckoutUrls::status($payment))->toIcs(), 200, [
+            'Content-Type' => 'text/calendar; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="visita-ml-habitat-'.$visit->folio.'.ics"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /** Visita pagada, en agenda y sin pendiente de reprogramar. */
+    private static function isConfirmedForCustomer(SiteVisit $visit, Payment $payment): bool
+    {
+        return $payment->status->isSettled() && $visit->status->isUpcoming() && $visit->attention_reason === null;
     }
 
     private function render(?Lead $lead): Response

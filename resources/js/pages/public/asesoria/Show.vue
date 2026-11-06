@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from "@inertiajs/vue3";
 import {
     CalendarClock,
     CalendarX,
@@ -15,17 +15,19 @@ import {
     Timer,
     UserRound,
     Video,
-} from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import ConsultationSlotPicker from '@/components/crm/ConsultationSlotPicker.vue';
-import ConfirmDialog from '@/components/ds/ConfirmDialog.vue';
-import StatusBadge from '@/components/ds/StatusBadge.vue';
-import type { Tone } from '@/components/ds/tones';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { formatMoney, TIME_ZONE } from '@/lib/format';
-import { cn } from '@/lib/utils';
+} from "@lucide/vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import ConsultationSlotPicker from "@/components/crm/ConsultationSlotPicker.vue";
+import BookingConfirmation from "@/components/payments/BookingConfirmation.vue";
+import PaymentStateNotice from "@/components/payments/PaymentStateNotice.vue";
+import ConfirmDialog from "@/components/ds/ConfirmDialog.vue";
+import StatusBadge from "@/components/ds/StatusBadge.vue";
+import type { Tone } from "@/components/ds/tones";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { formatMoney, TIME_ZONE } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type Opt = { value: string; label: string; tone?: Tone };
 
@@ -43,7 +45,11 @@ const props = defineProps<{
         isActive: boolean;
         durationMinutes: number;
         holdExpiresAt?: string | null;
+        holdExpired?: boolean;
         paidAt?: string | null;
+        needsReschedule?: boolean;
+        joinOpensAt?: string;
+        joinClosesAt?: string;
     };
     payment?: {
         uuid: string;
@@ -66,22 +72,24 @@ const props = defineProps<{
     rescheduleUrl: string;
     cancelUrl: string;
     bookAgainUrl: string | null;
+    calendar?: { icsUrl: string; googleUrl: string } | null;
+    portalUrl?: string | null;
 }>();
 
 const tz = { timeZone: TIME_ZONE } as const;
 const dayText = computed(() =>
-    new Intl.DateTimeFormat('es-MX', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+    new Intl.DateTimeFormat("es-MX", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
         ...tz,
     }).format(new Date(props.consultation.startsAt)),
 );
 const timeText = computed(() => {
-    const f = new Intl.DateTimeFormat('es-MX', {
-        hour: 'numeric',
-        minute: '2-digit',
+    const f = new Intl.DateTimeFormat("es-MX", {
+        hour: "numeric",
+        minute: "2-digit",
         ...tz,
     });
 
@@ -98,18 +106,92 @@ const channelIcon = computed(
 // ---------------------------------------------------------------- Pago
 
 const awaitingPayment = computed(
-    () => props.consultation.status.value === 'pending_payment',
+    () => props.consultation.status.value === "pending_payment",
 );
 const isBooked = computed(
     () => props.consultation.isActive && !awaitingPayment.value,
 );
-const processing = computed(() => props.payment?.status.value === 'processing');
+const processing = computed(() => props.payment?.status.value === "processing");
 const paid = computed(() =>
-    ['paid', 'partially_refunded', 'refunded', 'disputed'].includes(
-        props.payment?.status.value ?? '',
+    ["paid", "partially_refunded", "refunded", "disputed"].includes(
+        props.payment?.status.value ?? "",
     ),
 );
 const canCancel = computed(() => props.canCancel ?? props.canChange);
+const failed = computed(
+    () => awaitingPayment.value && props.payment?.status.value === "failed",
+);
+
+/** Qué pantalla mostrar: siempre según el estado que confirma el backend. */
+const view = computed<
+    "confirmed" | "processing" | "failed" | "expired" | "default"
+>(() => {
+    if (paid.value && isBooked.value && !props.consultation.needsReschedule) {
+        return "confirmed";
+    }
+    if (processing.value) {
+        return "processing";
+    }
+    if (failed.value) {
+        return "failed";
+    }
+    if (props.consultation.holdExpired) {
+        return "expired";
+    }
+
+    return "default";
+});
+
+const MAX_POLLS = 45;
+const polls = ref(0);
+
+const nextSteps = computed(() => {
+    const first = props.consultation.advisor.name;
+    const steps = [
+        "Te enviamos la confirmación, el comprobante y el archivo de calendario por correo.",
+    ];
+
+    if (props.consultation.channel.value === "video") {
+        steps.push(
+            props.consultation.meetingUrl
+                ? "El día de tu cita entra con el botón “Unirse a la videollamada” (se activa 15 minutos antes) o desde el enlace del correo."
+                : `${first} te enviará el enlace de la videollamada antes de la cita.`,
+        );
+    } else {
+        steps.push(
+            `${first} te contactará a la hora acordada por ${props.consultation.channel.label.toLowerCase()}.`,
+        );
+    }
+
+    steps.push(
+        "Ten a la mano fotos y medidas aproximadas del espacio; así aprovechamos mejor el tiempo.",
+        "Al terminar te diremos los siguientes pasos: visita técnica de medición, diseño y cotización.",
+    );
+
+    return steps;
+});
+
+const meeting = computed(() =>
+    props.consultation.meetingUrl &&
+    props.consultation.joinOpensAt &&
+    props.consultation.joinClosesAt
+        ? {
+              url: props.consultation.meetingUrl,
+              opensAt: props.consultation.joinOpensAt,
+              closesAt: props.consultation.joinClosesAt,
+          }
+        : null,
+);
+
+const place = computed(() => ({
+    icon: (["video", "phone", "whatsapp"].includes(
+        props.consultation.channel.value,
+    )
+        ? props.consultation.channel.value
+        : "video") as "video" | "phone" | "whatsapp",
+    label: "Medio",
+    value: `${props.consultation.channel.label} · ${props.consultation.durationMinutes} minutos`,
+}));
 
 const now = ref(Date.now());
 let clock: ReturnType<typeof setInterval> | undefined;
@@ -119,15 +201,17 @@ onMounted(() => {
     clock = setInterval(() => (now.value = Date.now()), 1000);
     // Nunca se muestra éxito sin el backend: mientras el banco confirma, se consulta cada 4 s.
     poll = setInterval(() => {
-        if (processing.value) {
+        if (processing.value && polls.value < MAX_POLLS) {
+            polls.value++;
             router.reload({
                 only: [
-                    'consultation',
-                    'payment',
-                    'payUrl',
-                    'receiptUrl',
-                    'canChange',
-                    'canCancel',
+                    "consultation",
+                    "payment",
+                    "payUrl",
+                    "receiptUrl",
+                    "canChange",
+                    "canCancel",
+                    "calendar",
                 ],
             });
         }
@@ -151,7 +235,7 @@ const countdown = computed(() => {
         ),
     );
     const hours = Math.floor(total / 3600);
-    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 
     if (total === 0) {
         return null;
@@ -177,7 +261,7 @@ function reschedule() {
 }
 
 const cancelOpen = ref(false);
-const reason = ref('');
+const reason = ref("");
 
 function cancel(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -191,7 +275,7 @@ function cancel(): Promise<void> {
                     reject(
                         new Error(
                             Object.values(errors)[0] ??
-                                'No pudimos cancelar. Inténtalo de nuevo.',
+                                "No pudimos cancelar. Inténtalo de nuevo.",
                         ),
                     ),
             },
@@ -206,221 +290,299 @@ function cancel(): Promise<void> {
     <section class="motion-calm bg-background pb-16">
         <div class="container-site pt-10 md:pt-16">
             <div class="max-w-3xl">
-                <p class="text-sm font-medium text-oak-ink">
-                    Asesoría {{ consultation.folio }}
-                </p>
-                <h1 class="mt-2 text-display-md font-display tracking-tight">
-                    <template v-if="awaitingPayment"
-                        >{{ lead.firstName }}, confirma tu asesoría con el
-                        pago</template
-                    >
-                    <template v-else-if="consultation.isActive"
-                        >{{ lead.firstName }}, tu asesoría está
-                        confirmada</template
-                    >
-                    <template
-                        v-else-if="consultation.status.value === 'cancelled'"
-                        >Tu asesoría se canceló</template
-                    >
-                    <template v-else>Tu asesoría</template>
-                </h1>
-
-                <div
-                    v-if="payment && (awaitingPayment || paid)"
-                    :class="
-                        cn(
-                            'pay-panel mt-8 flex flex-wrap items-center gap-4 rounded-xl border p-5',
-                            paid
-                                ? 'border-success/25 bg-success-soft'
-                                : 'border-warning/30 bg-warning-soft',
-                        )
+                <BookingConfirmation
+                    v-if="view === 'confirmed' && payment"
+                    :eyebrow="`Pago confirmado · asesoría ${consultation.folio}`"
+                    :title="`¡Listo, ${lead.firstName}! Tu asesoría está confirmada`"
+                    subtitle="Te enviamos los detalles y el comprobante por correo."
+                    :starts-at="consultation.startsAt"
+                    :ends-at="consultation.endsAt"
+                    person-label="Te atiende"
+                    :person-name="consultation.advisor.name"
+                    :place="place"
+                    :payment="payment"
+                    :meeting="meeting"
+                    :meeting-pending="
+                        consultation.channel.value === 'video' && !meeting
+                            ? 'Te enviaremos el enlace de la videollamada por correo antes de la cita.'
+                            : null
                     "
-                    role="status"
+                    :calendar="calendar ?? null"
+                    :receipt-url="receiptUrl ?? null"
+                    :portal-url="portalUrl ?? null"
+                    :next-steps="nextSteps"
                 >
-                    <span
-                        :class="
-                            cn(
-                                'grid size-11 shrink-0 place-items-center rounded-full',
-                                paid
-                                    ? 'bg-success text-success-foreground'
-                                    : 'bg-card text-warning-ink',
-                            )
-                        "
-                        aria-hidden="true"
-                    >
-                        <CircleCheck v-if="paid" class="size-5" />
-                        <Loader2
-                            v-else-if="processing"
-                            class="size-5 animate-spin"
-                        />
-                        <CreditCard v-else class="size-5" />
-                    </span>
-                    <div class="min-w-0 flex-1 text-sm">
-                        <template v-if="paid">
-                            <p class="font-semibold text-success-ink">
-                                Pago recibido ·
-                                {{ formatMoney(payment.amount) }} MXN
-                            </p>
-                            <p class="mt-0.5 text-success-ink/80">
-                                Folio {{ payment.folio
-                                }}<template v-if="payment.cardLast4">
-                                    · tarjeta ••••
-                                    {{ payment.cardLast4 }}</template
-                                >. No guardamos los datos de tu tarjeta.
-                            </p>
-                        </template>
-                        <template v-else-if="processing">
-                            <p class="font-semibold text-warning-ink">
-                                Estamos confirmando tu pago con el banco
-                            </p>
-                            <p class="mt-0.5 text-warning-ink/80">
-                                Esta página se actualiza sola. No vuelvas a
-                                pagar.
-                            </p>
-                        </template>
-                        <template v-else>
-                            <p class="font-semibold text-warning-ink">
-                                Pendiente de pago ·
-                                {{ formatMoney(payment.amount) }} MXN
-                            </p>
-                            <p
-                                class="mt-0.5 flex items-center gap-1.5 text-warning-ink/80"
-                            >
-                                <Timer class="size-3.5" aria-hidden="true" />
-                                <span v-if="countdown"
-                                    >Tu horario está apartado
-                                    <strong class="tabular-nums">{{
-                                        countdown
-                                    }}</strong>
-                                    más.</span
-                                >
-                                <span v-else>El apartado está por vencer.</span>
-                            </p>
-                            <p
-                                v-if="payment.errorMessage"
-                                class="mt-1 text-danger-ink"
-                            >
-                                Intento anterior: {{ payment.errorMessage }}
-                            </p>
-                        </template>
-                    </div>
-                    <Button v-if="payUrl && !processing" as-child class="h-11">
-                        <Link :href="payUrl">
-                            <Lock aria-hidden="true" /> Pagar
-                            {{ formatMoney(payment.amount) }}
-                        </Link>
-                    </Button>
-                    <Button
-                        v-else-if="receiptUrl"
-                        as-child
-                        variant="outline"
-                        class="h-11 bg-card"
-                    >
-                        <a :href="receiptUrl" target="_blank" rel="noopener">
-                            <Receipt aria-hidden="true" /> Ver comprobante
-                        </a>
-                    </Button>
-                </div>
-
-                <article
-                    class="mt-8 overflow-hidden rounded-xl border bg-card shadow-xs"
-                >
-                    <div
-                        class="flex flex-wrap items-start justify-between gap-4 border-b p-6"
-                    >
-                        <div>
-                            <p
-                                class="font-display text-2xl font-semibold tracking-tight first-letter:uppercase"
-                            >
-                                {{ dayText }}
-                            </p>
-                            <p
-                                class="mt-1 text-lg text-muted-foreground tabular-nums"
-                            >
-                                {{ timeText }}
-                                <span class="text-sm"
-                                    >(hora del centro de México)</span
-                                >
-                            </p>
-                        </div>
+                    <template #badge>
                         <StatusBadge
                             :label="consultation.status.label"
                             :tone="consultation.status.tone ?? 'neutral'"
                         />
-                    </div>
-                    <dl class="grid gap-5 p-6 sm:grid-cols-3">
-                        <div class="flex gap-3">
-                            <component
-                                :is="channelIcon"
-                                class="mt-0.5 size-4 shrink-0 text-primary"
-                                aria-hidden="true"
-                            />
-                            <div>
-                                <dt class="text-xs text-muted-foreground">
-                                    Medio
-                                </dt>
-                                <dd class="text-sm font-medium">
-                                    {{ consultation.channel.label }}
-                                </dd>
-                            </div>
-                        </div>
-                        <div class="flex gap-3">
-                            <UserRound
-                                class="mt-0.5 size-4 shrink-0 text-primary"
-                                aria-hidden="true"
-                            />
-                            <div>
-                                <dt class="text-xs text-muted-foreground">
-                                    Te atiende
-                                </dt>
-                                <dd class="text-sm font-medium">
-                                    {{ consultation.advisor.name }}
-                                </dd>
-                            </div>
-                        </div>
-                        <div class="flex gap-3">
-                            <Clock
-                                class="mt-0.5 size-4 shrink-0 text-primary"
-                                aria-hidden="true"
-                            />
-                            <div>
-                                <dt class="text-xs text-muted-foreground">
-                                    Duración
-                                </dt>
-                                <dd class="text-sm font-medium">
-                                    {{ consultation.durationMinutes }} minutos
-                                </dd>
-                            </div>
-                        </div>
-                    </dl>
-                    <div
-                        v-if="isBooked"
-                        class="border-t bg-muted/40 px-6 py-4 text-sm"
+                    </template>
+                </BookingConfirmation>
+
+                <PaymentStateNotice
+                    v-else-if="view === 'processing'"
+                    :state="polls < MAX_POLLS ? 'processing' : 'stalled'"
+                    :eyebrow="`Asesoría ${consultation.folio}`"
+                />
+
+                <PaymentStateNotice
+                    v-else-if="view === 'failed'"
+                    state="failed"
+                    :eyebrow="`Asesoría ${consultation.folio}`"
+                    :message="payment?.errorMessage ?? null"
+                    :hold-expires-at="consultation.holdExpiresAt ?? null"
+                    :retry-url="payUrl ?? null"
+                    :restart-url="bookAgainUrl"
+                />
+
+                <PaymentStateNotice
+                    v-else-if="view === 'expired'"
+                    state="expired"
+                    :eyebrow="`Asesoría ${consultation.folio}`"
+                    :restart-url="bookAgainUrl"
+                />
+
+                <template v-else>
+                    <p class="text-sm font-medium text-oak-ink">
+                        Asesoría {{ consultation.folio }}
+                    </p>
+                    <h1
+                        class="mt-2 text-display-md font-display tracking-tight"
                     >
-                        <template v-if="consultation.meetingUrl">
-                            <Button as-child class="h-11">
-                                <a
-                                    :href="consultation.meetingUrl"
-                                    target="_blank"
-                                    rel="noopener"
-                                >
-                                    Entrar a la reunión
-                                    <ExternalLink aria-hidden="true" />
-                                </a>
-                            </Button>
-                        </template>
-                        <p
-                            v-else-if="consultation.channel.value === 'video'"
-                            class="text-muted-foreground"
+                        <template v-if="awaitingPayment"
+                            >{{ lead.firstName }}, confirma tu asesoría con el
+                            pago</template
                         >
-                            Te enviaremos el enlace de la videollamada por
-                            correo antes de la cita.
-                        </p>
-                        <p v-else class="text-muted-foreground">
-                            Tu asesor se comunicará contigo a la hora acordada.
-                        </p>
+                        <template v-else-if="consultation.isActive"
+                            >{{ lead.firstName }}, tu asesoría está
+                            confirmada</template
+                        >
+                        <template
+                            v-else-if="
+                                consultation.status.value === 'cancelled'
+                            "
+                            >Tu asesoría se canceló</template
+                        >
+                        <template v-else>Tu asesoría</template>
+                    </h1>
+
+                    <div
+                        v-if="payment && (awaitingPayment || paid)"
+                        :class="
+                            cn(
+                                'pay-panel mt-8 flex flex-wrap items-center gap-4 rounded-xl border p-5',
+                                paid
+                                    ? 'border-success/25 bg-success-soft'
+                                    : 'border-warning/30 bg-warning-soft',
+                            )
+                        "
+                        role="status"
+                    >
+                        <span
+                            :class="
+                                cn(
+                                    'grid size-11 shrink-0 place-items-center rounded-full',
+                                    paid
+                                        ? 'bg-success text-success-foreground'
+                                        : 'bg-card text-warning-ink',
+                                )
+                            "
+                            aria-hidden="true"
+                        >
+                            <CircleCheck v-if="paid" class="size-5" />
+                            <Loader2
+                                v-else-if="processing"
+                                class="size-5 animate-spin"
+                            />
+                            <CreditCard v-else class="size-5" />
+                        </span>
+                        <div class="min-w-0 flex-1 text-sm">
+                            <template v-if="paid">
+                                <p class="font-semibold text-success-ink">
+                                    Pago recibido ·
+                                    {{ formatMoney(payment.amount) }} MXN
+                                </p>
+                                <p class="mt-0.5 text-success-ink/80">
+                                    Folio {{ payment.folio
+                                    }}<template v-if="payment.cardLast4">
+                                        · tarjeta ••••
+                                        {{ payment.cardLast4 }}</template
+                                    >. No guardamos los datos de tu tarjeta.
+                                </p>
+                            </template>
+                            <template v-else-if="processing">
+                                <p class="font-semibold text-warning-ink">
+                                    Estamos confirmando tu pago con el banco
+                                </p>
+                                <p class="mt-0.5 text-warning-ink/80">
+                                    Esta página se actualiza sola. No vuelvas a
+                                    pagar.
+                                </p>
+                            </template>
+                            <template v-else>
+                                <p class="font-semibold text-warning-ink">
+                                    Pendiente de pago ·
+                                    {{ formatMoney(payment.amount) }} MXN
+                                </p>
+                                <p
+                                    class="mt-0.5 flex items-center gap-1.5 text-warning-ink/80"
+                                >
+                                    <Timer
+                                        class="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                    <span v-if="countdown"
+                                        >Tu horario está apartado
+                                        <strong class="tabular-nums">{{
+                                            countdown
+                                        }}</strong>
+                                        más.</span
+                                    >
+                                    <span v-else
+                                        >El apartado está por vencer.</span
+                                    >
+                                </p>
+                                <p
+                                    v-if="payment.errorMessage"
+                                    class="mt-1 text-danger-ink"
+                                >
+                                    Intento anterior: {{ payment.errorMessage }}
+                                </p>
+                            </template>
+                        </div>
+                        <Button
+                            v-if="payUrl && !processing"
+                            as-child
+                            class="h-11"
+                        >
+                            <Link :href="payUrl">
+                                <Lock aria-hidden="true" /> Pagar
+                                {{ formatMoney(payment.amount) }}
+                            </Link>
+                        </Button>
+                        <Button
+                            v-else-if="receiptUrl"
+                            as-child
+                            variant="outline"
+                            class="h-11 bg-card"
+                        >
+                            <a
+                                :href="receiptUrl"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <Receipt aria-hidden="true" /> Ver comprobante
+                            </a>
+                        </Button>
                     </div>
-                </article>
+
+                    <article
+                        class="mt-8 overflow-hidden rounded-xl border bg-card shadow-xs"
+                    >
+                        <div
+                            class="flex flex-wrap items-start justify-between gap-4 border-b p-6"
+                        >
+                            <div>
+                                <p
+                                    class="font-display text-2xl font-semibold tracking-tight first-letter:uppercase"
+                                >
+                                    {{ dayText }}
+                                </p>
+                                <p
+                                    class="mt-1 text-lg text-muted-foreground tabular-nums"
+                                >
+                                    {{ timeText }}
+                                    <span class="text-sm"
+                                        >(hora del centro de México)</span
+                                    >
+                                </p>
+                            </div>
+                            <StatusBadge
+                                :label="consultation.status.label"
+                                :tone="consultation.status.tone ?? 'neutral'"
+                            />
+                        </div>
+                        <dl class="grid gap-5 p-6 sm:grid-cols-3">
+                            <div class="flex gap-3">
+                                <component
+                                    :is="channelIcon"
+                                    class="mt-0.5 size-4 shrink-0 text-primary"
+                                    aria-hidden="true"
+                                />
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">
+                                        Medio
+                                    </dt>
+                                    <dd class="text-sm font-medium">
+                                        {{ consultation.channel.label }}
+                                    </dd>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <UserRound
+                                    class="mt-0.5 size-4 shrink-0 text-primary"
+                                    aria-hidden="true"
+                                />
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">
+                                        Te atiende
+                                    </dt>
+                                    <dd class="text-sm font-medium">
+                                        {{ consultation.advisor.name }}
+                                    </dd>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <Clock
+                                    class="mt-0.5 size-4 shrink-0 text-primary"
+                                    aria-hidden="true"
+                                />
+                                <div>
+                                    <dt class="text-xs text-muted-foreground">
+                                        Duración
+                                    </dt>
+                                    <dd class="text-sm font-medium">
+                                        {{
+                                            consultation.durationMinutes
+                                        }}
+                                        minutos
+                                    </dd>
+                                </div>
+                            </div>
+                        </dl>
+                        <div
+                            v-if="isBooked"
+                            class="border-t bg-muted/40 px-6 py-4 text-sm"
+                        >
+                            <template v-if="consultation.meetingUrl">
+                                <Button as-child class="h-11">
+                                    <a
+                                        :href="consultation.meetingUrl"
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        Entrar a la reunión
+                                        <ExternalLink aria-hidden="true" />
+                                    </a>
+                                </Button>
+                            </template>
+                            <p
+                                v-else-if="
+                                    consultation.channel.value === 'video'
+                                "
+                                class="text-muted-foreground"
+                            >
+                                Te enviaremos el enlace de la videollamada por
+                                correo antes de la cita.
+                            </p>
+                            <p v-else class="text-muted-foreground">
+                                Tu asesor se comunicará contigo a la hora
+                                acordada.
+                            </p>
+                        </div>
+                    </article>
+                </template>
 
                 <div
                     v-if="(canChange || canCancel) && !rescheduling"
@@ -483,8 +645,8 @@ function cancel(): Promise<void> {
                             />
                             {{
                                 form.processing
-                                    ? 'Reprogramando…'
-                                    : 'Confirmar nueva fecha'
+                                    ? "Reprogramando…"
+                                    : "Confirmar nueva fecha"
                             }}
                         </Button>
                         <Button
@@ -498,7 +660,9 @@ function cancel(): Promise<void> {
                 </section>
 
                 <div
-                    v-if="bookAgainUrl"
+                    v-if="
+                        bookAgainUrl && view !== 'expired' && view !== 'failed'
+                    "
                     class="mt-8 rounded-xl border bg-card p-6"
                 >
                     <h2

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { Printer } from '@lucide/vue';
-import DateText from '@/components/ds/DateText.vue';
-import StatusBadge from '@/components/ds/StatusBadge.vue';
-import type { Tone } from '@/components/ds/tones';
-import { Button } from '@/components/ui/button';
-import { formatMoney } from '@/lib/format';
+import { Head } from "@inertiajs/vue3";
+import { Printer } from "@lucide/vue";
+import DateText from "@/components/ds/DateText.vue";
+import StatusBadge from "@/components/ds/StatusBadge.vue";
+import type { Tone } from "@/components/ds/tones";
+import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/format";
 
 type Option = { value: string; label: string; tone: string };
 
@@ -26,6 +26,7 @@ defineProps<{
         paidAt: string | null;
         customerName: string;
         visit: { folio: string; when: string; address: string } | null;
+        consultation?: { folio: string; when: string; channel: string } | null;
     };
 }>();
 
@@ -108,7 +109,7 @@ function print() {
                             <dd class="mt-0.5 font-medium">
                                 {{ receipt.method
                                 }}<template v-if="receipt.cardLast4">
-                                    · {{ receipt.cardBrand ?? 'tarjeta' }} ••••
+                                    · {{ receipt.cardBrand ?? "tarjeta" }} ••••
                                     {{ receipt.cardLast4 }}</template
                                 >
                             </dd>
@@ -134,6 +135,17 @@ function print() {
                             </dd>
                             <dd class="text-muted-foreground">
                                 {{ receipt.visit.address }}
+                            </dd>
+                        </div>
+                        <div v-if="receipt.consultation" class="sm:col-span-2">
+                            <dt class="text-muted-foreground">
+                                Asesoría {{ receipt.consultation.folio }}
+                            </dt>
+                            <dd class="mt-0.5 first-letter:uppercase">
+                                {{ receipt.consultation.when }}
+                            </dd>
+                            <dd class="text-muted-foreground">
+                                {{ receipt.consultation.channel }}
                             </dd>
                         </div>
                         <div class="sm:col-span-2">

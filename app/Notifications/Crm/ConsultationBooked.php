@@ -4,6 +4,7 @@ namespace App\Notifications\Crm;
 
 use App\Models\Consultation;
 use App\Models\Payment;
+use App\Support\Calendar\CalendarEvent;
 use App\Support\Crm\CrmLinks;
 use App\Support\Crm\Ics;
 use App\Support\Money;
@@ -35,26 +36,36 @@ class ConsultationBooked extends Notification implements ShouldQueue
         $c = $this->consultation->loadMissing(['lead.customer', 'advisor']);
         $manage = CrmLinks::manageConsultation($c);
 
+        $payment = $c->payment_id !== null ? Payment::query()->find($c->payment_id) : null;
+        $paid = $payment !== null && $payment->status->isSettled();
+        $advisorFirstName = explode(' ', trim($c->advisor->name))[0];
+
         $mail = (new MailMessage)
-            ->subject(($this->rescheduled ? 'Reprogramamos tu asesoría' : 'Tu asesoría está agendada').' · '.When::long($c->starts_at))
+            ->subject(($this->rescheduled ? 'Reprogramamos tu asesoría' : ($paid ? 'Asesoría confirmada' : 'Tu asesoría está agendada')).' · '.When::long($c->starts_at))
             ->greeting("¡Hola, {$c->lead->customer->first_name}!")
             ->line(($this->rescheduled ? 'Tu asesoría quedó para el ' : 'Te esperamos el ').'**'.When::long($c->starts_at).'** (hora del centro de México).')
-            ->line('Medio: '.$c->channel->label().'. '.$c->channel->description())
-            ->line("Te atenderá {$c->advisor->name}. Folio: {$c->folio}.");
+            ->line('Medio: '.$c->channel->label().' · '.$c->starts_at->diffInMinutes($c->ends_at).' minutos. '.$c->channel->description())
+            ->line("Te atenderá {$advisorFirstName}. Folio de la asesoría: **{$c->folio}**.");
 
         if ($c->meeting_url) {
-            $mail->line("Enlace de la reunión: {$c->meeting_url}");
+            $mail->line("**Videollamada:** [Unirse a la videollamada]({$c->meeting_url}) — {$c->meeting_url}")
+                ->line('Abre el enlace unos minutos antes desde tu computadora o celular; no necesitas instalar nada.');
         }
 
-        $payment = $c->payment_id !== null ? Payment::query()->find($c->payment_id) : null;
-        if ($payment !== null && $payment->status->isSettled()) {
-            $mail->line('Recibimos tu pago de '.Money::of($payment->amount)->format()." (folio {$payment->folio}).")
-                ->line('Comprobante: '.URL::signedRoute('pagos.comprobante', ['payment' => $payment->uuid]));
+        if ($paid) {
+            $mail->line('Recibimos tu pago de **'.Money::of($payment->amount)->format().' MXN**'
+                .($payment->card_last4 ? ' con tarjeta terminación '.$payment->card_last4 : '')
+                ." (folio {$payment->folio}).")
+                ->line('[Ver comprobante de pago]('.URL::signedRoute('pagos.comprobante', ['payment' => $payment->uuid]).')');
         }
+
+        $google = CalendarEvent::forConsultation($c, $manage)->googleCalendarUrl();
 
         return $mail
+            ->line("Adjuntamos el archivo para tu calendario. ¿Usas Google Calendar? [Agrégala aquí]({$google}).")
             ->line('Ten a la mano fotos y medidas aproximadas del espacio; así aprovechamos mejor el tiempo.')
-            ->action('Reprogramar o cancelar', $manage)
+            ->action('Ver mi asesoría', $manage)
+            ->line('Desde ese enlace puedes reprogramar o cancelar.')
             ->attachData(Ics::forConsultation($c, $manage), 'asesoria-ml-habitat.ics', ['mime' => 'text/calendar; charset=UTF-8; method=PUBLISH']);
     }
 }

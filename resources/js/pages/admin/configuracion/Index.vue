@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import {
     ArrowUpRight,
     BadgePercent,
@@ -9,20 +9,21 @@ import {
     SearchCheck,
     ShieldCheck,
     UserRoundPlus,
-} from '@lucide/vue';
-import { computed } from 'vue';
-import PageContainer from '@/components/ds/PageContainer.vue';
-import PageHeader from '@/components/ds/PageHeader.vue';
-import SectionCard from '@/components/ds/SectionCard.vue';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
-import configuracion from '@/routes/admin/configuracion';
+} from "@lucide/vue";
+import { computed } from "vue";
+import PageContainer from "@/components/ds/PageContainer.vue";
+import PageHeader from "@/components/ds/PageHeader.vue";
+import SectionCard from "@/components/ds/SectionCard.vue";
+import InputError from "@/components/InputError.vue";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import configuracion from "@/routes/admin/configuracion";
 
 type Props = {
     settings: {
@@ -41,6 +42,7 @@ type Props = {
             booking_window_days: number;
             min_notice_hours: number;
             channels: string[];
+            meeting_provider?: string;
         };
         leads: { follow_up_hours: number };
         security: { require_2fa_for_staff: boolean };
@@ -50,6 +52,7 @@ type Props = {
         };
     };
     channels: { value: string; label: string }[];
+    meetingProviders?: { value: string; label: string; description: string }[];
     links: { visitPolicy: string; site: string };
 };
 
@@ -58,8 +61,8 @@ const props = defineProps<Props>();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Panel', href: '/admin' },
-            { title: 'Configuración', href: '/admin/configuracion' },
+            { title: "Panel", href: "/admin" },
+            { title: "Configuración", href: "/admin/configuracion" },
         ],
     },
 });
@@ -72,11 +75,11 @@ const consultation = useForm({
 // Toda asesoría tiene costo: aviso inmediato si el precio no es positivo (el backend también lo valida).
 const priceInvalid = computed(() => {
     const value = Number(
-        String(consultation.price ?? '').replace(/[$,\s]/g, ''),
+        String(consultation.price ?? "").replace(/[$,\s]/g, ""),
     );
 
     return (
-        String(consultation.price ?? '').trim() !== '' &&
+        String(consultation.price ?? "").trim() !== "" &&
         (!Number.isFinite(value) || value <= 0)
     );
 });
@@ -99,7 +102,7 @@ const save = (
         onSuccess: () => form.defaults(),
     });
 
-function toggleChannel(value: string, checked: boolean | 'indeterminate') {
+function toggleChannel(value: string, checked: boolean | "indeterminate") {
     const set = new Set(consultation.channels);
 
     if (checked === true) {
@@ -260,7 +263,7 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                     :disabled="commercial.processing || !commercial.isDirty"
                 >
                     <Spinner v-if="commercial.processing" />
-                    {{ commercial.processing ? 'Guardando…' : 'Guardar' }}
+                    {{ commercial.processing ? "Guardando…" : "Guardar" }}
                 </Button>
             </template>
         </SectionCard>
@@ -309,11 +312,21 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                             <CreditCard class="size-5" aria-hidden="true" />
                         </span>
                         <div class="grid gap-1">
-                            <Label for="price">Precio de la asesoría</Label>
+                            <Label for="price"
+                                >Precio de la asesoría (MXN, total)</Label
+                            >
                             <p class="text-sm text-muted-foreground">
-                                Toda asesoría se cobra con tarjeta al agendar
-                                (videollamada, llamada o WhatsApp). El precio se
-                                congela en cada cita; mínimo $1.00.
+                                Es exactamente lo que se cobra al cliente con
+                                tarjeta al agendar (videollamada, llamada o
+                                WhatsApp): no se le suma IVA ni comisiones. Si
+                                facturas con IVA, escribe aquí el precio con IVA
+                                incluido. El IVA de "Comercial" solo aplica a
+                                cotizaciones.
+                            </p>
+                            <p class="text-sm text-muted-foreground">
+                                Cada cita congela el precio al apartarse: un
+                                cambio aquí aplica solo a las nuevas reservas.
+                                Mínimo $1.00.
                             </p>
                             <p
                                 class="flex items-center gap-1.5 text-xs text-muted-foreground"
@@ -442,6 +455,57 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                     </label>
                     <InputError :message="consultation.errors.channels" />
                 </fieldset>
+                <fieldset
+                    v-if="meetingProviders?.length"
+                    class="grid gap-2"
+                    aria-describedby="meeting-provider-hint"
+                >
+                    <legend class="mb-1 text-sm font-medium">
+                        Enlace de las videollamadas
+                    </legend>
+                    <RadioGroup
+                        v-model="consultation.meeting_provider"
+                        class="grid gap-2 sm:grid-cols-2"
+                    >
+                        <label
+                            v-for="option in meetingProviders"
+                            :key="option.value"
+                            :class="
+                                cn(
+                                    'flex cursor-pointer gap-3 rounded-xl border p-4 transition-colors',
+                                    consultation.meeting_provider ===
+                                        option.value
+                                        ? 'border-primary/40 bg-primary-soft/40'
+                                        : 'hover:bg-muted/40',
+                                )
+                            "
+                        >
+                            <RadioGroupItem
+                                :value="option.value"
+                                class="mt-0.5"
+                            />
+                            <span class="grid gap-1">
+                                <span class="text-sm font-medium">{{
+                                    option.label
+                                }}</span>
+                                <span class="text-xs text-muted-foreground">{{
+                                    option.description
+                                }}</span>
+                            </span>
+                        </label>
+                    </RadioGroup>
+                    <p
+                        id="meeting-provider-hint"
+                        class="text-xs text-muted-foreground"
+                    >
+                        En cualquier caso puedes cambiar el enlace de una
+                        asesoría desde Asesorías → detalle. El cliente solo ve
+                        el enlace cuando su pago está confirmado.
+                    </p>
+                    <InputError
+                        :message="consultation.errors.meeting_provider"
+                    />
+                </fieldset>
             </form>
             <template #footer>
                 <Button
@@ -454,7 +518,7 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                     "
                 >
                     <Spinner v-if="consultation.processing" />
-                    {{ consultation.processing ? 'Guardando…' : 'Guardar' }}
+                    {{ consultation.processing ? "Guardando…" : "Guardar" }}
                 </Button>
             </template>
         </SectionCard>
@@ -494,7 +558,7 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                     :disabled="leads.processing || !leads.isDirty"
                 >
                     <Spinner v-if="leads.processing" />
-                    {{ leads.processing ? 'Guardando…' : 'Guardar' }}
+                    {{ leads.processing ? "Guardando…" : "Guardar" }}
                 </Button>
             </template>
         </SectionCard>
@@ -537,7 +601,7 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                     :disabled="security.processing || !security.isDirty"
                 >
                     <Spinner v-if="security.processing" />
-                    {{ security.processing ? 'Guardando…' : 'Guardar' }}
+                    {{ security.processing ? "Guardando…" : "Guardar" }}
                 </Button>
             </template>
         </SectionCard>
@@ -604,7 +668,7 @@ function toggleChannel(value: string, checked: boolean | 'indeterminate') {
                     :disabled="seo.processing || !seo.isDirty"
                 >
                     <Spinner v-if="seo.processing" />
-                    {{ seo.processing ? 'Guardando…' : 'Guardar' }}
+                    {{ seo.processing ? "Guardando…" : "Guardar" }}
                 </Button>
             </template>
         </SectionCard>

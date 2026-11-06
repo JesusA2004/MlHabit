@@ -40,6 +40,9 @@ Route::prefix('agendar-visita')->name('public.visita.')->group(function () {
         ->middleware(['signed', 'throttle:60,1'])
         ->name('estado');
 
+    Route::get('pago/{payment:uuid}/calendario.ics', [VisitCheckoutController::class, 'calendar'])
+        ->middleware(['signed', 'throttle:30,1'])
+        ->name('calendario');
     // Enlace firmado que crm envía al prospecto (contrato docs/EQUIPO.md).
     Route::get('{lead:uuid}', [VisitCheckoutController::class, 'forLead'])
         ->middleware('signed')

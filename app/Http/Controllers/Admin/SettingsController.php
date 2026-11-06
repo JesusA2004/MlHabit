@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\SystemSettingsRequest;
 use App\Models\SiteSetting;
 use App\Services\ActivityLogger;
 use App\Services\Crm\ConsultationSettings;
+use App\Services\Crm\Meetings\ConfiguredMeetingProvider;
 use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -39,7 +40,7 @@ class SettingsController extends Controller
                     'currency' => (string) $commercial['currency'],
                 ],
                 // Toda asesoría tiene costo: se muestra el precio vigente (nunca 0).
-                'consultation' => [...Settings::group('consultation'), 'price' => ConsultationSettings::current()->price->amount],
+                'consultation' => [...Settings::group('consultation'), 'price' => ConsultationSettings::current()->price->amount, 'meeting_provider' => ConfiguredMeetingProvider::configuredKey()],
                 'leads' => Settings::group('leads'),
                 'security' => Settings::group('security'),
                 // Solo la verificación de buscadores; título y descripción viven en /admin/sitio.
@@ -52,6 +53,10 @@ class SettingsController extends Controller
                 ['value' => 'video', 'label' => 'Videollamada'],
                 ['value' => 'phone', 'label' => 'Llamada telefónica'],
                 ['value' => 'whatsapp', 'label' => 'WhatsApp'],
+            ],
+            'meetingProviders' => [
+                ['value' => 'jitsi', 'label' => 'Automático con Jitsi', 'description' => 'Al confirmarse el pago creamos una sala única de Jitsi Meet y el enlace llega al cliente por correo y en su pantalla de confirmación. Gratis y sin cuenta para el cliente.'],
+                ['value' => 'manual', 'label' => 'Manual', 'description' => 'El asesor pega el enlace (Meet, Zoom, Teams…) en cada asesoría desde Asesorías.'],
             ],
             'links' => [
                 'visitPolicy' => '/admin/visitas/politica',

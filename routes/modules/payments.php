@@ -52,4 +52,11 @@ Route::middleware(['auth', 'verified', 'staff'])
         Route::post('openpay/probar', [OpenpayDiagnosticsController::class, 'test'])
             ->middleware('throttle:10,1')
             ->name('openpay.probar');
+        // Credenciales cifradas en la base (prioridad sobre el .env).
+        Route::put('openpay/credenciales', [OpenpayDiagnosticsController::class, 'update'])
+            ->middleware('throttle:20,1')
+            ->name('openpay.credenciales');
+        Route::delete('openpay/credenciales', [OpenpayDiagnosticsController::class, 'reset'])
+            ->middleware('throttle:10,1')
+            ->name('openpay.credenciales.restablecer');
     });

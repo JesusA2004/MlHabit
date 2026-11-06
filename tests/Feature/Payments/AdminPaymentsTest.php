@@ -146,7 +146,9 @@ it('diagnóstico de Openpay: solo con openpay.diagnostics y sin revelar secretos
             ->where('configured', true)
             ->where('verification.code', 'ABC12345')
             ->where('webhookUrl', route('webhooks.openpay'))
-            ->where('variables.0.hint', '••••0001'));
+            ->where('canEdit', false)
+            ->where('credentials.merchantId.value', '••••0001')
+            ->where('credentials.merchantId.source', 'env'));
 
     $content = $response->getContent();
     expect($content)->not->toContain(VisitScenario::PRIVATE_KEY)

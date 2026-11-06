@@ -6,11 +6,12 @@ use App\Models\Consultation;
 use Illuminate\Container\Attributes\Bind;
 
 /**
- * Proveedor de videollamadas para asesorías. Hoy el asesor pega el enlace
- * a mano (ManualMeetingProvider); para integrar una plataforma (Google
- * Meet, Zoom, Teams…) basta con otra implementación y cambiar el binding.
+ * Proveedor de videollamadas para asesorías. ConfiguredMeetingProvider
+ * elige según Configuración → Asesorías: Jitsi automático (por defecto) o
+ * manual (el asesor pega el enlace). Para otra plataforma (Google Meet,
+ * Zoom, Teams…) basta otra implementación y agregarla a la opción.
  */
-#[Bind(ManualMeetingProvider::class)]
+#[Bind(ConfiguredMeetingProvider::class)]
 interface MeetingProvider
 {
     /** Identificador corto que se guarda en consultations.meeting_provider. */

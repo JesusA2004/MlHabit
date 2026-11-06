@@ -40,6 +40,8 @@ final class Settings
                 'booking_window_days' => 21,
                 'min_notice_hours' => 4,
                 'channels' => ['video', 'phone', 'whatsapp'],
+                // Videollamadas: 'jitsi' (enlace automático al confirmar el pago) o 'manual'.
+                'meeting_provider' => 'jitsi',
             ],
             'leads' => [
                 'follow_up_hours' => 24,
@@ -70,6 +72,12 @@ final class Settings
             'footer' => [
                 'text' => null,
                 'legal_name' => null,
+            ],
+            // Menú del sitio (Sitio web → Menú). null = el predeterminado
+            // (App\Services\Web\Navigation::defaults()).
+            'navigation' => [
+                'items' => null,
+                'cta' => null,
             ],
             'security' => [
                 // Si es true, el personal interno debe activar la verificación

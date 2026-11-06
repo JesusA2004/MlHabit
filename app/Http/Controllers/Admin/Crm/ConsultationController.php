@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Crm;
 
+use App\Enums\ConsultationChannel;
 use App\Enums\ConsultationOutcome;
 use App\Enums\ConsultationStatus;
 use App\Enums\Permission;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\Crm\ConsultationCheckoutUrls;
 use App\Services\Crm\ConsultationScheduler;
+use App\Services\Crm\Meetings\JitsiMeetingProvider;
 use App\Services\Scheduling\SlotUnavailableException;
 use App\Support\Crm\CrmLinks;
 use App\Support\Crm\Options;
@@ -111,6 +113,7 @@ class ConsultationController extends Controller
                 'outcomeNotes' => $consultation->outcome_notes,
                 'cancelReason' => $consultation->cancel_reason,
                 'meetingProvider' => $consultation->meeting_provider,
+                'generateMeetingUrl' => route('admin.asesorias.videollamada', $consultation),
                 'completedAt' => $consultation->completed_at?->toIso8601String(),
                 'cancelledAt' => $consultation->cancelled_at?->toIso8601String(),
                 'rescheduledFrom' => $consultation->rescheduledFrom ? ['uuid' => $consultation->rescheduledFrom->uuid, 'folio' => $consultation->rescheduledFrom->folio] : null,
@@ -231,10 +234,32 @@ class ConsultationController extends Controller
         ], ['meeting_url.url' => 'Pega un enlace completo que empiece con https://']);
 
         $consultation->fill($data);
-        $logger->logModelChanges('asesoria.actualizada', $consultation, ['meeting_url']);
+        if ($consultation->isDirty('meeting_url') && $consultation->meeting_url !== null) {
+            // Enlace pegado a mano: sustituye al automático.
+            $consultation->meeting_provider = JitsiMeetingProvider::isJitsiUrl($consultation->meeting_url) ? 'jitsi' : 'manual';
+        }
+        $logger->logModelChanges('asesoria.actualizada', $consultation, ['meeting_url', 'meeting_provider']);
         $consultation->save();
 
         return back()->with('success', 'Asesoría actualizada.');
+    }
+
+    /** Genera (o reemplaza) la sala de Jitsi de una videollamada. */
+    public function generateMeeting(Consultation $consultation, JitsiMeetingProvider $jitsi, ActivityLogger $logger): RedirectResponse
+    {
+        Gate::authorize('update', $consultation);
+
+        if ($consultation->channel !== ConsultationChannel::Video || ! $consultation->status->isActive()) {
+            return back()->with('error', 'Solo las videollamadas vigentes tienen enlace de reunión.');
+        }
+
+        $consultation->fill(['meeting_url' => $jitsi->create($consultation), 'meeting_provider' => $jitsi->key()]);
+        $logger->logModelChanges('asesoria.videollamada_generada', $consultation, ['meeting_url', 'meeting_provider']);
+        $consultation->save();
+
+        return back()->with('success', $consultation->paid_at !== null || $consultation->payment_id === null
+            ? 'Generamos un enlace nuevo de Jitsi. Compártelo con el cliente si ya tenía el anterior.'
+            : 'Generamos el enlace de Jitsi. El cliente lo verá cuando se confirme su pago.');
     }
 
     public function updateStatus(Request $request, Consultation $consultation): RedirectResponse

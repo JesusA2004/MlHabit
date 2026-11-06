@@ -21,12 +21,14 @@ use App\Services\Crm\ConsultationScheduler;
 use App\Services\Crm\CustomerMatcher;
 use App\Services\Scheduling\SlotUnavailableException;
 use App\Services\Web\Seo;
+use App\Support\Calendar\CalendarEvent;
 use App\Support\Crm\CrmLinks;
 use App\Support\Crm\Present;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -207,17 +209,31 @@ class ConsultationBookingController extends Controller
         [$from, $until] = $this->scheduler->window();
         $awaiting = $consultation->status->isAwaitingPayment();
         $canChange = $consultation->status->isBooked() && $consultation->starts_at->isFuture();
+        $confirmed = self::isConfirmedForCustomer($consultation);
+        $manage = CrmLinks::manageConsultation($consultation);
 
         return Inertia::render('public/asesoria/Show', [
             'seo' => app(Seo::class)->private('Tu asesoría'),
             'consultation' => [
                 ...Present::consultation($consultation),
+                // El enlace de la videollamada solo con el pago confirmado.
+                'meetingUrl' => $confirmed ? $consultation->meeting_url : null,
                 // El cliente solo ve el nombre de pila de su asesor.
                 'advisor' => ['name' => explode(' ', trim($consultation->advisor->name))[0]],
                 'durationMinutes' => (int) $consultation->starts_at->diffInMinutes($consultation->ends_at),
                 'holdExpiresAt' => $awaiting ? $consultation->hold_expires_at?->toIso8601String() : null,
+                'holdExpired' => $consultation->status === ConsultationStatus::Cancelled && $consultation->cancel_reason === ConsultationHoldExpirer::REASON,
                 'paidAt' => $consultation->paid_at?->toIso8601String(),
+                'needsReschedule' => $confirmed && $consultation->attention_reason !== null,
+                // "Unirse" se habilita 15 min antes y hasta 30 min después del final.
+                'joinOpensAt' => $consultation->starts_at->copy()->subMinutes(15)->toIso8601String(),
+                'joinClosesAt' => $consultation->ends_at->copy()->addMinutes(30)->toIso8601String(),
             ],
+            'calendar' => $confirmed && $consultation->ends_at->isFuture() ? [
+                'icsUrl' => URL::signedRoute('public.asesoria.calendario', ['consultation' => $consultation->uuid]),
+                'googleUrl' => CalendarEvent::forConsultation($consultation, $manage)->googleCalendarUrl(),
+            ] : null,
+            'portalUrl' => route('portal.citas'),
             'payment' => $payment ? $this->paymentProps($payment) : null,
             'payUrl' => $awaiting && $consultation->holdIsActive() && $payment !== null && ! $payment->status->isSettled() ? ConsultationCheckoutUrls::pay($consultation) : null,
             'receiptUrl' => $payment !== null && $payment->status->isSettled() ? ConsultationCheckoutUrls::receipt($payment) : null,
@@ -231,6 +247,31 @@ class ConsultationBookingController extends Controller
             'cancelUrl' => URL::signedRoute('public.asesoria.cancelar', ['consultation' => $consultation->uuid]),
             'bookAgainUrl' => $consultation->status === ConsultationStatus::Cancelled && $settings->enabled ? CrmLinks::bookConsultation($consultation->lead) : null,
         ]);
+    }
+
+    /** GET /asesoria/{uuid}/calendario.ics (firmado): solo de una asesoría pagada y vigente. */
+    public function calendar(Consultation $consultation): HttpResponse
+    {
+        $consultation = $this->latest($consultation);
+        abort_unless(self::isConfirmedForCustomer($consultation), 404);
+
+        $ics = CalendarEvent::forConsultation($consultation, CrmLinks::manageConsultation($consultation))->toIcs();
+
+        return response($ics, 200, [
+            'Content-Type' => 'text/calendar; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="asesoria-ml-habitat-'.$consultation->folio.'.ics"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
+     * ¿El cliente ya puede ver su cita como confirmada (enlace de la
+     * videollamada, calendario)? Agendada/confirmada y pagada; las asesorías
+     * antiguas sin cobro (payment_id nulo) también cuentan.
+     */
+    public static function isConfirmedForCustomer(Consultation $consultation): bool
+    {
+        return $consultation->status->isBooked() && ($consultation->paid_at !== null || $consultation->payment_id === null);
     }
 
     public function reschedule(BookConsultationRequest $request, Consultation $consultation): RedirectResponse

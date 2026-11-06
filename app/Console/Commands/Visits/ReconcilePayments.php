@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Payments\PaymentService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -18,6 +19,8 @@ use Throwable;
  */
 class ReconcilePayments extends Command
 {
+    public const HEARTBEAT = 'payments.reconcile.last_run';
+
     protected $signature = 'payments:reconcile {--minutes=5 : Antigüedad mínima del último cambio} {--limit=200}';
 
     protected $description = 'Concilia con Openpay los pagos en proceso o con reembolsos por confirmar';
@@ -51,6 +54,9 @@ class ReconcilePayments extends Command
                 $this->warn("{$payment->folio}: no se pudo conciliar ({$e->getMessage()})");
             }
         }
+
+        // Latido para la lista de activación de /admin/openpay (¿corre el programador?).
+        Cache::forever(self::HEARTBEAT, now()->toIso8601String());
 
         $this->info("Pagos revisados: {$candidates->count()} · con cambio de estado: {$changed}");
 

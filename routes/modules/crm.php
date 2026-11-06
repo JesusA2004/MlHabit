@@ -53,6 +53,10 @@ Route::middleware('signed')->group(function () {
     Route::post('asesoria/{consultation:uuid}/pago', [ConsultationBookingController::class, 'charge'])
         ->middleware('throttle:10,1')
         ->name('public.asesoria.cobrar');
+    // "Agregar a mi calendario" (.ics) de una asesoría pagada.
+    Route::get('asesoria/{consultation:uuid}/calendario.ics', [ConsultationBookingController::class, 'calendar'])
+        ->middleware('throttle:30,1')
+        ->name('public.asesoria.calendario');
     Route::post('asesoria/{consultation:uuid}/reprogramar', [ConsultationBookingController::class, 'reschedule'])
         ->middleware('throttle:crm-customer-actions')
         ->name('public.asesoria.reprogramar');
@@ -91,6 +95,7 @@ Route::middleware(['auth', 'verified', 'staff'])
         Route::post('asesorias/{consultation:uuid}/resultado', [ConsultationController::class, 'outcome'])->name('asesorias.resultado');
         Route::post('asesorias/{consultation:uuid}/reprogramar', [ConsultationController::class, 'reschedule'])->name('asesorias.reprogramar');
         Route::post('asesorias/{consultation:uuid}/cancelar', [ConsultationController::class, 'cancel'])->name('asesorias.cancelar');
+        Route::post('asesorias/{consultation:uuid}/videollamada', [ConsultationController::class, 'generateMeeting'])->middleware('throttle:20,1')->name('asesorias.videollamada');
         Route::post('asesorias/{consultation:uuid}/enlace-pago', [ConsultationController::class, 'sendPaymentLink'])->middleware('throttle:10,1')->name('asesorias.enlace-pago');
 
         // Precalificaciones

@@ -29,7 +29,7 @@ Fecha: 2026-10-27. Base técnica: `docs/pagos/OPENPAY-INVESTIGACION.md` (en adel
 | `OPENPAY_3DS_MODE`                                  | `auto` (por defecto), `always`, `never`                                                 | No                          |
 | `OPENPAY_TIMEOUT`                                   | Segundos por petición (30)                                                              | No                          |
 
-`/admin/openpay` muestra solo configurado/no configurado y los últimos 4 del merchant id.
+**Panel (prioridad sobre el `.env`):** `/admin/openpay` permite capturar merchant id, llaves, ambiente, usuario/contraseña del webhook y modo 3DS (permiso `openpay.diagnostics` + `settings.manage`). Se guardan en `site_settings.openpay_credentials` como un bloque cifrado con la APP_KEY (`OpenpayCredentialStore`); `OpenpayConfig` lee panel → `config('services.openpay')` → vacío, por lo que es compatible con `config:cache`. La llave privada y la contraseña del webhook nunca regresan al navegador (solo `••••` + últimos 4). La página incluye la lista "Pasos para activar cobros" (`OpenpaySetupStatus`), la prueba de conexión (GET `/charges?limit=1`, sin cargos), el estado de verificación del webhook y tarjetas de prueba. Guía para el dueño: `docs/pagos/GUIA-ACTIVACION-OPENPAY.md`.
 
 ## 3. Flujos
 

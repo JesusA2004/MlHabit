@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\User;
+use App\Services\Crm\Meetings\ConfiguredMeetingProvider;
 use App\Support\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -50,6 +51,7 @@ class SystemSettingsRequest extends FormRequest
                 'min_notice_hours' => ['required', 'integer', 'min:0', 'max:168'],
                 'channels' => ['present', 'array'],
                 'channels.*' => ['string', 'distinct', 'in:'.implode(',', self::CHANNELS)],
+                'meeting_provider' => ['sometimes', 'string', 'in:'.implode(',', ConfiguredMeetingProvider::OPTIONS)],
             ],
             'leads' => [
                 'follow_up_hours' => ['required', 'integer', 'min:1', 'max:336'],
@@ -126,6 +128,7 @@ class SystemSettingsRequest extends FormRequest
             'booking_window_days' => 'ventana de reserva',
             'min_notice_hours' => 'anticipación mínima',
             'channels' => 'canales',
+            'meeting_provider' => 'videollamadas',
             'follow_up_hours' => 'horas para el primer contacto',
             'require_2fa_for_staff' => 'verificación en dos pasos obligatoria',
             'google_site_verification' => 'código de verificación de Google',
@@ -172,6 +175,7 @@ class SystemSettingsRequest extends FormRequest
                 'booking_window_days' => (int) $data['booking_window_days'],
                 'min_notice_hours' => (int) $data['min_notice_hours'],
                 'channels' => array_values(array_intersect(self::CHANNELS, (array) $data['channels'])),
+                'meeting_provider' => (string) ($data['meeting_provider'] ?? ConfiguredMeetingProvider::configuredKey()),
             ],
             'leads' => [
                 'follow_up_hours' => (int) $data['follow_up_hours'],
