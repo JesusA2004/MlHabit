@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from "@inertiajs/vue3";
+import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     CircleAlert,
     CircleCheck,
@@ -14,38 +14,38 @@ import {
     RotateCcw,
     Webhook,
     WandSparkles,
-} from "@lucide/vue";
-import type { Component } from "vue";
-import { computed, ref } from "vue";
-import { toast } from "vue-sonner";
-import ConfirmDialog from "@/components/ds/ConfirmDialog.vue";
-import DateText from "@/components/ds/DateText.vue";
-import FormStatus from "@/components/ds/FormStatus.vue";
-import PageContainer from "@/components/ds/PageContainer.vue";
-import PageHeader from "@/components/ds/PageHeader.vue";
-import SectionCard from "@/components/ds/SectionCard.vue";
-import StatusBadge from "@/components/ds/StatusBadge.vue";
-import type { Tone } from "@/components/ds/tones";
-import InputError from "@/components/InputError.vue";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
+} from '@lucide/vue';
+import type { Component } from 'vue';
+import { computed, ref } from 'vue';
+import { toast } from 'vue-sonner';
+import ConfirmDialog from '@/components/ds/ConfirmDialog.vue';
+import DateText from '@/components/ds/DateText.vue';
+import FormStatus from '@/components/ds/FormStatus.vue';
+import PageContainer from '@/components/ds/PageContainer.vue';
+import PageHeader from '@/components/ds/PageHeader.vue';
+import SectionCard from '@/components/ds/SectionCard.vue';
+import StatusBadge from '@/components/ds/StatusBadge.vue';
+import type { Tone } from '@/components/ds/tones';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 type Option = { value: string; label: string; tone: string };
-type Source = "panel" | "env" | null;
+type Source = 'panel' | 'env' | null;
 type Step = {
     key: string;
     title: string;
     description: string;
-    status: "done" | "pending" | "warning" | "optional";
+    status: 'done' | 'pending' | 'warning' | 'optional';
 };
 
 const props = defineProps<{
-    environment: "sandbox" | "production";
+    environment: 'sandbox' | 'production';
     canEdit: boolean;
     configured: boolean;
     webhookConfigured: boolean;
@@ -67,10 +67,10 @@ const props = defineProps<{
     webhookEvents: string[];
     webhook: {
         state:
-            | "missing_credentials"
-            | "not_registered"
-            | "awaiting_verification"
-            | "verified";
+            | 'missing_credentials'
+            | 'not_registered'
+            | 'awaiting_verification'
+            | 'verified';
         code: string | null;
         codeReceivedAt: string | null;
         lastEventAt: string | null;
@@ -107,40 +107,40 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: "Panel", href: "/admin" },
-            { title: "Openpay", href: "/admin/openpay" },
+            { title: 'Panel', href: '/admin' },
+            { title: 'Openpay', href: '/admin/openpay' },
         ],
     },
 });
 
 const tone = (o: { tone?: string } | null | undefined) =>
-    (o?.tone ?? "neutral") as Tone;
+    (o?.tone ?? 'neutral') as Tone;
 
-const stepIcon: Record<Step["status"], Component> = {
+const stepIcon: Record<Step['status'], Component> = {
     done: CircleCheck,
     pending: CircleDashed,
     warning: CircleAlert,
     optional: CircleMinus,
 };
-const stepClass: Record<Step["status"], string> = {
-    done: "text-success",
-    pending: "text-muted-foreground",
-    warning: "text-warning",
-    optional: "text-muted-foreground/70",
+const stepClass: Record<Step['status'], string> = {
+    done: 'text-success',
+    pending: 'text-muted-foreground',
+    warning: 'text-warning',
+    optional: 'text-muted-foreground/70',
 };
-const stepLabel: Record<Step["status"], string> = {
-    done: "Listo",
-    pending: "Pendiente",
-    warning: "Revisar",
-    optional: "Opcional",
+const stepLabel: Record<Step['status'], string> = {
+    done: 'Listo',
+    pending: 'Pendiente',
+    warning: 'Revisar',
+    optional: 'Opcional',
 };
 
 const sourceText = (s: Source) =>
-    s === "panel"
-        ? "Guardado en el panel"
-        : s === "env"
-          ? "Tomado del archivo .env"
-          : "Sin configurar";
+    s === 'panel'
+        ? 'Guardado en el panel'
+        : s === 'env'
+          ? 'Tomado del archivo .env'
+          : 'Sin configurar';
 
 // ---------------------------------------------------------------- Credenciales
 
@@ -150,15 +150,15 @@ const replacePassword = ref(!props.credentials.webhookPassword.masked);
 const form = useForm({
     merchant_id: props.credentials.merchantId.panelValue,
     public_key: props.credentials.publicKey.panelValue,
-    private_key: "",
+    private_key: '',
     webhook_user: props.credentials.webhookUser.panelValue,
-    webhook_password: "",
+    webhook_password: '',
     production: props.credentials.production.value,
     three_ds_mode: props.credentials.threeDsMode.value,
 });
 
 const switchingToProduction = computed(
-    () => form.production && props.environment !== "production",
+    () => form.production && props.environment !== 'production',
 );
 
 function save() {
@@ -183,7 +183,7 @@ function save() {
     }).put(props.urls.update, {
         preserveScroll: true,
         onSuccess: () => {
-            form.reset("private_key", "webhook_password");
+            form.reset('private_key', 'webhook_password');
             replacePrivate.value = !props.credentials.privateKey.masked;
             replacePassword.value = !props.credentials.webhookPassword.masked;
         },
@@ -192,20 +192,20 @@ function save() {
 
 function generatePassword() {
     const alphabet =
-        "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
     const bytes = new Uint32Array(32);
     crypto.getRandomValues(bytes);
     form.webhook_password = Array.from(
         bytes,
         (b) => alphabet[b % alphabet.length],
-    ).join("");
+    ).join('');
     replacePassword.value = true;
 }
 
 function generateUser() {
     const bytes = new Uint8Array(4);
     crypto.getRandomValues(bytes);
-    form.webhook_user = `mlhabitat-${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+    form.webhook_user = `mlhabitat-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 const resetOpen = ref(false);
@@ -215,7 +215,7 @@ function reset(): Promise<void> {
         router.delete(props.urls.reset, {
             preserveScroll: true,
             onSuccess: () => resolve(),
-            onError: () => reject(new Error("No se pudo restablecer.")),
+            onError: () => reject(new Error('No se pudo restablecer.')),
         });
     });
 }
@@ -242,21 +242,21 @@ async function copy(text: string, label: string) {
         toast.success(`${label} copiado.`);
     } catch {
         toast.error(
-            "No se pudo copiar. Selecciona el texto y cópialo manualmente.",
+            'No se pudo copiar. Selecciona el texto y cópialo manualmente.',
         );
     }
 }
 
 const webhookBadge = computed<{ tone: Tone; label: string }>(() => {
     switch (props.webhook.state) {
-        case "verified":
-            return { tone: "success", label: "Verificado" };
-        case "awaiting_verification":
-            return { tone: "warning", label: "Falta verificar" };
-        case "missing_credentials":
-            return { tone: "danger", label: "Sin credenciales" };
+        case 'verified':
+            return { tone: 'success', label: 'Verificado' };
+        case 'awaiting_verification':
+            return { tone: 'warning', label: 'Falta verificar' };
+        case 'missing_credentials':
+            return { tone: 'danger', label: 'Sin credenciales' };
         default:
-            return { tone: "neutral", label: "No registrado" };
+            return { tone: 'neutral', label: 'No registrado' };
     }
 });
 
@@ -676,8 +676,8 @@ const progressPercent = computed(() =>
                             <Spinner v-if="form.processing" />
                             {{
                                 form.processing
-                                    ? "Guardando…"
-                                    : "Guardar credenciales"
+                                    ? 'Guardando…'
+                                    : 'Guardar credenciales'
                             }}
                         </Button>
                     </div>
@@ -876,9 +876,9 @@ const progressPercent = computed(() =>
                             rel="noopener"
                             class="inline-flex items-center gap-1 underline underline-offset-4"
                             >({{
-                                environment === "production"
-                                    ? "producción"
-                                    : "sandbox"
+                                environment === 'production'
+                                    ? 'producción'
+                                    : 'sandbox'
                             }}) <ExternalLink class="size-3" aria-hidden="true"
                         /></a>
                         y ve a

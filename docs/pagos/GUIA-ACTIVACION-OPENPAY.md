@@ -18,11 +18,11 @@ Todo se configura en el panel, en **Administración → Openpay** (`https://TU-D
 
 En el dashboard de sandbox busca la sección de **credenciales / llaves de API**. Verás tres datos:
 
-| Dato en Openpay | Cómo se ve       | Dónde va en el panel        |
-| --------------- | ---------------- | --------------------------- |
-| ID (comercio)   | `m` + letras     | **ID de comercio**          |
-| Llave privada   | empieza con `sk_` | **Llave privada**          |
-| Llave pública   | empieza con `pk_` | **Llave pública**          |
+| Dato en Openpay | Cómo se ve        | Dónde va en el panel |
+| --------------- | ----------------- | -------------------- |
+| ID (comercio)   | `m` + letras      | **ID de comercio**   |
+| Llave privada   | empieza con `sk_` | **Llave privada**    |
+| Llave pública   | empieza con `pk_` | **Llave pública**    |
 
 ## Paso 3. Pegar las llaves en el panel
 
@@ -33,7 +33,7 @@ En el dashboard de sandbox busca la sección de **credenciales / llaves de API**
     - **3D Secure:** deja **Automático (recomendado)**. Solo pide la autenticación del banco cuando el antifraude de Openpay lo necesita.
 3. En la misma sección, en **Usuario del webhook** y **Contraseña del webhook**, pulsa el botón de la varita para generar valores seguros. **Copia los dos** en un lugar seguro (los necesitas en el paso 5; la contraseña ya no se vuelve a mostrar).
 4. Pulsa **Guardar credenciales**.
-5. Pulsa **Probar conexión** (arriba a la derecha). Debe decir *"Conexión correcta: Openpay aceptó las credenciales."* Esta prueba solo consulta; no cobra nada.
+5. Pulsa **Probar conexión** (arriba a la derecha). Debe decir _"Conexión correcta: Openpay aceptó las credenciales."_ Esta prueba solo consulta; no cobra nada.
 
 > Lo que guardas en el panel tiene prioridad sobre el archivo `.env` del servidor. Si algún día quieres volver a usar solo el `.env`, usa **Usar solo el .env**.
 
@@ -69,13 +69,13 @@ El webhook es la dirección a la que Openpay nos avisa de pagos, reembolsos y co
 1. Abre el sitio como si fueras cliente y agenda una asesoría (o una visita técnica).
 2. En la pantalla de pago usa una tarjeta de prueba (también están en el panel, sección **Tarjetas de prueba**). Vencimiento: cualquier fecha futura. CVV: cualquier número de 3 dígitos (4 en American Express).
 
-| Tarjeta               | Resultado                         |
-| --------------------- | --------------------------------- |
-| 4111 1111 1111 1111   | Aprobada (Visa)                   |
-| 5555 5555 5555 4444   | Aprobada (Mastercard)             |
-| 4222 2222 2222 2220   | Rechazada por el banco            |
-| 4444 4444 4444 4448   | Fondos insuficientes              |
-| 5454 5454 5454 5454   | Pide autenticación del banco (3D Secure) |
+| Tarjeta             | Resultado                                |
+| ------------------- | ---------------------------------------- |
+| 4111 1111 1111 1111 | Aprobada (Visa)                          |
+| 5555 5555 5555 4444 | Aprobada (Mastercard)                    |
+| 4222 2222 2222 2220 | Rechazada por el banco                   |
+| 4444 4444 4444 4448 | Fondos insuficientes                     |
+| 5454 5454 5454 5454 | Pide autenticación del banco (3D Secure) |
 
 3. Revisa que:
     - Aparezca la pantalla **"¡Listo! Tu asesoría está confirmada"** con folio, fecha y hora, asesor, monto pagado, últimos 4 de la tarjeta, botones de **Agregar a mi calendario** y **Ver comprobante**.
@@ -125,18 +125,18 @@ El panel te avisa: los pasos **"Cola de trabajos en marcha"** y **"Tareas progra
 
 ## Problemas frecuentes
 
-| Lo que ves | Qué significa | Qué hacer |
-| --- | --- | --- |
-| "Credenciales rechazadas" al probar conexión | La llave privada no corresponde al ID o al ambiente | Revisa que las tres llaves sean del mismo ambiente (sandbox con sandbox, producción con producción) y que el interruptor de producción coincida |
-| "El merchant id no existe en este ambiente" | ID de sandbox con interruptor en producción (o al revés) | Corrige el interruptor de producción o el ID |
-| "Se configuró una llave pública donde se requiere la privada" | Se pegó la `pk_` en el campo de la privada | Pega la `sk_` en **Llave privada** |
-| La pantalla de pago dice que los pagos con tarjeta no están disponibles | Faltan llaves | Completa el paso 3 |
-| No aparece el código de verificación del webhook | Openpay no pudo llegar al sitio, o el usuario/contraseña no coinciden | Revisa que el sitio esté publicado con HTTPS, que la URL sea exacta y que el usuario y la contraseña sean idénticos en ambos lados |
-| "Hay N trabajos esperando más de 5 minutos" | La cola no está corriendo | Arranca `php artisan queue:work` (paso 7.2) |
-| "Aún no detectamos el programador" | El cron de `schedule:run` no está | Agrega el cron del paso 7.3 |
-| El cliente pagó pero la página dice "Estamos confirmando tu pago" mucho tiempo | El banco tardó (3D Secure) o se perdió el aviso | No cobres de nuevo. La conciliación automática (cada 5 min) lo resuelve; también puedes pulsar **Conciliar** en **Pagos → detalle** |
-| La videollamada no abre o pide iniciar sesión | meet.jit.si pide que el primer participante (el asesor) inicie sesión | El asesor entra primero con Google/GitHub; si prefieres otra plataforma, cambia a **Manual** y pega tu enlace |
-| Hay credenciales que "ya no se pueden leer" | Se cambió la `APP_KEY` del servidor | Vuelve a capturar las llaves en el panel |
-| El correo de confirmación no llega | Cola detenida o correo del servidor mal configurado | Revisa el paso 7.2 y la configuración de correo (`MAIL_*`) |
+| Lo que ves                                                                     | Qué significa                                                         | Qué hacer                                                                                                                                       |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Credenciales rechazadas" al probar conexión                                   | La llave privada no corresponde al ID o al ambiente                   | Revisa que las tres llaves sean del mismo ambiente (sandbox con sandbox, producción con producción) y que el interruptor de producción coincida |
+| "El merchant id no existe en este ambiente"                                    | ID de sandbox con interruptor en producción (o al revés)              | Corrige el interruptor de producción o el ID                                                                                                    |
+| "Se configuró una llave pública donde se requiere la privada"                  | Se pegó la `pk_` en el campo de la privada                            | Pega la `sk_` en **Llave privada**                                                                                                              |
+| La pantalla de pago dice que los pagos con tarjeta no están disponibles        | Faltan llaves                                                         | Completa el paso 3                                                                                                                              |
+| No aparece el código de verificación del webhook                               | Openpay no pudo llegar al sitio, o el usuario/contraseña no coinciden | Revisa que el sitio esté publicado con HTTPS, que la URL sea exacta y que el usuario y la contraseña sean idénticos en ambos lados              |
+| "Hay N trabajos esperando más de 5 minutos"                                    | La cola no está corriendo                                             | Arranca `php artisan queue:work` (paso 7.2)                                                                                                     |
+| "Aún no detectamos el programador"                                             | El cron de `schedule:run` no está                                     | Agrega el cron del paso 7.3                                                                                                                     |
+| El cliente pagó pero la página dice "Estamos confirmando tu pago" mucho tiempo | El banco tardó (3D Secure) o se perdió el aviso                       | No cobres de nuevo. La conciliación automática (cada 5 min) lo resuelve; también puedes pulsar **Conciliar** en **Pagos → detalle**             |
+| La videollamada no abre o pide iniciar sesión                                  | meet.jit.si pide que el primer participante (el asesor) inicie sesión | El asesor entra primero con Google/GitHub; si prefieres otra plataforma, cambia a **Manual** y pega tu enlace                                   |
+| Hay credenciales que "ya no se pueden leer"                                    | Se cambió la `APP_KEY` del servidor                                   | Vuelve a capturar las llaves en el panel                                                                                                        |
+| El correo de confirmación no llega                                             | Cola detenida o correo del servidor mal configurado                   | Revisa el paso 7.2 y la configuración de correo (`MAIL_*`)                                                                                      |
 
 Detalles técnicos para el programador: `docs/pagos/OPENPAY-INTEGRACION.md` y `docs/pagos/OPENPAY-INVESTIGACION.md`.

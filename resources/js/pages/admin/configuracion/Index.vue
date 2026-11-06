@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from "@inertiajs/vue3";
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     ArrowUpRight,
     BadgePercent,
@@ -9,21 +9,21 @@ import {
     SearchCheck,
     ShieldCheck,
     UserRoundPlus,
-} from "@lucide/vue";
-import { computed } from "vue";
-import PageContainer from "@/components/ds/PageContainer.vue";
-import PageHeader from "@/components/ds/PageHeader.vue";
-import SectionCard from "@/components/ds/SectionCard.vue";
-import InputError from "@/components/InputError.vue";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-import configuracion from "@/routes/admin/configuracion";
+} from '@lucide/vue';
+import { computed } from 'vue';
+import PageContainer from '@/components/ds/PageContainer.vue';
+import PageHeader from '@/components/ds/PageHeader.vue';
+import SectionCard from '@/components/ds/SectionCard.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import configuracion from '@/routes/admin/configuracion';
 
 type Props = {
     settings: {
@@ -61,8 +61,8 @@ const props = defineProps<Props>();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: "Panel", href: "/admin" },
-            { title: "Configuración", href: "/admin/configuracion" },
+            { title: 'Panel', href: '/admin' },
+            { title: 'Configuración', href: '/admin/configuracion' },
         ],
     },
 });
@@ -75,11 +75,11 @@ const consultation = useForm({
 // Toda asesoría tiene costo: aviso inmediato si el precio no es positivo (el backend también lo valida).
 const priceInvalid = computed(() => {
     const value = Number(
-        String(consultation.price ?? "").replace(/[$,\s]/g, ""),
+        String(consultation.price ?? '').replace(/[$,\s]/g, ''),
     );
 
     return (
-        String(consultation.price ?? "").trim() !== "" &&
+        String(consultation.price ?? '').trim() !== '' &&
         (!Number.isFinite(value) || value <= 0)
     );
 });
@@ -102,7 +102,7 @@ const save = (
         onSuccess: () => form.defaults(),
     });
 
-function toggleChannel(value: string, checked: boolean | "indeterminate") {
+function toggleChannel(value: string, checked: boolean | 'indeterminate') {
     const set = new Set(consultation.channels);
 
     if (checked === true) {
@@ -263,7 +263,7 @@ function toggleChannel(value: string, checked: boolean | "indeterminate") {
                     :disabled="commercial.processing || !commercial.isDirty"
                 >
                     <Spinner v-if="commercial.processing" />
-                    {{ commercial.processing ? "Guardando…" : "Guardar" }}
+                    {{ commercial.processing ? 'Guardando…' : 'Guardar' }}
                 </Button>
             </template>
         </SectionCard>
@@ -518,7 +518,7 @@ function toggleChannel(value: string, checked: boolean | "indeterminate") {
                     "
                 >
                     <Spinner v-if="consultation.processing" />
-                    {{ consultation.processing ? "Guardando…" : "Guardar" }}
+                    {{ consultation.processing ? 'Guardando…' : 'Guardar' }}
                 </Button>
             </template>
         </SectionCard>
@@ -558,7 +558,7 @@ function toggleChannel(value: string, checked: boolean | "indeterminate") {
                     :disabled="leads.processing || !leads.isDirty"
                 >
                     <Spinner v-if="leads.processing" />
-                    {{ leads.processing ? "Guardando…" : "Guardar" }}
+                    {{ leads.processing ? 'Guardando…' : 'Guardar' }}
                 </Button>
             </template>
         </SectionCard>
@@ -601,7 +601,7 @@ function toggleChannel(value: string, checked: boolean | "indeterminate") {
                     :disabled="security.processing || !security.isDirty"
                 >
                     <Spinner v-if="security.processing" />
-                    {{ security.processing ? "Guardando…" : "Guardar" }}
+                    {{ security.processing ? 'Guardando…' : 'Guardar' }}
                 </Button>
             </template>
         </SectionCard>
@@ -668,7 +668,7 @@ function toggleChannel(value: string, checked: boolean | "indeterminate") {
                     :disabled="seo.processing || !seo.isDirty"
                 >
                     <Spinner v-if="seo.processing" />
-                    {{ seo.processing ? "Guardando…" : "Guardar" }}
+                    {{ seo.processing ? 'Guardando…' : 'Guardar' }}
                 </Button>
             </template>
         </SectionCard>

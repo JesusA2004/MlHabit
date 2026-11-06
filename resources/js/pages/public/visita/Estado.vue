@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
-import { ReceiptText } from "@lucide/vue";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import BookingConfirmation from "@/components/payments/BookingConfirmation.vue";
-import PaymentStateNotice from "@/components/payments/PaymentStateNotice.vue";
-import { Button } from "@/components/ui/button";
-import { formatMoney } from "@/lib/format";
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ReceiptText } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import BookingConfirmation from '@/components/payments/BookingConfirmation.vue';
+import PaymentStateNotice from '@/components/payments/PaymentStateNotice.vue';
+import { Button } from '@/components/ui/button';
+import { formatMoney } from '@/lib/format';
 
 type Option = { value: string; label: string; tone: string };
 
@@ -41,23 +41,23 @@ const props = defineProps<{
     portalUrl?: string | null;
 }>();
 
-const SETTLED = ["paid", "partially_refunded", "refunded", "disputed"];
+const SETTLED = ['paid', 'partially_refunded', 'refunded', 'disputed'];
 
 /**
  * El estado SIEMPRE viene del backend: "confirmando" sondea el servidor
  * (que concilia con Openpay) y nunca muestra éxito por su cuenta.
  */
 const state = computed(() => {
-    if (SETTLED.includes(props.payment.status.value)) return "paid";
-    if (props.payment.status.value === "processing") return "processing";
+    if (SETTLED.includes(props.payment.status.value)) return 'paid';
+    if (props.payment.status.value === 'processing') return 'processing';
     if (
-        props.payment.status.value === "cancelled" ||
-        props.visit.status.value === "expired"
+        props.payment.status.value === 'cancelled' ||
+        props.visit.status.value === 'expired'
     )
-        return "expired";
-    if (props.payment.status.value === "failed") return "failed";
+        return 'expired';
+    if (props.payment.status.value === 'failed') return 'failed';
 
-    return "pending";
+    return 'pending';
 });
 
 const polls = ref(0);
@@ -67,14 +67,14 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 function poll() {
     clearTimeout(timer);
 
-    if (state.value !== "processing" || polls.value >= MAX_POLLS) {
+    if (state.value !== 'processing' || polls.value >= MAX_POLLS) {
         return;
     }
 
     timer = setTimeout(() => {
         polls.value++;
         router.reload({
-            only: ["visit", "payment", "receiptUrl", "payUrl", "calendar"],
+            only: ['visit', 'payment', 'receiptUrl', 'payUrl', 'calendar'],
             onFinish: poll,
         });
     }, 4000);
@@ -86,17 +86,17 @@ onBeforeUnmount(() => clearTimeout(timer));
 
 const nextSteps = computed(() => {
     const steps = [
-        "Te enviamos la confirmación, el comprobante y el archivo de calendario por correo.",
+        'Te enviamos la confirmación, el comprobante y el archivo de calendario por correo.',
         props.visit.technicianFirstName
             ? `Un día antes te recordamos la cita; ${props.visit.technicianFirstName} llegará dentro de la ventana indicada.`
-            : "Un día antes te recordamos la cita y el nombre de quien te visitará.",
-        "Ten despejado el espacio a medir y, si puedes, fotos o planos a la mano.",
-        "Con las medidas preparamos tu diseño y tu cotización.",
+            : 'Un día antes te recordamos la cita y el nombre de quien te visitará.',
+        'Ten despejado el espacio a medir y, si puedes, fotos o planos a la mano.',
+        'Con las medidas preparamos tu diseño y tu cotización.',
     ];
 
     if (props.visit.isCreditable && Number(props.visit.creditAmount) > 0) {
         steps.push(
-            `Si contratas tu proyecto, abonamos ${formatMoney(props.visit.creditAmount)} a tu anticipo${props.visit.creditValidityDays ? ` (vigente ${props.visit.creditValidityDays} días)` : ""}.`,
+            `Si contratas tu proyecto, abonamos ${formatMoney(props.visit.creditAmount)} a tu anticipo${props.visit.creditValidityDays ? ` (vigente ${props.visit.creditValidityDays} días)` : ''}.`,
         );
     }
 

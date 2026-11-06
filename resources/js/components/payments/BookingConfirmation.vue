@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from "@inertiajs/vue3";
+import { Link } from '@inertiajs/vue3';
 import {
     CalendarCheck,
     CalendarPlus,
@@ -14,13 +14,13 @@ import {
     ReceiptText,
     UserRound,
     Video,
-} from "@lucide/vue";
-import type { Component } from "vue";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import SuccessMark from "@/components/web/visual/SuccessMark.vue";
-import { formatMoney, TIME_ZONE } from "@/lib/format";
-import { cn } from "@/lib/utils";
+} from '@lucide/vue';
+import type { Component } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Button } from '@/components/ui/button';
+import SuccessMark from '@/components/web/visual/SuccessMark.vue';
+import { formatMoney, TIME_ZONE } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 /**
  * Pantalla de éxito tras un pago confirmado POR EL BACKEND (asesorías y
@@ -41,7 +41,7 @@ const props = withDefaults(
         personName?: string | null;
         /** Medio (videollamada, llamada…) o domicilio. */
         place?: {
-            icon: "video" | "phone" | "whatsapp" | "map";
+            icon: 'video' | 'phone' | 'whatsapp' | 'map';
             label: string;
             value: string;
         } | null;
@@ -86,19 +86,19 @@ const placeIcons: Record<string, Component> = {
 const tz = { timeZone: TIME_ZONE } as const;
 
 const dayText = computed(() =>
-    new Intl.DateTimeFormat("es-MX", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
+    new Intl.DateTimeFormat('es-MX', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
         ...tz,
     }).format(new Date(props.startsAt)),
 );
 
 const timeText = computed(() => {
-    const f = new Intl.DateTimeFormat("es-MX", {
-        hour: "numeric",
-        minute: "2-digit",
+    const f = new Intl.DateTimeFormat('es-MX', {
+        hour: 'numeric',
+        minute: '2-digit',
         ...tz,
     });
 
@@ -115,31 +115,31 @@ onMounted(() => {
 });
 onBeforeUnmount(() => clearInterval(clock));
 
-const meetingState = computed<"early" | "open" | "closed" | null>(() => {
+const meetingState = computed<'early' | 'open' | 'closed' | null>(() => {
     if (!props.meeting) {
         return null;
     }
 
     if (now.value < new Date(props.meeting.opensAt).getTime()) {
-        return "early";
+        return 'early';
     }
 
     return now.value <= new Date(props.meeting.closesAt).getTime()
-        ? "open"
-        : "closed";
+        ? 'open'
+        : 'closed';
 });
 
 const opensText = computed(() =>
     props.meeting
-        ? new Intl.DateTimeFormat("es-MX", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              hour: "numeric",
-              minute: "2-digit",
+        ? new Intl.DateTimeFormat('es-MX', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              hour: 'numeric',
+              minute: '2-digit',
               ...tz,
           }).format(new Date(props.meeting.opensAt))
-        : "",
+        : '',
 );
 
 const cardText = computed(() => {
@@ -150,7 +150,7 @@ const cardText = computed(() => {
     const brand = props.payment.cardBrand
         ? props.payment.cardBrand.charAt(0).toUpperCase() +
           props.payment.cardBrand.slice(1)
-        : "Tarjeta";
+        : 'Tarjeta';
 
     return `${brand} •••• ${props.payment.cardLast4}`;
 });
@@ -294,11 +294,11 @@ const cardText = computed(() => {
                     <template v-if="meeting">
                         <p class="font-semibold">
                             {{
-                                meetingState === "open"
-                                    ? "Tu videollamada está lista"
-                                    : meetingState === "closed"
-                                      ? "La videollamada ya terminó"
-                                      : "Videollamada con enlace propio"
+                                meetingState === 'open'
+                                    ? 'Tu videollamada está lista'
+                                    : meetingState === 'closed'
+                                      ? 'La videollamada ya terminó'
+                                      : 'Videollamada con enlace propio'
                             }}
                         </p>
                         <p class="mt-0.5 text-muted-foreground">

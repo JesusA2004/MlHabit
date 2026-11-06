@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { Link } from "@inertiajs/vue3";
+import { Link } from '@inertiajs/vue3';
 import {
     CircleAlert,
     Clock,
     Loader2,
     ShieldCheck,
     TimerOff,
-} from "@lucide/vue";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+} from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 /**
  * Estados del pago que NO son éxito (asesorías y visitas):
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  */
 const props = withDefaults(
     defineProps<{
-        state: "processing" | "stalled" | "failed" | "expired";
+        state: 'processing' | 'stalled' | 'failed' | 'expired';
         eyebrow?: string | null;
         message?: string | null;
         holdExpiresAt?: string | null;
@@ -35,7 +35,7 @@ const props = withDefaults(
         holdExpiresAt: null,
         retryUrl: null,
         restartUrl: null,
-        restartLabel: "Elegir otro horario",
+        restartLabel: 'Elegir otro horario',
     },
 );
 
@@ -61,34 +61,34 @@ const countdown = computed(() => {
     }
 
     const h = Math.floor(total / 3600);
-    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 
     return h > 0 ? `${h} h ${mmss}` : mmss;
 });
 
 const copy = computed(() => {
     switch (props.state) {
-        case "processing":
+        case 'processing':
             return {
-                title: "Estamos confirmando tu pago",
-                body: "Tu banco está respondiendo. No cierres esta página ni vuelvas a pagar: se actualiza sola en unos segundos.",
+                title: 'Estamos confirmando tu pago',
+                body: 'Tu banco está respondiendo. No cierres esta página ni vuelvas a pagar: se actualiza sola en unos segundos.',
             };
-        case "stalled":
+        case 'stalled':
             return {
-                title: "La confirmación está tardando",
-                body: "No vuelvas a pagar. En cuanto el banco confirme te enviaremos un correo; si ya se aprobó, no se hará un segundo cargo.",
+                title: 'La confirmación está tardando',
+                body: 'No vuelvas a pagar. En cuanto el banco confirme te enviaremos un correo; si ya se aprobó, no se hará un segundo cargo.',
             };
-        case "failed":
+        case 'failed':
             return {
-                title: "No se completó el pago",
+                title: 'No se completó el pago',
                 body:
                     props.message ??
-                    "El banco no autorizó el cargo. No se realizó ningún cobro.",
+                    'El banco no autorizó el cargo. No se realizó ningún cobro.',
             };
         default:
             return {
-                title: "Tu apartado venció",
-                body: "El horario se liberó y no se realizó ningún cargo. Es posible que siga disponible: elígelo de nuevo.",
+                title: 'Tu apartado venció',
+                body: 'El horario se liberó y no se realizó ningún cargo. Es posible que siga disponible: elígelo de nuevo.',
             };
     }
 });

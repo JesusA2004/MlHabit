@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from "@inertiajs/vue3";
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     CalendarClock,
     CalendarX,
@@ -15,19 +15,19 @@ import {
     Timer,
     UserRound,
     Video,
-} from "@lucide/vue";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import ConsultationSlotPicker from "@/components/crm/ConsultationSlotPicker.vue";
-import BookingConfirmation from "@/components/payments/BookingConfirmation.vue";
-import PaymentStateNotice from "@/components/payments/PaymentStateNotice.vue";
-import ConfirmDialog from "@/components/ds/ConfirmDialog.vue";
-import StatusBadge from "@/components/ds/StatusBadge.vue";
-import type { Tone } from "@/components/ds/tones";
-import InputError from "@/components/InputError.vue";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { formatMoney, TIME_ZONE } from "@/lib/format";
-import { cn } from "@/lib/utils";
+} from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import ConsultationSlotPicker from '@/components/crm/ConsultationSlotPicker.vue';
+import BookingConfirmation from '@/components/payments/BookingConfirmation.vue';
+import PaymentStateNotice from '@/components/payments/PaymentStateNotice.vue';
+import ConfirmDialog from '@/components/ds/ConfirmDialog.vue';
+import StatusBadge from '@/components/ds/StatusBadge.vue';
+import type { Tone } from '@/components/ds/tones';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { formatMoney, TIME_ZONE } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 type Opt = { value: string; label: string; tone?: Tone };
 
@@ -78,18 +78,18 @@ const props = defineProps<{
 
 const tz = { timeZone: TIME_ZONE } as const;
 const dayText = computed(() =>
-    new Intl.DateTimeFormat("es-MX", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
+    new Intl.DateTimeFormat('es-MX', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
         ...tz,
     }).format(new Date(props.consultation.startsAt)),
 );
 const timeText = computed(() => {
-    const f = new Intl.DateTimeFormat("es-MX", {
-        hour: "numeric",
-        minute: "2-digit",
+    const f = new Intl.DateTimeFormat('es-MX', {
+        hour: 'numeric',
+        minute: '2-digit',
         ...tz,
     });
 
@@ -106,40 +106,40 @@ const channelIcon = computed(
 // ---------------------------------------------------------------- Pago
 
 const awaitingPayment = computed(
-    () => props.consultation.status.value === "pending_payment",
+    () => props.consultation.status.value === 'pending_payment',
 );
 const isBooked = computed(
     () => props.consultation.isActive && !awaitingPayment.value,
 );
-const processing = computed(() => props.payment?.status.value === "processing");
+const processing = computed(() => props.payment?.status.value === 'processing');
 const paid = computed(() =>
-    ["paid", "partially_refunded", "refunded", "disputed"].includes(
-        props.payment?.status.value ?? "",
+    ['paid', 'partially_refunded', 'refunded', 'disputed'].includes(
+        props.payment?.status.value ?? '',
     ),
 );
 const canCancel = computed(() => props.canCancel ?? props.canChange);
 const failed = computed(
-    () => awaitingPayment.value && props.payment?.status.value === "failed",
+    () => awaitingPayment.value && props.payment?.status.value === 'failed',
 );
 
 /** Qué pantalla mostrar: siempre según el estado que confirma el backend. */
 const view = computed<
-    "confirmed" | "processing" | "failed" | "expired" | "default"
+    'confirmed' | 'processing' | 'failed' | 'expired' | 'default'
 >(() => {
     if (paid.value && isBooked.value && !props.consultation.needsReschedule) {
-        return "confirmed";
+        return 'confirmed';
     }
     if (processing.value) {
-        return "processing";
+        return 'processing';
     }
     if (failed.value) {
-        return "failed";
+        return 'failed';
     }
     if (props.consultation.holdExpired) {
-        return "expired";
+        return 'expired';
     }
 
-    return "default";
+    return 'default';
 });
 
 const MAX_POLLS = 45;
@@ -148,13 +148,13 @@ const polls = ref(0);
 const nextSteps = computed(() => {
     const first = props.consultation.advisor.name;
     const steps = [
-        "Te enviamos la confirmación, el comprobante y el archivo de calendario por correo.",
+        'Te enviamos la confirmación, el comprobante y el archivo de calendario por correo.',
     ];
 
-    if (props.consultation.channel.value === "video") {
+    if (props.consultation.channel.value === 'video') {
         steps.push(
             props.consultation.meetingUrl
-                ? "El día de tu cita entra con el botón “Unirse a la videollamada” (se activa 15 minutos antes) o desde el enlace del correo."
+                ? 'El día de tu cita entra con el botón “Unirse a la videollamada” (se activa 15 minutos antes) o desde el enlace del correo.'
                 : `${first} te enviará el enlace de la videollamada antes de la cita.`,
         );
     } else {
@@ -164,8 +164,8 @@ const nextSteps = computed(() => {
     }
 
     steps.push(
-        "Ten a la mano fotos y medidas aproximadas del espacio; así aprovechamos mejor el tiempo.",
-        "Al terminar te diremos los siguientes pasos: visita técnica de medición, diseño y cotización.",
+        'Ten a la mano fotos y medidas aproximadas del espacio; así aprovechamos mejor el tiempo.',
+        'Al terminar te diremos los siguientes pasos: visita técnica de medición, diseño y cotización.',
     );
 
     return steps;
@@ -184,12 +184,12 @@ const meeting = computed(() =>
 );
 
 const place = computed(() => ({
-    icon: (["video", "phone", "whatsapp"].includes(
+    icon: (['video', 'phone', 'whatsapp'].includes(
         props.consultation.channel.value,
     )
         ? props.consultation.channel.value
-        : "video") as "video" | "phone" | "whatsapp",
-    label: "Medio",
+        : 'video') as 'video' | 'phone' | 'whatsapp',
+    label: 'Medio',
     value: `${props.consultation.channel.label} · ${props.consultation.durationMinutes} minutos`,
 }));
 
@@ -205,13 +205,13 @@ onMounted(() => {
             polls.value++;
             router.reload({
                 only: [
-                    "consultation",
-                    "payment",
-                    "payUrl",
-                    "receiptUrl",
-                    "canChange",
-                    "canCancel",
-                    "calendar",
+                    'consultation',
+                    'payment',
+                    'payUrl',
+                    'receiptUrl',
+                    'canChange',
+                    'canCancel',
+                    'calendar',
                 ],
             });
         }
@@ -235,7 +235,7 @@ const countdown = computed(() => {
         ),
     );
     const hours = Math.floor(total / 3600);
-    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+    const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 
     if (total === 0) {
         return null;
@@ -261,7 +261,7 @@ function reschedule() {
 }
 
 const cancelOpen = ref(false);
-const reason = ref("");
+const reason = ref('');
 
 function cancel(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -275,7 +275,7 @@ function cancel(): Promise<void> {
                     reject(
                         new Error(
                             Object.values(errors)[0] ??
-                                "No pudimos cancelar. Inténtalo de nuevo.",
+                                'No pudimos cancelar. Inténtalo de nuevo.',
                         ),
                     ),
             },
@@ -543,9 +543,7 @@ function cancel(): Promise<void> {
                                         Duración
                                     </dt>
                                     <dd class="text-sm font-medium">
-                                        {{
-                                            consultation.durationMinutes
-                                        }}
+                                        {{ consultation.durationMinutes }}
                                         minutos
                                     </dd>
                                 </div>
@@ -645,8 +643,8 @@ function cancel(): Promise<void> {
                             />
                             {{
                                 form.processing
-                                    ? "Reprogramando…"
-                                    : "Confirmar nueva fecha"
+                                    ? 'Reprogramando…'
+                                    : 'Confirmar nueva fecha'
                             }}
                         </Button>
                         <Button

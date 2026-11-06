@@ -376,8 +376,8 @@ const texts = [
                     aria-describedby="fee_amount_help"
                 />
                 <p id="fee_amount_help" class="text-xs text-muted-foreground">
-                    Toda visita se cobra con tarjeta antes de confirmarse;
-                    la tarifa mínima es de $1.00.
+                    Toda visita se cobra con tarjeta antes de confirmarse; la
+                    tarifa mínima es de $1.00.
                 </p>
                 <InputError :message="form.errors.fee_amount" />
             </div>
