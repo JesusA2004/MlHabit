@@ -4,11 +4,15 @@ namespace App\Providers;
 
 use App\Enums\Permission;
 use App\Models\User;
+use App\Services\Storage\SynologyDisk;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -24,6 +28,21 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureAuthorization();
+        $this->configureStorage();
+    }
+
+    /**
+     * Disco `media_synology`: SFTP con las credenciales guardadas desde
+     * /admin/almacenamiento (ver SynologyDisk).
+     */
+    protected function configureStorage(): void
+    {
+        Storage::extend('synology', function (Application $app, array $config) {
+            /** @var FilesystemManager $manager */
+            $manager = $app->make('filesystem');
+
+            return SynologyDisk::create($manager, $config);
+        });
     }
 
     protected function configureDefaults(): void

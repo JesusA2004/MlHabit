@@ -5,10 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\StorageProviderKey;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorageProviderRequest;
+use App\Jobs\Storage\PurgeMigrationSources;
+use App\Jobs\Storage\SyncPendingMedia;
 use App\Models\Media;
+use App\Models\MediaVariant;
+use App\Models\StorageMigration;
 use App\Models\StorageProvider;
 use App\Services\ActivityLogger;
+use App\Services\Storage\MediaStorage;
+use App\Services\Storage\PendingMediaSync;
+use App\Services\Storage\StorageMigrationService;
+use App\Services\Storage\SynologyDisk;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -22,17 +31,39 @@ use Throwable;
  * (local y Synology) y permite configurar y probar la conexión al NAS.
  * Nunca envía credenciales (contraseña, llave privada) de vuelta al
  * navegador, aunque estén guardadas: solo indica si existen.
+ *
+ * También muestra dónde vive cada archivo, los pendientes de subir al NAS
+ * (respaldo local) y permite trasladar la biblioteca servidor ⇄ Synology
+ * con progreso en vivo (ver StorageMigrationService).
  */
 class StorageController extends Controller
 {
-    public function index(): Response
+    public function index(StorageMigrationService $migrations, MediaStorage $mediaStorage, PendingMediaSync $sync): Response
     {
         Gate::authorize('settings.manage');
 
         $providers = StorageProvider::query()->orderBy('key')->get();
+        $latest = StorageMigration::query()->latest('id')->first();
 
         return Inertia::render('admin/almacenamiento/Index', [
             'providers' => $providers->map(fn (StorageProvider $provider) => $this->present($provider))->values(),
+            'storage' => $this->summary($mediaStorage, $sync),
+            'migration' => $latest !== null ? $migrations->present($latest) : null,
+            'history' => StorageMigration::query()->latest('id')->limit(6)->get()
+                ->map(fn (StorageMigration $m) => [
+                    'id' => $m->id,
+                    'direction' => $m->target_disk === MediaStorage::REMOTE ? 'to_synology' : 'to_local',
+                    'status' => $m->status->value,
+                    'statusLabel' => $m->status->label(),
+                    'totalFiles' => $m->total_files,
+                    'totalBytes' => $m->total_bytes,
+                    'createdAt' => $m->created_at?->toIso8601String(),
+                    'finishedAt' => $m->finished_at?->toIso8601String(),
+                ])->values(),
+            'plan' => [
+                'toSynology' => $migrations->plan(MediaStorage::LOCAL),
+                'toLocal' => $migrations->plan(MediaStorage::REMOTE),
+            ],
         ]);
     }
 
@@ -60,6 +91,8 @@ class StorageController extends Controller
             ],
         ]);
 
+        SynologyDisk::forget();
+
         // Nunca registrar contraseñas ni rutas de llaves en la bitácora.
         $activity->log('almacenamiento.configurado', $provider, [
             'provider' => $provider->key->value,
@@ -86,9 +119,11 @@ class StorageController extends Controller
         return back()->with('success', "«{$provider->label}» es ahora el proveedor activo.");
     }
 
-    public function test(StorageProvider $provider, ActivityLogger $activity): RedirectResponse
+    public function test(StorageProvider $provider, ActivityLogger $activity, MediaStorage $mediaStorage, PendingMediaSync $sync): RedirectResponse
     {
         Gate::authorize('settings.manage');
+
+        SynologyDisk::forget();
 
         $result = $provider->key === StorageProviderKey::Local
             ? $this->testLocal()
@@ -104,10 +139,107 @@ class StorageController extends Controller
             'result' => $result['status'],
         ]);
 
+        // «En cuanto conecte»: si el NAS respondió, lo que quedó en el
+        // servidor por el respaldo se sube ya, sin esperar al programador.
+        if ($provider->key === StorageProviderKey::Synology) {
+            if ($result['status'] === 'ok') {
+                $mediaStorage->markUp(MediaStorage::REMOTE);
+                if ($sync->pendingCount() > 0) {
+                    SyncPendingMedia::dispatch();
+                }
+            } elseif ($result['status'] === 'error') {
+                $mediaStorage->markDown(MediaStorage::REMOTE, $result['message']);
+            }
+        }
+
         return back()->with(
             $result['status'] === 'ok' ? 'success' : 'error',
             $result['message'],
         );
+    }
+
+    /** Inicia un traslado: «to_synology» (servidor → NAS) o «to_local» (emergencia). */
+    public function startMigration(Request $request, StorageMigrationService $migrations): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+
+        $data = $request->validate([
+            'direction' => ['required', 'string', 'in:to_synology,to_local'],
+            'keep_source' => ['required', 'boolean'],
+        ]);
+
+        $toSynology = $data['direction'] === 'to_synology';
+
+        if ($toSynology) {
+            $synology = StorageProvider::query()->where('key', StorageProviderKey::Synology->value)->first();
+            if (($synology?->last_test_result['status'] ?? null) !== 'ok') {
+                return back()->with('error', 'Prueba la conexión con el Synology antes de mover archivos.');
+            }
+        }
+
+        [$source, $target] = $toSynology
+            ? [MediaStorage::LOCAL, MediaStorage::REMOTE]
+            : [MediaStorage::REMOTE, MediaStorage::LOCAL];
+
+        if ($migrations->plan($source)['files'] === 0) {
+            return back()->with('success', 'No hay archivos por mover: todo está ya en el destino.');
+        }
+
+        try {
+            $migration = $migrations->start($source, $target, (bool) $data['keep_source'], $request->user());
+        } catch (Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Traslado iniciado: {$migration->total_files} archivos.");
+    }
+
+    public function cancelMigration(StorageMigration $migration, StorageMigrationService $migrations): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+
+        $migrations->cancel($migration);
+
+        return back()->with('success', 'Traslado cancelado. Lo que ya se movió se queda en el destino y funciona normal.');
+    }
+
+    public function retryMigration(StorageMigration $migration, StorageMigrationService $migrations): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+
+        try {
+            $migrations->retry($migration);
+        } catch (Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Se reanudó el traslado con los archivos pendientes y fallidos.');
+    }
+
+    public function purgeMigrationSources(StorageMigration $migration): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+
+        if ($migration->status->isActive()) {
+            return back()->with('error', 'Espera a que termine el traslado.');
+        }
+
+        PurgeMigrationSources::dispatch($migration->id);
+
+        return back()->with('success', 'Se están borrando del origen las copias ya verificadas.');
+    }
+
+    public function syncPending(PendingMediaSync $sync): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+
+        if ($sync->pendingCount() === 0) {
+            return back()->with('success', 'No hay archivos pendientes de subir al Synology.');
+        }
+
+        SyncPendingMedia::dispatch();
+
+        return back()->with('success', 'Sincronización en marcha: los archivos pendientes se están subiendo al Synology.');
     }
 
     /**
@@ -155,9 +287,9 @@ class StorageController extends Controller
      */
     private function testSynology(StorageProvider $provider): array
     {
-        $config = $provider->config ?? [];
+        $config = SynologyDisk::mergeProviderConfig((array) config('filesystems.disks.media_synology', []));
         $hasCredentials = ! empty($config['host']) && ! empty($config['username'])
-            && (! empty($config['password']) || ! empty($config['private_key_path']));
+            && (! empty($config['password']) || ! empty($config['privateKey']));
 
         if (! $hasCredentials) {
             return [
@@ -175,8 +307,8 @@ class StorageController extends Controller
         $probeContent = (string) Str::uuid();
 
         try {
-            $disk->put($probePath, $probeContent);
-            $read = $disk->get($probePath);
+            $written = $disk->put($probePath, $probeContent);
+            $read = $written !== false ? $disk->get($probePath) : null;
             $disk->delete($probePath);
 
             $ok = $read === $probeContent;
@@ -185,10 +317,10 @@ class StorageController extends Controller
                 'status' => $ok ? 'ok' : 'error',
                 'message' => $ok
                     ? 'Synology: conexión, lectura y escritura correctas a través de Tailscale.'
-                    : 'Synology: la lectura no coincidió con lo escrito.',
+                    : 'Synology: se conectó pero no se pudo escribir o leer en la carpeta. Revisa los permisos de la carpeta compartida.',
                 'connect' => true,
                 'read' => $ok,
-                'write' => true,
+                'write' => $written !== false,
                 'checkedAt' => now()->toIso8601String(),
             ];
         } catch (Throwable $e) {
@@ -203,6 +335,52 @@ class StorageController extends Controller
                 'checkedAt' => now()->toIso8601String(),
             ];
         }
+    }
+
+    /**
+     * Dónde vive cada archivo: conteo y tamaño por disco (originales +
+     * variantes, incluida la papelera) y pendientes de subir al NAS.
+     *
+     * @return array<string, mixed>
+     */
+    private function summary(MediaStorage $mediaStorage, PendingMediaSync $sync): array
+    {
+        $media = Media::withTrashed()->toBase()
+            ->selectRaw('disk, count(*) as files, coalesce(sum(size), 0) as bytes')
+            ->groupBy('disk')->get()->keyBy('disk');
+        $variants = MediaVariant::query()->toBase()
+            ->selectRaw('disk, count(*) as files, coalesce(sum(size), 0) as bytes')
+            ->groupBy('disk')->get()->keyBy('disk');
+
+        $labels = [
+            MediaStorage::LOCAL => 'Servidor',
+            MediaStorage::REMOTE => 'Synology',
+            'media_private' => 'Servidor · documentos privados',
+        ];
+
+        $disks = [];
+        foreach ($labels as $disk => $label) {
+            $m = $media->get($disk);
+            $v = $variants->get($disk);
+            $disks[] = [
+                'disk' => $disk,
+                'label' => $label,
+                'files' => (int) ($m->files ?? 0),
+                'variants' => (int) ($v->files ?? 0),
+                'bytes' => (int) ($m->bytes ?? 0) + (int) ($v->bytes ?? 0),
+            ];
+        }
+
+        $lastError = Media::withTrashed()->whereNotNull('pending_sync_to')->whereNotNull('sync_error')
+            ->latest('updated_at')->value('sync_error');
+
+        return [
+            'disks' => $disks,
+            'pendingSync' => $sync->pendingCount(),
+            'pendingSyncBytes' => (int) Media::withTrashed()->whereNotNull('pending_sync_to')->sum('size'),
+            'pendingSyncError' => $lastError,
+            'remoteDown' => $mediaStorage->downReason(MediaStorage::REMOTE) !== null,
+        ];
     }
 
     /**

@@ -59,6 +59,20 @@ Route::middleware(['auth', 'verified', 'staff'])
             Route::post('almacenamiento/{provider}/probar', [StorageController::class, 'test'])
                 ->middleware('throttle:sensitive-actions')
                 ->name('almacenamiento.probar');
+            Route::post('almacenamiento/sincronizar', [StorageController::class, 'syncPending'])
+                ->middleware('throttle:sensitive-actions')
+                ->name('almacenamiento.sincronizar');
+            Route::post('almacenamiento/traslados', [StorageController::class, 'startMigration'])
+                ->middleware('throttle:sensitive-actions')
+                ->name('almacenamiento.traslados.store');
+            Route::post('almacenamiento/traslados/{migration}/cancelar', [StorageController::class, 'cancelMigration'])
+                ->name('almacenamiento.traslados.cancelar');
+            Route::post('almacenamiento/traslados/{migration}/reintentar', [StorageController::class, 'retryMigration'])
+                ->middleware('throttle:sensitive-actions')
+                ->name('almacenamiento.traslados.reintentar');
+            Route::post('almacenamiento/traslados/{migration}/liberar-espacio', [StorageController::class, 'purgeMigrationSources'])
+                ->middleware('throttle:sensitive-actions')
+                ->name('almacenamiento.traslados.liberar');
         });
     });
 

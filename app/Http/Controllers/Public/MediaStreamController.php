@@ -6,6 +6,7 @@ use App\Enums\MediaVisibility;
 use App\Http\Controllers\Controller;
 use App\Models\Media;
 use App\Models\MediaVariant;
+use App\Services\Storage\MediaStorage;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -22,12 +23,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *   `archivos.show` tras autorizar.
  * - Los nombres de archivo son UUID (reemplazar un archivo genera otra
  *   ruta), así que se cachean como inmutables por un año.
+ * - Da igual en qué disco viva el archivo (servidor o NAS): cada registro
+ *   guarda el suyo. Si el NAS no responde y durante un traslado se
+ *   conservó la copia del servidor, se sirve esa.
  */
 class MediaStreamController extends Controller
 {
     private const CHUNK_SIZE = 1024 * 1024;
 
-    public function __invoke(Request $request, string $path): Response|StreamedResponse
+    public function __invoke(Request $request, string $path, MediaStorage $mediaStorage): Response|StreamedResponse
     {
         $resolved = $this->resolve($path);
         if ($resolved === null) {
@@ -35,11 +39,11 @@ class MediaStreamController extends Controller
         }
 
         [$disk, $mimeType] = $resolved;
-        $storage = Storage::disk($disk);
-
-        if (! $storage->exists($path)) {
+        $readable = $mediaStorage->readableDisk($disk, $path);
+        if ($readable === null) {
             abort(404);
         }
+        $storage = Storage::disk($readable);
 
         $size = (int) $storage->size($path);
         $headers = [

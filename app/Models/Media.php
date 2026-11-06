@@ -30,12 +30,16 @@ use Illuminate\Support\Str;
  * @property MediaType $type
  * @property string $mime_type
  * @property int $size
+ * @property string|null $checksum xxh128 del original
  * @property int|null $width
  * @property int|null $height
  * @property int|null $duration_seconds
  * @property string|null $title
  * @property string|null $alt_text
  * @property MediaStatus $status
+ * @property string|null $pending_sync_to Disco destino pendiente (respaldo local mientras el NAS no responde)
+ * @property int $sync_attempts
+ * @property string|null $sync_error
  * @property array<string, mixed>|null $metadata
  * @property Carbon|null $last_used_at
  * @property Carbon|null $created_at
@@ -50,8 +54,9 @@ class Media extends Model
     protected $fillable = [
         'uuid', 'visibility', 'description', 'origin',
         'media_collection_id', 'uploaded_by', 'disk', 'path', 'filename', 'original_filename',
-        'type', 'mime_type', 'size', 'width', 'height', 'duration_seconds',
+        'type', 'mime_type', 'size', 'checksum', 'width', 'height', 'duration_seconds',
         'title', 'alt_text', 'status', 'metadata', 'last_used_at',
+        'pending_sync_to', 'sync_attempts', 'sync_error',
     ];
 
     protected static function booted(): void
@@ -78,6 +83,7 @@ class Media extends Model
             'width' => 'integer',
             'height' => 'integer',
             'duration_seconds' => 'integer',
+            'sync_attempts' => 'integer',
             'last_used_at' => 'datetime',
         ];
     }

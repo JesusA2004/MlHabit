@@ -40,6 +40,7 @@ Visitante → solicitud (`/solicitar`, crea Customer + Lead con folio y atribuci
 - **Cobertura**: `App\Services\CoverageService` es la única verdad para vender visitas.
 - **Configuración de negocio**: `App\Support\Settings` (grupos `commercial`, `consultation`, `contact`, `brand`, `seo`, `footer`, `leads`, `navigation`). Los valores que afectan dinero se congelan en la entidad.
 - **Archivos**: `Media` con `visibility` public/private. Privados en disco `media_private`, descargables solo por `GET /archivos/{media:uuid}` (`archivos.show`) que autoriza contra la entidad dueña. Vincular con el trait `App\Concerns\HasAttachments` (`media_attachments`, `role`: gallery, cover, photo, sketch, render, document, evidence, receipt…). Subida: `ChunkedUploadService`/`MediaUploadService` con visibilidad.
+- **Almacenamiento servidor ⇄ Synology**: cada `Media`/`MediaVariant` guarda su `disk`. Si el NAS activo no responde, la subida cae a `media_local` con `pending_sync_to` y `media:sync-pending` (cada 10 min) la empuja después. Traslados con verificación: `StorageMigrationService` + `php artisan media:migrate`. Ver `docs/ALMACENAMIENTO-SYNOLOGY.md`.
 - **Auditoría**: `App\Services\ActivityLogger::log('modulo.verbo', $model, ['before'=>…, 'after'=>…])`; sanea secretos y tarjetas.
 - **Transacciones**: `DB::transaction` en reservar, pagar, confirmar pago, acreditar visita, crear proyecto, aceptar cotización.
 - **Idempotencia**: claves `idempotency_key` UNIQUE generadas en el cliente (UUID por intento de formulario) y restricciones UNIQUE en DB.

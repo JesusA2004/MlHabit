@@ -62,4 +62,26 @@ return [
     'ffmpeg_path' => env('FFMPEG_BINARY_PATH'),
     'ffprobe_path' => env('FFPROBE_BINARY_PATH'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Almacenamiento: respaldo local y traslados servidor ⇄ Synology
+    |--------------------------------------------------------------------------
+    | Ver docs/ALMACENAMIENTO-SYNOLOGY.md.
+    |
+    | - down_minutes: tras un fallo del NAS, minutos que las subidas van
+    |   directo al servidor sin volver a intentar el NAS.
+    | - verify_checksum: tras copiar un original, se relee el destino y se
+    |   compara su huella xxh128 (más lento, más seguro).
+    | - attempts / retry_wait_seconds: reintentos por archivo en traslados.
+    | - queue: cola de los traslados (null = la predeterminada).
+    */
+    'storage' => [
+        'down_minutes' => (int) env('MEDIA_STORAGE_DOWN_MINUTES', 5),
+        'verify_checksum' => (bool) env('MEDIA_STORAGE_VERIFY_CHECKSUM', true),
+        'attempts' => (int) env('MEDIA_STORAGE_ATTEMPTS', 3),
+        'retry_wait_seconds' => [5, 30],
+        'sync_batch' => (int) env('MEDIA_STORAGE_SYNC_BATCH', 200),
+        'queue' => env('MEDIA_STORAGE_QUEUE'),
+    ],
+
 ];

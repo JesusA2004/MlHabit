@@ -22,6 +22,13 @@ import PageHeader from '@/components/ds/PageHeader.vue';
 import StatusBadge from '@/components/ds/StatusBadge.vue';
 import InputError from '@/components/InputError.vue';
 import StatTile from '@/components/platform/dashboard/StatTile.vue';
+import StorageMigrationPanel from '@/components/platform/storage/StorageMigrationPanel.vue';
+import type {
+    MigrationHistoryEntry,
+    MigrationPlan,
+    StorageMigration,
+    StorageSummary,
+} from '@/components/platform/storage/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,7 +74,22 @@ interface Provider {
     } | null;
 }
 
-const props = defineProps<{ providers: Provider[] }>();
+const props = defineProps<{
+    providers: Provider[];
+    storage: StorageSummary;
+    migration: StorageMigration | null;
+    history: MigrationHistoryEntry[];
+    plan: { toSynology: MigrationPlan; toLocal: MigrationPlan };
+}>();
+
+const synologyReady = computed(() =>
+    props.providers.some(
+        (p) => p.key === 'synology' && p.lastTestResult?.status === 'ok',
+    ),
+);
+const synologyActive = computed(() =>
+    props.providers.some((p) => p.key === 'synology' && p.isActive),
+);
 
 defineOptions({
     layout: {
@@ -281,7 +303,7 @@ function saveSynology(provider: Provider) {
     <PageContainer>
         <PageHeader
             title="Almacenamiento"
-            description="Dónde se guardan fotos, renders, videos y documentos. Los archivos nuevos se suben al proveedor activo; los existentes se quedan donde están."
+            description="Dónde se guardan fotos, renders, videos y documentos. Los archivos nuevos se suben al proveedor activo; si el Synology no responde, se guardan en el servidor y se pasan solos en cuanto conecte."
         />
 
         <div class="grid gap-4 sm:grid-cols-3">
@@ -516,6 +538,15 @@ function saveSynology(provider: Provider) {
             </article>
         </div>
 
+        <StorageMigrationPanel
+            :storage="props.storage"
+            :migration="props.migration"
+            :history="props.history"
+            :plan="props.plan"
+            :synology-ready="synologyReady"
+            :synology-active="synologyActive"
+        />
+
         <!-- Configuración de Synology -->
         <section
             v-for="provider in synologyProviders"
@@ -748,7 +779,7 @@ function saveSynology(provider: Provider) {
     <ConfirmDialog
         v-model:open="activateOpen"
         :title="`Activar ${activateTarget?.label ?? ''}`"
-        description="Los archivos nuevos se guardarán en este proveedor. Los que ya existen se quedan donde están y siguen disponibles."
+        description="Los archivos nuevos se guardarán en este proveedor. Los que ya existen se quedan donde están y siguen disponibles; puedes moverlos después con «Mover multimedia»."
         confirm-label="Activar"
         loading-label="Activando…"
         :confirm="activateProvider"

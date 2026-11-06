@@ -6,8 +6,11 @@ use App\Enums\MediaType;
 use App\Enums\MediaVariantType;
 use App\Models\Media;
 use App\Models\MediaVariant;
+use App\Services\Storage\MediaRelocator;
+use App\Services\Storage\MediaStorage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
@@ -20,6 +23,11 @@ use Throwable;
  * amplía), más AVIF con los mismos anchos cuando GD lo soporta. Guarda
  * dimensiones y un color dominante para el marcador de carga. El original
  * nunca se modifica.
+ *
+ * Funciona igual con el original en el servidor o en el NAS. Si el NAS no
+ * responde al guardar una variante, esta queda en el servidor y el Media se
+ * marca pendiente de sincronizar. Un candado por archivo evita chocar con
+ * un traslado servidor ⇄ NAS en curso.
  */
 class GenerateImageVariants implements ShouldQueue
 {
@@ -31,7 +39,25 @@ class GenerateImageVariants implements ShouldQueue
 
     public function __construct(public int $mediaId) {}
 
-    public function handle(): void
+    public function handle(?MediaStorage $storage = null): void
+    {
+        $storage ??= app(MediaStorage::class);
+        $lock = Cache::lock(MediaRelocator::lockKey($this->mediaId), 900);
+        if (! $lock->get()) {
+            // Se está trasladando este archivo: reintentar en un momento.
+            $this->release(60);
+
+            return;
+        }
+
+        try {
+            $this->generate($storage);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function generate(MediaStorage $storage): void
     {
         $media = Media::query()->find($this->mediaId);
         if ($media === null || $media->type !== MediaType::Image) {
@@ -78,11 +104,11 @@ class GenerateImageVariants implements ShouldQueue
             $previous = $width;
 
             $scaled = (clone $original)->scaleDown(width: $width);
-            $generated[] = $this->store($media, MediaVariantType::webp($width), "{$prefix}-{$width}.webp", $scaled, 'webp');
+            $generated[] = $this->store($storage, $media, MediaVariantType::webp($width), "{$prefix}-{$width}.webp", $scaled, 'webp');
 
             if ($avif) {
                 try {
-                    $generated[] = $this->store($media, MediaVariantType::avif($width), "{$prefix}-{$width}.avif", $scaled, 'avif');
+                    $generated[] = $this->store($storage, $media, MediaVariantType::avif($width), "{$prefix}-{$width}.avif", $scaled, 'avif');
                 } catch (Throwable $e) {
                     Log::info('GenerateImageVariants: AVIF no disponible.', ['media_id' => $media->id, 'error' => $e->getMessage()]);
                     $avif = false;
@@ -94,7 +120,11 @@ class GenerateImageVariants implements ShouldQueue
         $stale = $media->variants()->whereNotIn('type', $generated)->get()
             ->filter(fn (MediaVariant $v) => MediaVariantType::tryFrom($v->type)?->isResponsive() || in_array($v->type, [MediaVariantType::OptimizedWebp->value, MediaVariantType::OptimizedAvif->value], true));
         foreach ($stale as $variant) {
-            Storage::disk($variant->disk)->delete($variant->path);
+            try {
+                Storage::disk($variant->disk)->delete($variant->path);
+            } catch (Throwable $e) {
+                Log::info('GenerateImageVariants: no se pudo borrar una variante vieja.', ['media_id' => $media->id, 'error' => $e->getMessage()]);
+            }
             $variant->delete();
         }
 
@@ -105,22 +135,32 @@ class GenerateImageVariants implements ShouldQueue
         ])->save();
     }
 
-    private function store(Media $media, MediaVariantType $type, string $path, ImageInterface $image, string $format): string
+    private function store(MediaStorage $storage, Media $media, MediaVariantType $type, string $path, ImageInterface $image, string $format): string
     {
         $encoded = $format === 'avif'
             ? (string) $image->toAvif(quality: (int) config('media.avif_quality', 55))
             : (string) $image->toWebp(quality: (int) config('media.webp_quality', 80));
 
-        Storage::disk($media->disk)->put($path, $encoded);
+        // Las variantes van al disco que DEBE tener el archivo (el NAS si
+        // está pendiente de sincronizar); si no responde, al servidor.
+        $preferred = $media->pending_sync_to ?? $media->disk;
+        $disk = $storage->put($preferred, $path, $encoded);
+        if ($disk !== $preferred && $media->pending_sync_to === null) {
+            $storage->markPending($media, $preferred, $storage->downReason($preferred));
+        }
 
         $existing = MediaVariant::query()->where('media_id', $media->id)->where('type', $type->value)->first();
-        if ($existing !== null && $existing->path !== $path) {
-            Storage::disk($existing->disk)->delete($existing->path);
+        if ($existing !== null && ($existing->path !== $path || $existing->disk !== $disk)) {
+            try {
+                Storage::disk($existing->disk)->delete($existing->path);
+            } catch (Throwable) {
+                // El NAS puede no responder; la variante nueva ya quedó guardada.
+            }
         }
 
         MediaVariant::query()->updateOrCreate(
             ['media_id' => $media->id, 'type' => $type->value],
-            ['disk' => $media->disk, 'path' => $path, 'width' => $image->width(), 'height' => $image->height(), 'size' => strlen($encoded)],
+            ['disk' => $disk, 'path' => $path, 'width' => $image->width(), 'height' => $image->height(), 'size' => strlen($encoded)],
         );
 
         return $type->value;

@@ -78,15 +78,23 @@ return [
             'report' => false,
         ],
 
+        // Driver "synology" = SFTP con las credenciales guardadas en
+        // /admin/almacenamiento (App\Services\Storage\SynologyDisk); las
+        // variables NAS_SFTP_* quedan como respaldo. Se sirve al navegador
+        // por el mismo /media/… que el disco local (MediaStreamController).
         'media_synology' => [
-            'driver' => 'sftp',
+            'driver' => 'synology',
+            'url' => '/media',
             'host' => env('NAS_SFTP_HOST'),
             'port' => (int) env('NAS_SFTP_PORT', 22),
             'username' => env('NAS_SFTP_USERNAME'),
             'password' => env('NAS_SFTP_PASSWORD'),
             'privateKey' => env('NAS_SFTP_PRIVATE_KEY_PATH'),
             'root' => env('NAS_SFTP_ROOT', '/ml-habitat'),
-            'timeout' => 10,
+            'timeout' => (int) env('NAS_SFTP_TIMEOUT', 10),
+            // Reintentos de conexión (0 = un solo intento): si el NAS no responde, la subida
+            // cae al servidor de inmediato (ver MediaStorage) en vez de esperar.
+            'maxTries' => (int) env('NAS_SFTP_MAX_TRIES', 0),
             'throw' => false,
         ],
 

@@ -10,7 +10,9 @@ use App\Jobs\GenerateImageVariants;
 use App\Jobs\ProcessVideoMedia;
 use App\Models\Media;
 use App\Models\MediaCollection;
+use App\Models\StorageMigrationItem;
 use App\Models\StorageProvider;
+use App\Services\Storage\MediaStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -26,9 +28,15 @@ use Illuminate\Support\Str;
  * Visibilidad: `public` va al disco de medios público (/media) y
  * `private` al disco `media_private`, que solo se sirve vía
  * PrivateMediaController (`archivos.show`) tras autorizar.
+ *
+ * Respaldo: si el proveedor activo es el NAS y no responde, el archivo se
+ * guarda en el servidor (`media_local`) y queda marcado como pendiente de
+ * sincronizar (`pending_sync_to`); ver MediaStorage y media:sync-pending.
  */
 class MediaUploadService
 {
+    public function __construct(private readonly MediaStorage $storage) {}
+
     public function upload(UploadedFile $file, ?string $collectionPath = null, MediaVisibility $visibility = MediaVisibility::Public): Media
     {
         $realPath = $file->getRealPath();
@@ -66,7 +74,8 @@ class MediaUploadService
         $filename = Str::uuid()->toString().'.'.$this->extension($originalFilename);
         $path = $collection->path.'/'.$filename;
 
-        $this->putFile($disk, $path, $absoluteTempPath);
+        $storedDisk = $this->putFile($disk, $path, $absoluteTempPath);
+        $fellBack = $storedDisk !== $disk;
 
         [$width, $height] = $type === MediaType::Image ? $this->dimensions($absoluteTempPath) : [null, null];
 
@@ -74,7 +83,10 @@ class MediaUploadService
             'visibility' => $visibility,
             'media_collection_id' => $collection->id,
             'uploaded_by' => auth()->id(),
-            'disk' => $disk,
+            'disk' => $storedDisk,
+            'pending_sync_to' => $fellBack ? $disk : null,
+            'sync_error' => $fellBack ? $this->storage->downReason($disk) : null,
+            'checksum' => $this->checksum($absoluteTempPath),
             'path' => $path,
             'filename' => $filename,
             'original_filename' => mb_substr($originalFilename, 0, 255),
@@ -113,12 +125,16 @@ class MediaUploadService
         $filename = Str::uuid()->toString().'.'.$this->extension($file->getClientOriginalName());
         $newPath = ($directory === '.' ? '' : $directory.'/').$filename;
 
-        $this->putFile($media->disk, $newPath, $realPath);
+        $preferredDisk = $media->pending_sync_to ?? $media->disk;
+        $storedDisk = $this->putFile($preferredDisk, $newPath, $realPath);
         $this->deleteFiles($media);
 
         [$width, $height] = $type === MediaType::Image ? $this->dimensions($realPath) : [null, null];
 
         $media->forceFill([
+            'disk' => $storedDisk,
+            'pending_sync_to' => $storedDisk !== $preferredDisk ? $preferredDisk : null,
+            'checksum' => $this->checksum($realPath),
             'path' => $newPath,
             'filename' => $filename,
             'original_filename' => mb_substr($file->getClientOriginalName(), 0, 255),
@@ -136,16 +152,54 @@ class MediaUploadService
         return $media->refresh();
     }
 
-    /** Borra del disco el original y todas sus variantes (y sus registros). */
+    /**
+     * Borra del disco el original y todas sus variantes (y sus registros),
+     * incluidas las copias que se hayan conservado en el disco de origen
+     * de un traslado servidor ⇄ NAS.
+     */
     public function deleteFiles(Media $media): void
     {
         $media->loadMissing('variants');
+        $paths = [$media->path];
         foreach ($media->variants as $variant) {
-            Storage::disk($variant->disk)->delete($variant->path);
+            $paths[] = $variant->path;
+            $this->deleteQuietly($variant->disk, $variant->path);
             $variant->delete();
         }
 
-        Storage::disk($media->disk)->delete($media->path);
+        $this->deleteQuietly($media->disk, $media->path);
+
+        $kept = StorageMigrationItem::query()
+            ->where('media_id', $media->id)
+            ->where('source_kept', true)
+            ->with('migration:id,source_disk')
+            ->get();
+        foreach ($kept as $item) {
+            if ($item->migration->source_disk !== $media->disk) {
+                foreach ($paths as $path) {
+                    $this->deleteQuietly($item->migration->source_disk, $path);
+                }
+            }
+            $item->forceFill(['source_kept' => false])->save();
+        }
+    }
+
+    private function deleteQuietly(string $disk, string $path): void
+    {
+        try {
+            Storage::disk($disk)->delete($path);
+        } catch (\Throwable $e) {
+            // El NAS puede no responder: el registro se borra igual y el archivo
+            // queda huérfano en el NAS (no es accesible desde la plataforma).
+            report($e);
+        }
+    }
+
+    private function checksum(string $absolutePath): ?string
+    {
+        $hash = @hash_file('xxh128', $absolutePath);
+
+        return $hash === false ? null : $hash;
     }
 
     /**
@@ -238,16 +292,22 @@ class MediaUploadService
         }
     }
 
-    private function putFile(string $disk, string $path, string $absoluteSource): void
+    /** Devuelve el disco donde quedó (el servidor si el NAS no respondió). */
+    private function putFile(string $disk, string $path, string $absoluteSource): string
     {
         $stream = fopen($absoluteSource, 'r');
         if ($stream === false) {
             throw new RejectedUploadException('No se pudo leer el archivo temporal.');
         }
 
-        Storage::disk($disk)->put($path, $stream);
-        if (is_resource($stream)) {
-            fclose($stream);
+        try {
+            return $this->storage->put($disk, $path, $stream);
+        } catch (\RuntimeException $e) {
+            throw new RejectedUploadException('No se pudo guardar el archivo. Inténtalo de nuevo en unos minutos.');
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
         }
     }
 
