@@ -16,7 +16,9 @@ import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
 import { illustrationFor } from '@/components/web/visual/illustrations';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import NextStepTeaser from '@/components/web/visual/journey/NextStepTeaser.vue';
+import FloatingShapes from '@/components/web/visual/FloatingShapes.vue';
 import MaterialChips from '@/components/web/visual/MaterialChips.vue';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
 import SplitText from '@/components/web/visual/SplitText.vue';
 import type {
     CategoryCardData,
@@ -65,6 +67,8 @@ const traits = [
             class="tex-blueprint pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_20%_40%,#000_10%,transparent_65%)]"
             aria-hidden="true"
         />
+        <FloatingShapes layout="spread" />
+        <ParticleField tone="light" :density="0.4" class="-z-10" />
         <div
             class="container-site grid gap-10 pt-10 pb-12 lg:grid-cols-12 lg:items-center lg:gap-14 lg:pb-16"
         >
@@ -79,7 +83,7 @@ const traits = [
                 />
                 <span
                     class="mb-5 inline-grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md"
-                    data-motion="zoom-in"
+                    data-motion="pop"
                     aria-hidden="true"
                 >
                     <component
@@ -111,6 +115,7 @@ const traits = [
                 </p>
                 <ul
                     class="mt-6 flex flex-wrap gap-2"
+                    data-motion="pop"
                     data-motion-stagger="80"
                     data-motion-delay="320"
                 >
@@ -195,7 +200,7 @@ const traits = [
                 v-if="props.products.length"
                 class="mt-10 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="zoom-out"
             >
                 <ProductCard
                     v-for="product in props.products"
@@ -234,12 +239,13 @@ const traits = [
             <div
                 class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="rise"
             >
                 <ShowcaseCard
-                    v-for="project in props.projects"
+                    v-for="(project, i) in props.projects"
                     :key="project.id"
                     :project="project"
+                    :highlight="i === 0"
                 />
             </div>
         </div>

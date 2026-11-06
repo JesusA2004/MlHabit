@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import type { IllustrationName } from '@/components/web/visual/illustrations/types';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
+import type { ParticleVariant } from '@/lib/motion/particles';
 
 /**
  * Capa decorativa de una sección en el SITIO PÚBLICO (nunca en el editor):
@@ -13,12 +15,44 @@ import type { IllustrationName } from '@/components/web/visual/illustrations/typ
  *
  * El contenido sigue siendo del editor: aquí solo hay ornamento según el
  * tipo de sección.
+ *
+ * Fondo animado "Partículas" (polvo en un rayo de sol / virutas de madera,
+ * `ParticleField`): con `particles="auto"` (por defecto) aparece en la
+ * portada y en el CTA final; cualquier sección puede pedir una variante
+ * (`dust` · `shavings` · `mixed`, p. ej. desde un ajuste de sección) o
+ * apagarlo con `"off"`. Las secciones oscuras o con fotografía suman una
+ * luz cálida que sigue al cursor (`data-spotlight-layer`, pointer.ts).
  */
-const props = defineProps<{
-    type: string;
-    dark: boolean;
-    hasImage: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        type: string;
+        dark: boolean;
+        hasImage: boolean;
+        particles?: 'auto' | 'off' | ParticleVariant;
+    }>(),
+    { particles: 'auto' },
+);
+
+const PARTICLE_TYPES: Record<string, ParticleVariant> = {
+    hero: 'dust',
+    final_cta: 'mixed',
+};
+
+const particleVariant = computed<ParticleVariant | null>(() => {
+    if (props.particles === 'off') {
+        return null;
+    }
+
+    if (props.particles !== 'auto') {
+        return props.particles;
+    }
+
+    return PARTICLE_TYPES[props.type] ?? null;
+});
+// Sobre fotografía la luz siempre es cálida (tono oscuro).
+const particleTone = computed(() =>
+    props.dark || props.hasImage ? 'dark' : 'light',
+);
 
 type Drawing = {
     name: IllustrationName;
@@ -71,6 +105,22 @@ const ring = computed(() =>
         data-scroll-progress
         aria-hidden="true"
     >
+        <!-- Luz cálida que sigue al cursor (secciones oscuras). -->
+        <div
+            v-if="props.dark || props.hasImage"
+            class="spotlight-layer"
+            data-spotlight-layer
+        />
+
+        <!-- Partículas: polvo en el rayo de sol / virutas de madera. -->
+        <ParticleField
+            v-if="particleVariant"
+            :variant="particleVariant"
+            :tone="particleTone"
+            :density="props.type === 'hero' ? 1.1 : 0.8"
+            :beam="props.type === 'hero'"
+        />
+
         <!-- Portada: plano, aros que giran y cotas que se separan. -->
         <template v-if="isHero">
             <div

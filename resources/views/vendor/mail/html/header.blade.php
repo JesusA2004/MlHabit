@@ -2,6 +2,7 @@
 <tr>
 <td class="header">
 <a href="{{ $url }}" class="wordmark" style="display: inline-block;">
+<img src="{{ url('/brand/logo-128.png') }}" width="64" height="64" alt="ML Hábitat" class="brand-logo" style="display: block; margin: 0 auto 10px; width: 64px; height: 64px; border: 0; border-radius: 50%;">
 <span class="wordmark-text">ML Habitat</span>
 </a>
 <table class="swatch" align="center" cellpadding="0" cellspacing="0" role="presentation" aria-hidden="true">

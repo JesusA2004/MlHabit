@@ -24,7 +24,7 @@ showrooms de mobiliario escandinavo (orden, materiales a la vista).
 
 **Firma visual (un solo gesto memorable):** el _muestrario de acabados_ —
 franjas de lino, roble, eucalipto y espresso como las muestras de chapa y
-laminado que un asesor pone sobre la mesa. Aparece en el monograma, en el
+laminado que un asesor pone sobre la mesa. Aparece en el
 panel de acceso, en las páginas de error y como acento fino en marketing.
 Todo lo demás es silencioso y disciplinado.
 
@@ -204,3 +204,15 @@ Español de México, tú, frases cortas y concretas. Explica qué pasó y qué
 hacer. Los errores no se disculpan ni son vagos. Los nombres de las cosas son
 los del cliente: "cita", "visita", "anticipo", "instalación", no
 "evento", "registro" o "transacción".
+
+## 11. Logotipo
+
+Logotipo oficial: la insignia redonda (monograma "ML" sobre la cocina de muro
+verde, "ML HÁBITAT · COCINAS · CLÓSETS · INTERIORES", aro de roble). Fuente
+`public/logoSinFondo.png` (`public/logo.jpeg` es la misma pieza en alta
+resolución con fondo blanco). Derivados en `public/brand/` (`logo-128/256/512`
+en WebP y PNG; `mark-64/128`, recorte del monograma para tamaños ≤ 48 px),
+favicons (`favicon.ico` 16/32/48, `favicon-16x16.png`, `favicon-32x32.png`,
+`favicon.svg` con la imagen embebida), `apple-touch-icon.png` (180, fondo
+lino) e `icons/` (192, 512 y maskable 512). En la interfaz se usa siempre
+`AppLogo` / `AppLogoIcon`. El monograma SVG anterior se retiró.

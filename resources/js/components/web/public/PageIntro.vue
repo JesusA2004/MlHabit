@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import type { IllustrationName } from '@/components/web/visual/illustrations/types';
+import FloatingShapes from '@/components/web/visual/FloatingShapes.vue';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
 import SplitText from '@/components/web/visual/SplitText.vue';
 import type { JourneyStepKey } from '@/lib/motion/journey';
 import PublicBreadcrumbs from './PublicBreadcrumbs.vue';
@@ -9,16 +11,21 @@ import PublicBreadcrumbs from './PublicBreadcrumbs.vue';
  * Encabezado de páginas interiores del sitio: migas, título (entra palabra
  * por palabra), entrada y, opcionalmente, una ilustración de línea que se
  * dibuja sobre una cuadrícula de plano. `journey` marca el paso del
- * recorrido guiado.
+ * recorrido guiado. `ambient` (por defecto) suma polvo de luz y formas que
+ * respiran detrás del título; `ambient=false` lo deja quieto.
  */
-const props = defineProps<{
-    title: string;
-    eyebrow?: string | null;
-    lead?: string | null;
-    breadcrumbs?: { label: string; href?: string }[];
-    visual?: IllustrationName | null;
-    journey?: JourneyStepKey | null;
-}>();
+const props = withDefaults(
+    defineProps<{
+        title: string;
+        eyebrow?: string | null;
+        lead?: string | null;
+        breadcrumbs?: { label: string; href?: string }[];
+        visual?: IllustrationName | null;
+        journey?: JourneyStepKey | null;
+        ambient?: boolean;
+    }>(),
+    { ambient: true },
+);
 </script>
 
 <template>
@@ -30,6 +37,10 @@ const props = defineProps<{
             class="tex-blueprint pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_at_80%_30%,#000_10%,transparent_70%)]"
             aria-hidden="true"
         />
+        <template v-if="props.ambient">
+            <FloatingShapes :layout="props.visual ? 'spread' : 'right'" />
+            <ParticleField tone="light" :density="0.45" beam class="-z-10" />
+        </template>
         <div class="container-site pt-10 pb-12 sm:pt-14 sm:pb-16">
             <PublicBreadcrumbs
                 v-if="props.breadcrumbs?.length"

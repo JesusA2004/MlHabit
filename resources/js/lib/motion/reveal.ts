@@ -20,7 +20,26 @@ export const MOTION_PRESETS = [
     'split',
     'settle',
     'none',
+    // Nuevos (v2): recortes, elevación y zoom de imagen.
+    'wipe-up',
+    'wipe-down',
+    'wipe-left',
+    'wipe-right',
+    'rise',
+    'pop',
+    'blur-up',
+    'tilt-in',
+    'zoom-out',
 ] as const;
+
+/** Presets que empiezan recortados (sin área visible para el observador). */
+const CLIPPED = new Set([
+    'mask-reveal',
+    'wipe-up',
+    'wipe-down',
+    'wipe-left',
+    'wipe-right',
+]);
 
 export type MotionPreset = (typeof MOTION_PRESETS)[number];
 
@@ -130,7 +149,7 @@ export function createRevealEngine(): RevealEngine {
      */
     const targets = new WeakMap<Element, HTMLElement[]>();
     const sentinelFor = (el: HTMLElement): HTMLElement =>
-        el.dataset.motion === 'mask-reveal' && el.parentElement
+        CLIPPED.has(el.dataset.motion ?? '') && el.parentElement
             ? el.parentElement
             : el;
 

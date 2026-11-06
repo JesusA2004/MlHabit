@@ -16,6 +16,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import ChoiceCards from '@/components/crm/ChoiceCards.vue';
 import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
 import { illustrationFor } from '@/components/web/visual/illustrations';
+import FloatingShapes from '@/components/web/visual/FloatingShapes.vue';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import FilePicker from '@/components/crm/FilePicker.vue';
 import FormStatus from '@/components/ds/FormStatus.vue';
@@ -413,9 +414,10 @@ const contactOptions = computed(() =>
             class="tex-blueprint pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 [mask-image:linear-gradient(to_bottom,#000,transparent)]"
             aria-hidden="true"
         />
+        <FloatingShapes class="bottom-auto h-80" />
         <div class="container-site pt-10 md:pt-16">
             <div class="flex items-end justify-between gap-8">
-                <div class="max-w-2xl" data-motion="fade-up">
+                <div class="max-w-2xl" data-motion="blur-up">
                     <p class="text-sm font-medium text-oak-ink">
                         Solicitud sin compromiso
                     </p>

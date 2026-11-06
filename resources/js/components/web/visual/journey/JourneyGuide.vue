@@ -232,6 +232,7 @@ const railFill = computed(() => {
     <!-- Móvil: barra fina segmentada -->
     <div
         v-if="!journey.quiet.value && currentIndex >= 0"
+        data-journey-bar
         class="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[3px] gap-[3px] xl:hidden"
         aria-hidden="true"
     >

@@ -406,6 +406,7 @@ const contact = computed(() => props.site?.contact ?? {});
                         <div class="mb-4 flex items-center gap-3">
                             <span
                                 class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"
+                                data-motion="pop"
                                 aria-hidden="true"
                             >
                                 <component

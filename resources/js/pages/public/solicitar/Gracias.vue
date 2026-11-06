@@ -4,6 +4,7 @@ import { CalendarClock, Home, MessageCircle, Ruler, Video } from '@lucide/vue';
 import { computed } from 'vue';
 import FinishSwatches from '@/components/ds/FinishSwatches.vue';
 import Timeline from '@/components/ds/Timeline.vue';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
 import SuccessMark from '@/components/web/visual/SuccessMark.vue';
 import type { TimelineEvent } from '@/components/ds/Timeline.vue';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,13 @@ const nextSteps = computed<TimelineEvent[]>(() => [
         <div
             class="tex-blueprint pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 [mask-image:linear-gradient(to_bottom,#000,transparent)]"
             aria-hidden="true"
+        />
+        <ParticleField
+            variant="mixed"
+            tone="light"
+            :density="0.5"
+            :interactive="false"
+            class="bottom-auto -z-10 h-96 [mask-image:linear-gradient(to_bottom,#000,transparent)]"
         />
         <div
             class="container-site grid gap-10 py-12 md:py-20 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16"

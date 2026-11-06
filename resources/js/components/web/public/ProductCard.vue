@@ -12,7 +12,8 @@ import ResponsiveImage from './ResponsiveImage.vue';
 /**
  * Tarjeta de producto: imagen que se eleva y amplía al pasar el cursor, una
  * pastilla "Ver modelo" que sube desde abajo, nombre, resumen y precio
- * "desde" solo si se publica.
+ * "desde" solo si se publica. Con ratón, la foto se inclina en 3D con un
+ * brillo que sigue al cursor (`data-tilt`).
  */
 const props = defineProps<{ product: ProductCardData }>();
 
@@ -27,6 +28,7 @@ const illustration = computed(() =>
         class="group flex flex-col rounded-2xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
         <div
+            data-tilt="5"
             class="relative aspect-[4/5] overflow-hidden rounded-2xl bg-stone shadow-xs transition-[translate,box-shadow] duration-500 ease-out group-hover:-translate-y-1.5 group-hover:shadow-lg"
         >
             <ResponsiveImage

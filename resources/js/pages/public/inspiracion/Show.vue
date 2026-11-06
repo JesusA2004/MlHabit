@@ -12,6 +12,7 @@ import SectionHeading from '@/components/web/public/SectionHeading.vue';
 import SeoHead from '@/components/web/public/SeoHead.vue';
 import ShowcaseCard from '@/components/web/public/ShowcaseCard.vue';
 import BeforeAfter from '@/components/web/visual/BeforeAfter.vue';
+import FloatingShapes from '@/components/web/visual/FloatingShapes.vue';
 import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
 import { illustrationFor } from '@/components/web/visual/illustrations';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
@@ -78,6 +79,7 @@ const nextTitle = computed(() =>
                 class="tex-blueprint pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 [mask-image:linear-gradient(to_bottom,#000,transparent)]"
                 aria-hidden="true"
             />
+            <FloatingShapes class="bottom-auto h-96" />
             <div class="container-site pt-10 pb-10">
                 <PublicBreadcrumbs
                     :items="[
@@ -172,7 +174,8 @@ const nextTitle = computed(() =>
                 <div class="lg:col-span-4">
                     <div class="lg:sticky lg:top-28" data-motion="fade-up">
                         <span
-                            class="mb-5 block h-px w-12 bg-oak"
+                            class="mb-5 block h-px w-12 origin-left bg-oak"
+                            data-motion="wipe-right"
                             aria-hidden="true"
                         />
                         <p
@@ -191,7 +194,8 @@ const nextTitle = computed(() =>
                     <figure
                         v-if="props.testimonial"
                         class="relative mt-12 overflow-hidden rounded-2xl bg-primary-soft p-8 sm:p-10"
-                        data-motion="zoom-in"
+                        data-motion="tilt-in"
+                        data-spotlight
                     >
                         <Quote
                             class="absolute -top-2 -right-2 size-28 text-primary/10"
@@ -234,11 +238,11 @@ const nextTitle = computed(() =>
                 <h2
                     id="antes-despues"
                     class="mb-8 text-display-md"
-                    data-motion="fade-up"
+                    data-motion="blur-up"
                 >
                     Antes y después
                 </h2>
-                <div data-motion="fade-up">
+                <div data-motion="wipe-up" class="[--mask-radius:1rem]">
                     <BeforeAfter
                         :before="beforeAfter.before"
                         :after="beforeAfter.after"
@@ -257,7 +261,7 @@ const nextTitle = computed(() =>
                 <h2
                     id="galeria-proyecto"
                     class="mb-8 text-display-md"
-                    data-motion="fade-up"
+                    data-motion="blur-up"
                 >
                     Galería
                 </h2>
@@ -283,7 +287,7 @@ const nextTitle = computed(() =>
             <div
                 class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="rise"
             >
                 <ShowcaseCard
                     v-for="item in props.more"

@@ -5,6 +5,7 @@ import GradientBlobs from '@/components/web/visual/GradientBlobs.vue';
 import { ICON_STROKE } from '@/components/web/visual/icons';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
 import type { IllustrationName } from '@/components/web/visual/illustrations/types';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
 
 /**
  * Banda de cierre para páginas interiores: invita a solicitar asesoría.
@@ -46,9 +47,15 @@ const steps = [
             <div
                 data-spotlight
                 data-motion="zoom-in"
-                class="relative isolate overflow-hidden rounded-[2rem] bg-espresso px-6 py-12 text-espresso-foreground sm:px-12 sm:py-14"
+                class="glow-border relative isolate overflow-hidden rounded-[2rem] bg-espresso px-6 py-12 text-espresso-foreground [--glow-duration:9s] [--glow-opacity:0.55] sm:px-12 sm:py-14"
             >
                 <GradientBlobs tone="dark" />
+                <ParticleField
+                    variant="mixed"
+                    tone="dark"
+                    :density="0.7"
+                    class="-z-10"
+                />
                 <div
                     class="tex-blueprint-dark pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_left,#000,transparent_60%)] opacity-50"
                     aria-hidden="true"

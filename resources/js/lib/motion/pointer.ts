@@ -6,6 +6,9 @@
  * - `[data-tilt]`      inclinación 3D + brillo (`--tilt-rx/ry`, `--glare-x/y`).
  * - `[data-spotlight]` foco de luz que sigue al cursor (`--spot-x/y`).
  * - `[data-hover-zoom]` lupa: la imagen se amplía desde el punto del cursor.
+ * - `[data-spotlight-layer]` capa de luz dentro de un anfitrión
+ *   (`[data-spotlight-host]` o `.sb-section`): sigue al cursor aunque la capa
+ *   no reciba eventos (decoración con `pointer-events: none`).
  *
  * Todos escriben variables CSS; el aspecto vive en `motion.css`.
  */
@@ -28,6 +31,40 @@ const RESET: Record<Effect, string[]> = {
 
 export function createPointerEngine(): { destroy: () => void } {
     const active = new Map<Effect, HTMLElement>();
+    let layer: HTMLElement | null = null;
+
+    function releaseLayer(): void {
+        layer?.style.removeProperty('--spot-o');
+        layer = null;
+    }
+
+    function applyLayer(event: PointerEvent, target: Element | null): void {
+        const host = target?.closest<HTMLElement>(
+            '[data-spotlight-host], .sb-section',
+        );
+        const next =
+            host?.querySelector<HTMLElement>('[data-spotlight-layer]') ?? null;
+
+        if (next !== layer) {
+            releaseLayer();
+            layer = next;
+        }
+
+        if (!layer) {
+            return;
+        }
+
+        const rect = layer.getBoundingClientRect();
+        layer.style.setProperty(
+            '--spot-x',
+            `${(event.clientX - rect.left).toFixed(0)}px`,
+        );
+        layer.style.setProperty(
+            '--spot-y',
+            `${(event.clientY - rect.top).toFixed(0)}px`,
+        );
+        layer.style.setProperty('--spot-o', '1');
+    }
     let frame = 0;
     let last: PointerEvent | null = null;
 
@@ -52,6 +89,8 @@ export function createPointerEngine(): { destroy: () => void } {
 
         const event = last;
         const target = event.target instanceof Element ? event.target : null;
+
+        applyLayer(event, target);
 
         (Object.keys(SELECTORS) as Effect[]).forEach((effect) => {
             const el = target?.closest<HTMLElement>(SELECTORS[effect]) ?? null;
@@ -136,6 +175,7 @@ export function createPointerEngine(): { destroy: () => void } {
     function onLeaveWindow(): void {
         last = null;
         (Object.keys(SELECTORS) as Effect[]).forEach(release);
+        releaseLayer();
     }
 
     document.addEventListener('pointermove', onMove, { passive: true });

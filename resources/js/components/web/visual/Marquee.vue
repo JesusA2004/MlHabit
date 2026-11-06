@@ -22,9 +22,16 @@ const props = withDefaults(
         duration?: number;
         tone?: 'light' | 'dark';
         label?: string;
+        /** Recorre de izquierda a derecha (para alternar dos filas). */
+        reverse?: boolean;
         class?: HTMLAttributes['class'];
     }>(),
-    { duration: 40, tone: 'light', label: 'Líneas y materiales' },
+    {
+        duration: 40,
+        tone: 'light',
+        label: 'Líneas y materiales',
+        reverse: false,
+    },
 );
 
 // Repite la lista hasta llenar pantallas anchas antes de duplicarla.
@@ -49,7 +56,12 @@ const filled = computed(() => {
         role="region"
         :style="{ '--marquee-duration': `${props.duration}s` }"
     >
-        <div class="marquee-track">
+        <div
+            class="marquee-track"
+            :style="
+                props.reverse ? { animationDirection: 'reverse' } : undefined
+            "
+        >
             <ul
                 v-for="copy in 2"
                 :key="copy"

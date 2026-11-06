@@ -171,6 +171,8 @@ onBeforeUnmount(() => {
                     >
                         <span
                             class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"
+                            data-motion="pop"
+                            data-motion-delay="200"
                             aria-hidden="true"
                         >
                             <FileText
@@ -214,7 +216,7 @@ onBeforeUnmount(() => {
                                             : undefined
                                     "
                                     :class="[
-                                        '-ml-px block border-l-2 py-1.5 pl-4 text-sm leading-snug transition-[border-color,color] duration-300',
+                                        '-ml-px block border-l-2 py-1.5 pl-4 text-sm leading-snug transition-[border-color,color,padding] duration-300 hover:pl-5',
                                         activeId === item.id
                                             ? 'border-primary font-medium text-foreground'
                                             : 'border-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground',
@@ -234,7 +236,7 @@ onBeforeUnmount(() => {
                                 :stroke-width="ICON_STROKE"
                                 aria-hidden="true"
                             />
-                            Volver al inicio
+                            <span class="link-sweep">Volver al inicio</span>
                         </button>
                     </nav>
                 </div>

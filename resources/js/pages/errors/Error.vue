@@ -3,14 +3,18 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, RotateCw } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import FinishSwatches from '@/components/ds/FinishSwatches.vue';
 import { Button } from '@/components/ui/button';
+import FloatingShapes from '@/components/web/visual/FloatingShapes.vue';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
 import { adminNavigation } from '@/lib/navigation';
 import { shellFor } from '@/lib/permissions';
 
 /**
  * Página de error con marca (403, 404, 419, 429, 500, 503). Independiente
- * de cualquier layout: funciona con o sin sesión.
+ * de cualquier layout: funciona con o sin sesión. Entrada escalonada solo
+ * con CSS (`motion-safe`), polvo de luz y la insignia oficial en el panel.
  */
 
 const props = defineProps<{ status: number; message?: string | null }>();
@@ -95,7 +99,9 @@ function back() {
                 <AppLogo />
             </Link>
 
-            <div class="flex flex-1 flex-col justify-center py-16">
+            <div
+                class="flex flex-1 flex-col justify-center py-16 motion-safe:[&>*]:animate-in motion-safe:[&>*]:duration-700 motion-safe:[&>*]:fill-mode-both motion-safe:[&>*]:fade-in motion-safe:[&>*]:slide-in-from-bottom-4 motion-safe:[&>*:nth-child(2)]:delay-100 motion-safe:[&>*:nth-child(3)]:delay-200 motion-safe:[&>*:nth-child(4)]:delay-300 motion-safe:[&>*:nth-child(5)]:delay-300"
+            >
                 <p
                     class="font-display text-sm font-semibold text-oak-ink tabular-nums"
                 >
@@ -143,9 +149,19 @@ function back() {
         </main>
 
         <aside
-            class="relative hidden overflow-hidden bg-stone lg:block"
+            class="relative isolate hidden overflow-hidden bg-stone lg:block"
             aria-hidden="true"
         >
+            <FloatingShapes layout="spread" />
+            <ParticleField variant="mixed" tone="light" :density="0.7" beam />
+            <div
+                class="breathe absolute top-[12%] left-1/2 -ml-24 [--breathe-duration:9s]"
+            >
+                <AppLogoIcon
+                    class-name="size-48 shadow-[0_24px_60px_-20px_rgb(35_30_26/0.45)]"
+                    sizes="192px"
+                />
+            </div>
             <div class="absolute inset-x-[8%] bottom-[-6%]">
                 <FinishSwatches />
             </div>

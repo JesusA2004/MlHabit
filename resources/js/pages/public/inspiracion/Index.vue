@@ -9,6 +9,8 @@ import CtaBand from '@/components/web/public/CtaBand.vue';
 import PageIntro from '@/components/web/public/PageIntro.vue';
 import SeoHead from '@/components/web/public/SeoHead.vue';
 import ShowcaseCard from '@/components/web/public/ShowcaseCard.vue';
+import Marquee from '@/components/web/visual/Marquee.vue';
+import type { MarqueeItem } from '@/components/web/visual/Marquee.vue';
 import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
 import NextStepTeaser from '@/components/web/visual/journey/NextStepTeaser.vue';
 import { cn } from '@/lib/utils';
@@ -95,6 +97,15 @@ const filterKey = computed(
     () =>
         `${props.filters.origen}-${props.filters.categoria}-${props.projects.current_page}`,
 );
+
+/** Muestrario de la marca (mismos nombres que el abanico de acabados). */
+const materials: MarqueeItem[] = [
+    { label: 'Roble', swatch: '#B07D4F' },
+    { label: 'Eucalipto', swatch: '#2F5A4C' },
+    { label: 'Lino', swatch: '#F3EEE7' },
+    { label: 'Piedra', swatch: '#D9CFC2' },
+    { label: 'Espresso', swatch: '#2B2420' },
+];
 </script>
 
 <template>
@@ -192,6 +203,15 @@ const filterKey = computed(
         </div>
     </PageIntro>
 
+    <div class="border-b border-border/70 bg-background py-4">
+        <Marquee
+            :items="materials"
+            label="Materiales y acabados"
+            :duration="46"
+            reverse
+        />
+    </div>
+
     <section class="section-y" aria-label="Proyectos">
         <div class="container-site">
             <p
@@ -199,7 +219,9 @@ const filterKey = computed(
                 aria-live="polite"
             >
                 <template v-if="props.projects.total">
-                    {{ props.projects.total }}
+                    <span :key="filterKey" data-countup>{{
+                        props.projects.total
+                    }}</span>
                     {{ props.projects.total === 1 ? 'proyecto' : 'proyectos' }}
                 </template>
             </p>
@@ -208,7 +230,7 @@ const filterKey = computed(
                 :key="filterKey"
                 class="grid gap-5 sm:grid-cols-2 lg:grid-cols-6"
                 data-motion-stagger="80"
-                data-motion="fade-up"
+                data-motion="rise"
             >
                 <ShowcaseCard
                     v-for="(project, i) in props.projects.data"
@@ -216,6 +238,7 @@ const filterKey = computed(
                     :project="project"
                     :size="layout(i).size"
                     :aspect="layout(i).aspect"
+                    :highlight="i === 0 && props.projects.current_page === 1"
                     :class="layout(i).class"
                 />
             </div>

@@ -13,6 +13,7 @@ import RichText from '@/components/web/public/RichText.vue';
 import SectionHeading from '@/components/web/public/SectionHeading.vue';
 import SeoHead from '@/components/web/public/SeoHead.vue';
 import ShowcaseCard from '@/components/web/public/ShowcaseCard.vue';
+import ParticleField from '@/components/web/visual/ParticleField.vue';
 import { featureIcon, ICON_STROKE } from '@/components/web/visual/icons';
 import { illustrationFor } from '@/components/web/visual/illustrations';
 import LineIllustration from '@/components/web/visual/illustrations/LineIllustration.vue';
@@ -450,6 +451,12 @@ function stepClass(i: number, total: number): string {
             class="tex-blueprint-dark pointer-events-none absolute inset-0 -z-10 opacity-60"
             aria-hidden="true"
         />
+        <ParticleField
+            variant="shavings"
+            tone="dark"
+            :density="0.5"
+            class="-z-10"
+        />
         <div class="container-site">
             <SectionHeading
                 id="proceso-producto-title"
@@ -460,7 +467,7 @@ function stepClass(i: number, total: number): string {
             <ol
                 class="mt-12 grid gap-px overflow-hidden rounded-2xl bg-white/10 sm:grid-cols-2 lg:grid-cols-4"
                 data-motion-stagger="110"
-                data-motion="fade-up"
+                data-motion="wipe-up"
             >
                 <li
                     v-for="(step, i) in props.process"
@@ -506,7 +513,7 @@ function stepClass(i: number, total: number): string {
             <div
                 class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="rise"
             >
                 <ShowcaseCard
                     v-for="project in props.projects"
@@ -549,7 +556,7 @@ function stepClass(i: number, total: number): string {
             <div
                 class="mt-10 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="zoom-out"
             >
                 <ProductCard
                     v-for="item in props.related"

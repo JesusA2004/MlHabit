@@ -15,16 +15,18 @@ import ResponsiveImage from './ResponsiveImage.vue';
  * Tarjeta de proyecto de inspiración con etiqueta de origen visible. Al
  * pasar el cursor la imagen se amplía y el resumen sube sobre la foto.
  * `aspect` permite composiciones editoriales (alto/ancho) sin romper el
- * uso anterior (`size`).
+ * uso anterior (`size`). Con ratón la tarjeta se inclina en 3D con brillo
+ * (`data-tilt`); `highlight` añade un borde con degradado que gira.
  */
 const props = withDefaults(
     defineProps<{
         project: ShowcaseCardData;
         size?: 'lg' | 'md';
         aspect?: 'landscape' | 'portrait' | 'square' | 'auto';
+        highlight?: boolean;
         class?: HTMLAttributes['class'];
     }>(),
-    { size: 'md', aspect: 'landscape' },
+    { size: 'md', aspect: 'landscape', highlight: false },
 );
 
 const frame = computed(() => {
@@ -54,7 +56,13 @@ const illustration = computed(() =>
                 props.class,
             )
         "
+        :data-tilt="props.size === 'lg' ? '3' : '4'"
     >
+        <span
+            v-if="props.highlight"
+            class="glow-border pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
+            aria-hidden="true"
+        />
         <div :class="cn('relative overflow-hidden bg-stone', frame)">
             <ResponsiveImage
                 v-if="props.project.image"

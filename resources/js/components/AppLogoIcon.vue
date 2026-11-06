@@ -1,63 +1,57 @@
 <script setup lang="ts">
-import { useId } from 'vue';
 import type { HTMLAttributes } from 'vue';
+import { cn } from '@/lib/utils';
 
 /**
- * Monograma ML Habitat: la M cuyo trazo final se convierte en la L, sobre
- * eucalipto con un canto de roble (como el canto de un tablero).
- * `variant="mono"` hereda `currentColor` para fondos de color.
+ * Logotipo oficial de ML Hábitat: la insignia redonda (monograma "ML" sobre
+ * la cocina de muro verde, con aro de roble). Fuente: `public/logoSinFondo.png`;
+ * las versiones optimizadas viven en `public/brand/` (WebP 128/256/512 px).
+ *
+ * El tamaño lo da `className` (p. ej. `size-8`); la imagen nunca provoca
+ * saltos de diseño porque lleva dimensiones intrínsecas cuadradas.
+ * `variant` se conserva por compatibilidad: la insignia es la misma sobre
+ * cualquier fondo.
  */
 defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(
     defineProps<{
         className?: HTMLAttributes['class'];
+        /** @deprecated La insignia oficial no tiene versión monocroma. */
         variant?: 'color' | 'mono';
+        /** Texto alternativo. Sin él, la imagen es decorativa (la acompaña el nombre). */
         title?: string;
+        /** Ancho mostrado aproximado, para elegir la resolución (atributo `sizes`). */
+        sizes?: string;
+        /** `eager` + prioridad alta para logotipos dentro del primer pintado. */
+        loading?: 'lazy' | 'eager';
     }>(),
-    { variant: 'color' },
+    { variant: 'color', sizes: '48px', loading: 'eager' },
 );
-
-const clipId = `ml-tile-${useId()}`;
 </script>
 
 <template>
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 32 32"
-        :class="props.className"
-        :role="props.title ? 'img' : undefined"
+    <img
+        src="/brand/logo-128.webp"
+        srcset="
+            /brand/logo-128.webp 128w,
+            /brand/logo-256.webp 256w,
+            /brand/logo-512.webp 512w
+        "
+        :sizes="props.sizes"
+        width="128"
+        height="128"
+        :alt="props.title ?? ''"
         :aria-hidden="props.title ? undefined : 'true'"
-        :aria-label="props.title"
+        :loading="props.loading"
+        decoding="async"
+        draggable="false"
+        :class="
+            cn(
+                'aspect-square rounded-full object-contain select-none',
+                props.className,
+            )
+        "
         v-bind="$attrs"
-    >
-        <template v-if="props.variant === 'color'">
-            <defs>
-                <clipPath :id="clipId">
-                    <rect width="32" height="32" rx="8" />
-                </clipPath>
-            </defs>
-            <g :clip-path="`url(#${clipId})`">
-                <rect width="32" height="32" fill="#2F5A4C" />
-                <rect y="26.5" width="32" height="5.5" fill="#B07D4F" />
-            </g>
-            <path
-                d="M7.5 21.5V9l6.5 7 6.5-7v12.5H25"
-                fill="none"
-                stroke="#FFFFFF"
-                stroke-width="2.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            />
-        </template>
-        <path
-            v-else
-            d="M7.5 21.5V9l6.5 7 6.5-7v12.5H25"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        />
-    </svg>
+    />
 </template>

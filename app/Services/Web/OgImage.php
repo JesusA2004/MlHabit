@@ -11,6 +11,7 @@ use App\Models\Page;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
+use App\Models\SitePage;
 use App\Models\SiteSection;
 use App\Support\Settings;
 use GdImage;
@@ -43,7 +44,7 @@ final class OgImage
     public const TYPES = ['home', 'category', 'product', 'showcase', 'page'];
 
     /** Súbelo al cambiar el diseño para regenerar todas las imágenes. */
-    private const VERSION = 3;
+    private const VERSION = 4;
 
     /** Supermuestreo: se dibuja al doble y se reduce (bordes suaves). */
     private const S = 2;
@@ -434,26 +435,28 @@ final class OgImage
     // Piezas de marca
     // ------------------------------------------------------------------
 
-    /** Monograma + "ML Habitat". */
+    /** Insignia oficial + "ML Habitat". */
     private function brandRow(GdImage $canvas, int $x, int $y, bool $inverted): void
     {
-        $this->monogram($canvas, $x, $y, 52);
-        $this->text($canvas, 30, $this->font('familjen-semibold'), $x + 68, $y + 37, $inverted ? '#FFFFFF' : self::C_INK, PublicSite::name(), -0.02);
+        $this->badge($canvas, $x - 4, $y - 6, 64);
+        $this->text($canvas, 30, $this->font('familjen-semibold'), $x + 72, $y + 37, $inverted ? '#FFFFFF' : self::C_INK, PublicSite::name(), -0.02);
     }
 
     /**
-     * Monograma ML (mismo trazo que public/favicon.svg, retícula de 32).
+     * Logotipo oficial (insignia redonda, `public/brand/logo-256.png`,
+     * generado desde `public/logoSinFondo.png`) con su transparencia.
      */
-    private function monogram(GdImage $canvas, int $x, int $y, int $size): void
+    private function badge(GdImage $canvas, int $x, int $y, int $size): void
     {
-        $k = $size / 32;
-        $this->roundedRect($canvas, $x, $y, $size, $size, 8 * $k, self::C_OAK);
-        // Eucalipto con esquinas superiores redondeadas; deja ver el canto de roble.
-        $this->polygon($canvas, $this->roundedRectPoints($x, $y, $size, 26.5 * $k, 8 * $k, [true, true, false, false]), self::C_EUCALYPTUS);
+        $path = public_path('brand/logo-256.png');
+        $logo = is_file($path) ? @imagecreatefrompng($path) : false;
+        if (! $logo instanceof GdImage) {
+            return;
+        }
 
-        $points = [[7.5, 21.5], [7.5, 9], [14, 16], [20.5, 9], [20.5, 21.5], [25, 21.5]];
-        $path = array_map(fn ($p) => [$x + $p[0] * $k, $y + $p[1] * $k], $points);
-        $this->stroke($canvas, $path, 2.6 * $k, '#FFFFFF');
+        imagealphablending($canvas, true);
+        imagecopyresampled($canvas, $logo, $x * self::S, $y * self::S, 0, 0, $size * self::S, $size * self::S, imagesx($logo), imagesy($logo));
+        imagedestroy($logo);
     }
 
     /** Fila de muestras (lino, piedra, roble, eucalipto, espresso). */
@@ -907,8 +910,14 @@ final class OgImage
         }
 
         $page = Page::query()->published()->where('slug', $slug)->first();
+        if ($page !== null) {
+            return $this->page($page->slug, $page->title, 'Información legal');
+        }
 
-        return $page !== null ? $this->page($page->slug, $page->title, 'Información legal') : null;
+        // Páginas propias del editor visual (SitePages::render).
+        $sitePage = SitePage::query()->published()->where('slug', $slug)->first();
+
+        return $sitePage !== null ? $this->page($sitePage->slug, $sitePage->seo_title ?: $sitePage->title) : null;
     }
 
     /** Media pública, lista y de tipo imagen; si no, null. */

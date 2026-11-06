@@ -87,7 +87,7 @@ const promises = [
                 v-if="props.categories.length"
                 class="grid auto-rows-[minmax(18rem,auto)] gap-4 sm:grid-cols-2 lg:grid-cols-3"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="rise"
             >
                 <CategoryTile
                     v-for="(category, i) in props.categories"
@@ -120,7 +120,7 @@ const promises = [
         aria-labelledby="promesas-title"
     >
         <div class="container-site grid gap-12 lg:grid-cols-12 lg:items-center">
-            <div class="lg:col-span-4" data-motion="fade-up">
+            <div class="lg:col-span-4" data-motion="blur-up">
                 <h2 id="promesas-title" class="text-display-md">
                     Todo el catálogo se adapta a ti
                 </h2>
@@ -133,12 +133,13 @@ const promises = [
             <ul
                 class="grid gap-4 sm:grid-cols-2 lg:col-span-8"
                 data-motion-stagger="90"
-                data-motion="fade-up"
+                data-motion="rise"
             >
                 <li
                     v-for="item in promises"
                     :key="item.title"
-                    class="group rounded-2xl border border-border bg-card p-6 transition-[translate,box-shadow,border-color] duration-500 ease-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md"
+                    data-spotlight
+                    class="group overflow-hidden rounded-2xl border border-border bg-card p-6 transition-[translate,box-shadow,border-color] duration-500 ease-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-md"
                 >
                     <IconBadge :icon="item.icon" />
                     <h3

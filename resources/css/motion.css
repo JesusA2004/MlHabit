@@ -41,8 +41,8 @@
     [data-motion]:not([data-motion='none']):not([data-motion='draw']):not(
         [data-motion='split']
     ):not([data-motion='settle']):not([data-motion='mask-reveal']):not(
-        [data-motion-in]
-    ) {
+        [data-motion^='wipe-']
+    ):not([data-motion-in]) {
     opacity: 0;
 }
 
@@ -97,6 +97,81 @@
 
 .motion-ready .motion-scope [data-motion='settle']:not([data-motion-in]) img {
     transform: scale(1.06);
+}
+
+/* --- Presets v2 -------------------------------------------------------- */
+
+/* Recortes (wipe): el bloque se descubre desde un borde, sin desvanecerse. */
+.motion-ready .motion-scope [data-motion^='wipe-'] {
+    clip-path: inset(0 0 0 0 round var(--mask-radius, 0px));
+}
+
+.motion-ready .motion-scope [data-motion='wipe-up']:not([data-motion-in]) {
+    clip-path: inset(100% 0 0 0 round var(--mask-radius, 0px));
+}
+
+.motion-ready .motion-scope [data-motion='wipe-down']:not([data-motion-in]) {
+    clip-path: inset(0 0 100% 0 round var(--mask-radius, 0px));
+}
+
+.motion-ready .motion-scope [data-motion='wipe-left']:not([data-motion-in]) {
+    clip-path: inset(0 0 0 100% round var(--mask-radius, 0px));
+}
+
+.motion-ready .motion-scope [data-motion='wipe-right']:not([data-motion-in]) {
+    clip-path: inset(0 100% 0 0 round var(--mask-radius, 0px));
+}
+
+/* Elevación: sube con una ligera inclinación hacia atrás (tarjetas). */
+.motion-ready .motion-scope [data-motion='rise']:not([data-motion-in]) {
+    transform: perspective(900px) translate3d(0, 48px, 0) rotateX(10deg);
+    transform-origin: 50% 0%;
+}
+
+/* Pop: aparece con un pequeño rebote (iconos, chips, cifras). */
+.motion-ready .motion-scope [data-motion='pop']:not([data-motion-done]) {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.motion-ready .motion-scope [data-motion='pop']:not([data-motion-in]) {
+    transform: scale(0.82);
+}
+
+/* Desenfoque + subida (titulares). */
+.motion-ready .motion-scope [data-motion='blur-up']:not([data-motion-in]) {
+    filter: blur(10px);
+    transform: translate3d(0, calc(var(--motion-distance) * 0.75), 0);
+}
+
+/* Inclinado: entra girando apenas (muestras, notas). */
+.motion-ready .motion-scope [data-motion='tilt-in']:not([data-motion-in]) {
+    transform: translate3d(0, var(--motion-distance), 0) rotate(-2.5deg);
+}
+
+/* Zoom de imagen al revelarse: el bloque aparece y su imagen se asienta
+   desde un acercamiento (para la imagen LCP usar `settle`). */
+.motion-ready
+    .motion-scope
+    [data-motion='zoom-out']:not([data-motion-done])
+    img {
+    transition: transform 1.6s var(--motion-ease) var(--motion-delay, 0ms);
+}
+
+.motion-ready .motion-scope [data-motion='zoom-out']:not([data-motion-in]) img {
+    transform: scale(1.18);
+}
+
+/* Imagen que se descubre con zoom (clase): combinar con `wipe-*` o
+   `mask-reveal` en el mismo elemento. */
+.motion-ready
+    .motion-scope
+    .img-reveal[data-motion]:not([data-motion-done])
+    img {
+    transition: transform 1.4s var(--motion-ease) var(--motion-delay, 0ms);
+}
+
+.motion-ready .motion-scope .img-reveal[data-motion]:not([data-motion-in]) img {
+    transform: scale(1.14);
 }
 
 /* Texto dividido en palabras (componente SplitText). */
@@ -249,11 +324,20 @@
     transform: perspective(1000px) rotateX(var(--tilt-rx, 0deg))
         rotateY(var(--tilt-ry, 0deg));
     transform-style: preserve-3d;
-    transition: transform 0.6s var(--motion-ease);
+    /* Conserva las transiciones de elevación de las tarjetas (translate, sombra). */
+    transition:
+        transform 0.6s var(--motion-ease),
+        translate 0.5s var(--motion-ease),
+        scale 0.5s var(--motion-ease),
+        box-shadow 0.5s var(--motion-ease);
 }
 
 .motion-ready [data-tilt][data-pointer-active] {
-    transition-duration: 0.12s;
+    transition:
+        transform 0.12s var(--motion-ease),
+        translate 0.5s var(--motion-ease),
+        scale 0.5s var(--motion-ease),
+        box-shadow 0.5s var(--motion-ease);
 }
 
 .motion-ready [data-tilt]::after {
@@ -313,6 +397,27 @@
     transform: scale(1.75);
 }
 
+/* Capa de luz de una sección oscura (`[data-spotlight-layer]`): la mueve
+   pointer.ts aunque la capa no reciba eventos. */
+.spotlight-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        560px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+        rgb(214 168 118 / 0.16),
+        rgb(47 90 76 / 0.08) 45%,
+        transparent 72%
+    );
+    opacity: var(--spot-o, 0);
+    transition: opacity 0.6s var(--motion-ease);
+}
+
+/* Dentro de una tarjeta inclinada, `data-tilt-depth` "flota" sobre el plano. */
+.motion-ready [data-tilt] [data-tilt-depth] {
+    transform: translateZ(var(--tilt-depth, 24px));
+}
+
 /* ---------------------------------------------------------------------- */
 /* 4. Transiciones de página                                               */
 /* ---------------------------------------------------------------------- */
@@ -349,6 +454,7 @@
 @keyframes vt-in {
     from {
         opacity: 0;
+        filter: blur(6px);
         transform: translate3d(0, 16px, 0);
     }
 }
@@ -372,6 +478,54 @@
     .link-underline:focus-visible,
     .link-underline[aria-current='page'] {
         background-size: 100% 1px;
+    }
+
+    /* Subrayado que entra por la izquierda y sale por la derecha. */
+    .link-sweep {
+        background-image: linear-gradient(currentColor, currentColor);
+        background-size: 0% 1px;
+        background-position: 100% 100%;
+        background-repeat: no-repeat;
+        transition: background-size 0.5s var(--motion-ease);
+        padding-bottom: 2px;
+    }
+
+    .link-sweep:hover,
+    .link-sweep:focus-visible {
+        background-size: 100% 1px;
+        background-position: 0 100%;
+    }
+
+    /* Borde con degradado que gira (tarjetas destacadas). El elemento debe
+       tener fondo propio; el borde vive en `::after` con máscara (no combinar
+       con `data-tilt` en el mismo elemento: también usa `::after`). */
+    .glow-border {
+        position: relative;
+        isolation: isolate;
+    }
+
+    .glow-border::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        padding: var(--glow-width, 1.5px);
+        border-radius: inherit;
+        pointer-events: none;
+        background: conic-gradient(
+            from var(--glow-angle, 0deg),
+            transparent 0deg,
+            var(--glow-a, var(--oak)) 60deg,
+            var(--glow-b, var(--primary)) 140deg,
+            transparent 200deg,
+            transparent 360deg
+        );
+        mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+        mask-composite: exclude;
+        opacity: var(--glow-opacity, 0.9);
+        animation: glow-spin var(--glow-duration, 6s) linear infinite;
     }
 
     /* Flecha que se adelanta al pasar el cursor (icono `.nudge`). */
@@ -505,6 +659,97 @@
 
     .dimension-line::after {
         right: 0;
+    }
+}
+
+@property --glow-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes glow-spin {
+    to {
+        --glow-angle: 360deg;
+    }
+}
+
+/* Barra de progreso de lectura (la inserta lib/motion). Escala, no ancho. */
+.scroll-progress-bar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 60;
+    height: 2px;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--primary), var(--oak));
+    transform-origin: 0 50%;
+    transform: scaleX(var(--scroll-progress, 0));
+    opacity: 0;
+    transition: opacity 0.4s var(--motion-ease);
+}
+
+html[data-scrolled='true'] .scroll-progress-bar {
+    opacity: 1;
+}
+
+/* Fuera del sitio público y donde el recorrido ya pinta su barra
+   segmentada (móvil/tableta), no se muestra. */
+html:not(:has(.motion-scope)) .scroll-progress-bar {
+    display: none;
+}
+
+@media (max-width: 1279.98px) {
+    html:has([data-journey-bar]) .scroll-progress-bar {
+        display: none;
+    }
+}
+
+/* Formas que respiran (FloatingShapes). */
+.breathe {
+    animation: breathe var(--breathe-duration, 10s) var(--motion-ease-in-out)
+        var(--breathe-delay, 0s) infinite alternate;
+}
+
+@keyframes breathe {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(var(--breathe-rotate, 0deg))
+            scale(1);
+        opacity: 0.85;
+    }
+    100% {
+        transform: translate3d(0, -14px, 0)
+            rotate(calc(var(--breathe-rotate, 0deg) + 4deg)) scale(1.06);
+        opacity: 1;
+    }
+}
+
+/* Rayo de sol diagonal detrás de las partículas (ParticleField `beam`). */
+.particle-beam {
+    position: absolute;
+    inset: -20% -10%;
+    background: linear-gradient(
+        115deg,
+        transparent 30%,
+        rgb(255 228 190 / 0.08) 42%,
+        rgb(255 236 210 / 0.13) 48%,
+        transparent 62%
+    );
+    animation: beam-sway 18s var(--motion-ease-in-out) infinite alternate;
+}
+
+.particle-beam[data-tone='light'] {
+    background: linear-gradient(
+        115deg,
+        transparent 30%,
+        rgb(176 125 79 / 0.06) 44%,
+        rgb(255 255 255 / 0.35) 49%,
+        transparent 62%
+    );
+}
+
+@keyframes beam-sway {
+    to {
+        transform: translate3d(6%, 0, 0) rotate(2deg);
     }
 }
 
@@ -662,6 +907,9 @@
 
     .blob,
     .float-soft,
+    .breathe,
+    .particle-beam,
+    .glow-border::after,
     .step-panel,
     .check-in,
     .motion-calm [role='radio'],
@@ -685,6 +933,8 @@
 
     .marquee,
     .blob,
+    .particle-field,
+    .scroll-progress-bar,
     [data-journey-rail],
     [data-journey-cta] {
         display: none !important;

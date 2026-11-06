@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title>Volvemos en un momento — ML Habitat</title>
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <style>
         :root { --bg: #F7F5F2; --surface: #FFFFFF; --fg: #231E1A; --muted: #6B635A; --border: #E3DDD4; --primary: #2F5A4C; --linen: #E9E2D6; --oak: #B07D4F; --eucalyptus: #2F5A4C; --espresso: #2B2420; color-scheme: light; }
@@ -14,7 +15,8 @@
         main { width: 100%; max-width: 520px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px 32px; }
         .swatch { display: flex; height: 6px; border-radius: 999px; overflow: hidden; margin-bottom: 32px; width: 120px; }
         .swatch span { flex: 1; }
-        .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 15px; margin: 0 0 24px; }
+        .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 15px; margin: 0 0 24px; display: flex; align-items: center; gap: 12px; }
+        .brand img { width: 48px; height: 48px; border-radius: 50%; }
         .code { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; margin: 0 0 8px; }
         h1 { font-size: clamp(1.625rem, 4vw, 2.125rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
         p { line-height: 1.6; color: var(--muted); margin: 0 0 24px; }
@@ -30,7 +32,7 @@
             <span style="background: var(--eucalyptus)"></span>
             <span style="background: var(--espresso)"></span>
         </div>
-        <p class="brand">ML Habitat</p>
+        <p class="brand"><img src="/brand/logo-128.webp" width="48" height="48" alt="">ML Habitat</p>
         <p class="code">Error 503 · Mantenimiento</p>
         <h1>Estamos haciendo ajustes en el taller</h1>
         <p>El sitio está en mantenimiento programado y volverá en unos minutos. Tus citas, pagos y proyectos están a salvo.</p>

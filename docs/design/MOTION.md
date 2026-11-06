@@ -222,3 +222,34 @@ md 20 · lg 24 · xl 32`), `categoryIcon()` y `featureIcon()`.
 7. Nunca `alert`, `confirm` ni `<select>` nativos.
 8. Sin scroll horizontal: `.motion-scope { overflow-x: clip }` absorbe los
    desplazamientos de entrada (y no rompe `position: sticky`).
+
+## 9. Ampliación v2 (partículas, presets y microinteracciones)
+
+- **Presets nuevos de `data-motion`** (compatibles con `v-reveal` y
+  `data-motion-stagger`): `wipe-up` · `wipe-down` · `wipe-left` ·
+  `wipe-right` (recorte con `clip-path`, radio con `--mask-radius`), `rise`
+  (sube con leve inclinación 3D), `pop` (rebote), `blur-up`, `tilt-in`,
+  `zoom-out` (el bloque aparece y su `<img>` se asienta desde 1.18).
+  Clase `.img-reveal` + un preset `wipe-*`/`mask-reveal` = barrido con zoom.
+- **Partículas** (`visual/ParticleField.vue`, runtime
+  `lib/motion/particles.ts`): `variant` `dust | shavings | mixed`, `tone`
+  `dark | light`, `density` (0.2–2), `interactive` (repulsión del cursor),
+  `beam` (rayo de sol). Un rAF por lienzo, DPR ≤ 2, pausa fuera de pantalla
+  y con la pestaña oculta, pocas partículas en móvil, cuadro quieto con
+  movimiento reducido. `SectionDecor` lo pone en `hero` y `final_cta`
+  (prop `particles`: `auto | off | dust | shavings | mixed`).
+- **`FloatingShapes.vue`**: aros y muestras que "respiran" (`.breathe`).
+- **`.glow-border`**: borde con degradado que gira (`::after`; variables
+  `--glow-a`, `--glow-b`, `--glow-width`, `--glow-duration`,
+  `--glow-opacity`). No combinar con `data-tilt` en el mismo elemento.
+- **`[data-spotlight-layer]`** (clase `.spotlight-layer`): luz que sigue al
+  cursor dentro de su anfitrión (`[data-spotlight-host]` o `.sb-section`)
+  aunque la capa sea `pointer-events: none`.
+- **`.link-sweep`**: subrayado que entra por la izquierda y sale por la derecha.
+- **Barra de progreso de lectura**: `createMotion` inserta
+  `.scroll-progress-bar` (2 px, escala con `--scroll-progress`); se oculta
+  por debajo de 1280 px cuando existe la barra del recorrido
+  (`[data-journey-bar]`) y fuera del sitio público.
+- `ShowcaseCard` acepta `highlight`; `ProductCard`/`ShowcaseCard` usan
+  `data-tilt`; `Marquee` acepta `reverse`; `PageIntro` acepta `ambient`
+  (por defecto `true`).
