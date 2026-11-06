@@ -70,7 +70,7 @@ async function publish() {
                     ¿Publicar los cambios?
                 </AlertDialogTitle>
                 <AlertDialogDescription class="text-sm leading-relaxed">
-                    La portada del sitio se actualiza al instante con lo que ves
+                    La página del sitio se actualiza al instante con lo que ves
                     en el editor. La versión anterior queda en el historial.
                 </AlertDialogDescription>
             </AlertDialogHeader>
@@ -84,7 +84,7 @@ async function publish() {
                     v-model="note"
                     rows="2"
                     maxlength="300"
-                    placeholder="p. ej. Nueva foto de portada y orden de secciones"
+                    placeholder="p. ej. Nueva foto principal y orden de secciones"
                 />
             </div>
 

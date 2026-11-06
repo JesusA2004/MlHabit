@@ -8,6 +8,7 @@ use App\Models\Page;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
+use App\Models\SitePage;
 use App\Models\SiteSection;
 use App\Services\Web\PublicSite;
 use App\Support\ResponsiveImage;
@@ -132,7 +133,7 @@ class SeoController extends Controller
             $pages = Page::query()->published()->orderBy('id')->get(['slug', 'title', 'updated_at']);
 
             $latest = fn (iterable $items): ?CarbonInterface => collect($items)->pluck('updated_at')->filter()->max();
-            $homeUpdated = SiteSection::query()->max('updated_at');
+            $homeUpdated = SiteSection::query()->where('page', 'home')->max('updated_at');
 
             $urls = [
                 ['loc' => url('/'), 'lastmod' => $homeUpdated !== null ? Carbon::parse((string) $homeUpdated) : null, 'images' => []],
@@ -168,6 +169,21 @@ class SeoController extends Controller
 
             foreach ($pages as $page) {
                 $urls[] = ['loc' => url('/legal/'.$page->slug), 'lastmod' => $page->updated_at, 'images' => []];
+            }
+
+            // Páginas propias del editor visual (solo publicadas).
+            $sitePages = SitePage::query()->published()->orderBy('id')->get(['id', 'slug', 'updated_at', 'published_at']);
+            $sectionDates = $sitePages->isNotEmpty()
+                ? SiteSection::query()->whereIn('page', $sitePages->map(fn (SitePage $p) => $p->pageKey())->all())
+                    ->selectRaw('page, MAX(updated_at) as at')->groupBy('page')->pluck('at', 'page')
+                : collect();
+            foreach ($sitePages as $sitePage) {
+                $at = $sectionDates->get($sitePage->pageKey());
+                $urls[] = [
+                    'loc' => $sitePage->publicUrl(),
+                    'lastmod' => collect([$sitePage->updated_at, $at !== null ? Carbon::parse((string) $at) : null])->filter()->max(),
+                    'images' => [],
+                ];
             }
 
             return $urls;

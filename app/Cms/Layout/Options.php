@@ -61,6 +61,16 @@ final class Options
 
     public const BADGE_VARIANTS = ['eyebrow', 'pill', 'glass', 'soft'];
 
+    /** Galería: cuadrícula, carrusel deslizable o mosaico editorial. */
+    public const GALLERY_LAYOUTS = ['grid', 'carousel', 'mosaic'];
+
+    public const GALLERY_GAPS = ['sm', 'md', 'lg'];
+
+    public const GALLERY_ASPECTS = ['4:3', '1:1', '3:4', '16:9'];
+
+    /** Proporción del reproductor de un video incrustado (YouTube/Vimeo). */
+    public const EMBED_ASPECTS = ['16:9', '4:3', '1:1', '9:16'];
+
     public const SHAPES = ['rect', 'circle', 'ring', 'line', 'rings', 'swatches', 'elevation'];
 
     public const LIST_MARKERS = ['check', 'dot', 'number'];

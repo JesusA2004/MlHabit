@@ -33,7 +33,7 @@ export type PublicSiteData = SiteData & {
     };
     categories?: { label: string; href: string }[];
     footer?: { text: string | null; legalName: string | null };
-    cta?: { label: string; href: string };
+    cta?: SiteData['cta'];
 };
 
 export type SeoData = {

@@ -1,6 +1,8 @@
 import {
     BadgeCheck,
     CircleHelp,
+    Clapperboard,
+    UsersRound,
     CreditCard,
     Images,
     LayoutDashboard,
@@ -47,6 +49,9 @@ const ICONS: Record<string, Component> = {
     canvas: SquareDashed,
     blank: SquareDashed,
     'square-dashed': SquareDashed,
+    // Plantillas de página (App\Cms\Layout\PageTemplates)
+    'users-round': UsersRound,
+    clapperboard: Clapperboard,
 };
 
 export function templateIcon(name: string): Component {

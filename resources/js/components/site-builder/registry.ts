@@ -25,6 +25,8 @@ import {
     Type,
     Video,
     Images,
+    GalleryHorizontalEnd,
+    MonitorPlay,
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import BadgeBlock from './blocks/BadgeBlock.vue';
@@ -32,9 +34,11 @@ import BenefitsListBlock from './blocks/BenefitsListBlock.vue';
 import ButtonBlock from './blocks/ButtonBlock.vue';
 import CategoriesBlock from './blocks/CategoriesBlock.vue';
 import CoverageCheckerBlock from './blocks/CoverageCheckerBlock.vue';
+import EmbedBlock from './blocks/EmbedBlock.vue';
 import FaqBlock from './blocks/FaqBlock.vue';
 import FeaturedProjectsBlock from './blocks/FeaturedProjectsBlock.vue';
 import FinalCtaBlock from './blocks/FinalCtaBlock.vue';
+import GalleryBlock from './blocks/GalleryBlock.vue';
 import HeadingBlock from './blocks/HeadingBlock.vue';
 import HomeVisitBlock from './blocks/HomeVisitBlock.vue';
 import IconBlock from './blocks/IconBlock.vue';
@@ -165,6 +169,37 @@ export const BLOCKS: Record<BlockType, BlockDefinition> = {
         size: [6, 14],
         props: { mediaId: null, autoplay: true, loop: true, controls: false },
         frame: true,
+    },
+    embed: {
+        label: 'YouTube / Vimeo',
+        icon: MonitorPlay,
+        component: EmbedBlock,
+        group: 'media',
+        size: [8, 18],
+        props: {
+            url: '',
+            provider: null,
+            videoId: null,
+            title: '',
+            aspect: '16:9',
+        },
+        frame: true,
+    },
+    gallery: {
+        label: 'Galería',
+        icon: GalleryHorizontalEnd,
+        component: GalleryBlock,
+        group: 'media',
+        size: [12, 20],
+        props: {
+            items: [],
+            layout: 'grid',
+            columns: 3,
+            gap: 'md',
+            aspect: '4:3',
+            lightbox: true,
+            showOrigin: true,
+        },
     },
     icon: {
         label: 'Ícono',

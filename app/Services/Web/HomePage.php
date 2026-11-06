@@ -123,6 +123,15 @@ class HomePage
             if ($block['type'] === 'image' && is_int($props['mediaId'] ?? null)) {
                 $images[$props['mediaId']] ??= ResponsiveImage::for($media->get($props['mediaId']), null, $this->sizes((int) $block['w'], $fullBleed));
             }
+            if ($block['type'] === 'gallery' && is_array($props['items'] ?? null)) {
+                $columns = ($props['layout'] ?? 'grid') === 'carousel' ? 2 : max(1, (int) ($props['columns'] ?? 3));
+                $tile = max(1, (int) round((int) $block['w'] / $columns));
+                foreach ($props['items'] as $item) {
+                    if (is_array($item) && is_int($item['mediaId'] ?? null)) {
+                        $images[$item['mediaId']] ??= ResponsiveImage::for($media->get($item['mediaId']), null, $this->sizes($tile, $fullBleed));
+                    }
+                }
+            }
             if ($block['type'] === 'video' && is_int($props['mediaId'] ?? null)) {
                 $video = $media->get($props['mediaId']);
                 if ($video instanceof Media && $video->type === MediaType::Video) {

@@ -49,6 +49,7 @@ import { INK_TOKENS, MOTION_PRESETS, SURFACE_TOKENS } from '../tokens';
 import type { Block } from '../types';
 import ColorField from './ColorField.vue';
 import InspectorGroup from './InspectorGroup.vue';
+import MediaBlockFields from './MediaBlockFields.vue';
 import { editorKey } from './keys';
 import { previewMotion } from './motion';
 import SbSlider from './SbSlider.vue';
@@ -635,6 +636,18 @@ const SHAPES = [
                             (v: boolean) => set('controls', v)
                         "
                 /></label>
+            </template>
+
+            <template
+                v-else-if="
+                    props.block.type === 'gallery' ||
+                    props.block.type === 'embed'
+                "
+            >
+                <MediaBlockFields
+                    :block="props.block"
+                    :section-key="props.sectionKey"
+                />
             </template>
 
             <template v-else-if="props.block.type === 'badge'">

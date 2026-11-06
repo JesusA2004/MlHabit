@@ -20,7 +20,8 @@ import type { IllustrationName } from '@/components/web/visual/illustrations/typ
 import Marquee from '@/components/web/visual/Marquee.vue';
 import type { MarqueeItem } from '@/components/web/visual/Marquee.vue';
 import { defaultSiteNavigation } from '@/lib/navigation';
-import type { SiteData } from '@/types/public';
+import type { SiteData, SiteNavLink } from '@/types/public';
+import NavAnchor from './NavAnchor.vue';
 import SocialIcon from './SocialIcon.vue';
 
 /**
@@ -43,9 +44,14 @@ const props = withDefaults(
 
 const year = new Date().getFullYear();
 const name = computed(() => props.site?.name || 'ML Habitat');
-const navigation = computed(() =>
+/** Enlaces del menú del sitio; los submenús se aplanan en el pie. */
+const navigation = computed<SiteNavLink[]>(() =>
     props.site?.navigation?.length
-        ? props.site.navigation
+        ? props.site.navigation.flatMap((item) =>
+              item.href
+                  ? [{ ...item, href: item.href }]
+                  : (item.children ?? []),
+          )
         : defaultSiteNavigation,
 );
 const contact = computed(() => props.site?.contact ?? {});
@@ -262,15 +268,20 @@ const platformLabel = (platform: string) =>
                         Explora
                     </h3>
                     <ul class="mt-4 flex flex-col gap-1">
-                        <li v-for="link in navigation" :key="link.href">
-                            <Link
+                        <li
+                            v-for="(link, i) in navigation"
+                            :key="`${i}-${link.href}`"
+                        >
+                            <NavAnchor
                                 :href="link.href"
+                                :external="link.external"
+                                :new-tab="link.newTab"
                                 class="group inline-flex min-h-10 items-center gap-1 text-[0.9375rem] text-espresso-foreground/70 transition-colors hover:text-white"
                             >
                                 <span class="link-underline">{{
                                     link.label
                                 }}</span>
-                            </Link>
+                            </NavAnchor>
                         </li>
                     </ul>
                 </nav>

@@ -5,11 +5,13 @@ use App\Http\Controllers\Admin\Web\CatalogController;
 use App\Http\Controllers\Admin\Web\FaqController;
 use App\Http\Controllers\Admin\Web\MediaCollectionController;
 use App\Http\Controllers\Admin\Web\MediaController;
+use App\Http\Controllers\Admin\Web\NavigationController;
 use App\Http\Controllers\Admin\Web\PageController;
 use App\Http\Controllers\Admin\Web\ProductController;
 use App\Http\Controllers\Admin\Web\ShowcaseController;
 use App\Http\Controllers\Admin\Web\SiteBuilderController;
 use App\Http\Controllers\Admin\Web\SiteController;
+use App\Http\Controllers\Admin\Web\SitePageController;
 use App\Http\Controllers\Admin\Web\SocialLinkController;
 use App\Http\Controllers\Admin\Web\TestimonialController;
 use Illuminate\Support\Facades\Route;
@@ -33,6 +35,24 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('sitio/editor/descartar', [SiteBuilderController::class, 'discard'])->name('sitio.editor.descartar');
     Route::post('sitio/editor/versiones/{version}/restaurar', [SiteBuilderController::class, 'restore'])->name('sitio.editor.versiones.restaurar');
     Route::get('sitio/editor/vista-previa', [SiteBuilderController::class, 'preview'])->middleware('signed')->name('sitio.editor.vista-previa');
+
+    // Páginas propias armadas con el mismo editor visual (clave `pagina-{id}`)
+    Route::post('sitio/paginas-web', [SitePageController::class, 'store'])->name('sitio.paginas-web.store');
+    Route::put('sitio/paginas-web/{sitePage}', [SitePageController::class, 'update'])->name('sitio.paginas-web.update');
+    Route::post('sitio/paginas-web/{sitePage}/duplicar', [SitePageController::class, 'duplicate'])->name('sitio.paginas-web.duplicar');
+    Route::post('sitio/paginas-web/{sitePage}/publicar', [SitePageController::class, 'publish'])->name('sitio.paginas-web.publicar');
+    Route::post('sitio/paginas-web/{sitePage}/despublicar', [SitePageController::class, 'unpublish'])->name('sitio.paginas-web.despublicar');
+    Route::delete('sitio/paginas-web/{sitePage}', [SitePageController::class, 'destroy'])->name('sitio.paginas-web.destroy');
+    Route::get('sitio/paginas-web/{sitePage}/editor', [SiteBuilderController::class, 'editPage'])->name('sitio.paginas-web.editor.edit');
+    Route::put('sitio/paginas-web/{sitePage}/editor/borrador', [SiteBuilderController::class, 'saveDraftPage'])->middleware('throttle:240,1')->name('sitio.paginas-web.editor.borrador');
+    Route::post('sitio/paginas-web/{sitePage}/editor/publicar', [SiteBuilderController::class, 'publishPage'])->name('sitio.paginas-web.editor.publicar');
+    Route::post('sitio/paginas-web/{sitePage}/editor/descartar', [SiteBuilderController::class, 'discardPage'])->name('sitio.paginas-web.editor.descartar');
+    Route::post('sitio/paginas-web/{sitePage}/editor/versiones/{version}/restaurar', [SiteBuilderController::class, 'restorePage'])->name('sitio.paginas-web.editor.versiones.restaurar');
+    Route::get('sitio/paginas-web/{sitePage}/editor/vista-previa', [SiteBuilderController::class, 'previewPage'])->middleware('signed')->name('sitio.paginas-web.editor.vista-previa');
+
+    // Menú del sitio (cabecera pública)
+    Route::put('sitio/menu', [NavigationController::class, 'update'])->name('sitio.menu.update');
+    Route::post('sitio/menu/restablecer', [NavigationController::class, 'reset'])->name('sitio.menu.restablecer');
 
     Route::put('sitio/ajustes/{group}', [SiteController::class, 'updateSettings'])->whereIn('group', ['brand', 'contact', 'seo', 'footer'])->name('sitio.ajustes.update');
 

@@ -6,11 +6,18 @@ import PageContainer from '@/components/ds/PageContainer.vue';
 import PageHeader from '@/components/ds/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import NavigationPanel from '@/components/web/admin/site/NavigationPanel.vue';
+import type { NavigationData } from '@/components/web/admin/site/NavigationPanel.vue';
 import PagesPanel from '@/components/web/admin/site/PagesPanel.vue';
 import type { PageRow } from '@/components/web/admin/site/PagesPanel.vue';
 import EditorLauncher from '@/components/web/admin/site/EditorLauncher.vue';
 import type { EditorSummary } from '@/components/web/admin/site/EditorLauncher.vue';
 import SettingsPanel from '@/components/web/admin/site/SettingsPanel.vue';
+import SitePagesPanel from '@/components/web/admin/site/SitePagesPanel.vue';
+import type {
+    PageTemplateOption,
+    SitePageRow,
+} from '@/components/web/admin/site/SitePagesPanel.vue';
 import SocialPanel from '@/components/web/admin/site/SocialPanel.vue';
 import type { SocialLinkRow } from '@/components/web/admin/site/SocialPanel.vue';
 import TestimonialsPanel from '@/components/web/admin/site/TestimonialsPanel.vue';
@@ -20,6 +27,8 @@ import type { MediaRef, Option } from '@/types/web';
 
 type Tab =
     | 'portada'
+    | 'paginas-web'
+    | 'menu'
     | 'identidad'
     | 'contacto'
     | 'redes'
@@ -41,8 +50,11 @@ const props = defineProps<{
     socialLinks: SocialLinkRow[];
     testimonials: TestimonialRow[];
     pages: PageRow[];
+    sitePages: SitePageRow[];
+    pageTemplates: PageTemplateOption[];
+    navigation: NavigationData;
     showcaseOptions: Option<number>[];
-    can: { publish: boolean };
+    can: { publish: boolean; createPages: boolean };
 }>();
 
 defineOptions({
@@ -56,6 +68,8 @@ defineOptions({
 
 const tabs: { value: Tab; label: string }[] = [
     { value: 'portada', label: 'Portada' },
+    { value: 'paginas-web', label: 'Páginas' },
+    { value: 'menu', label: 'Menú' },
     { value: 'identidad', label: 'Identidad' },
     { value: 'contacto', label: 'Contacto' },
     { value: 'redes', label: 'Redes sociales' },
@@ -89,7 +103,7 @@ const mediaMap = computed(() => props.media);
     <PageContainer>
         <PageHeader
             title="Sitio web"
-            description="Edita la portada, la identidad de la marca, los datos de contacto y las páginas legales del sitio público."
+            description="Edita la portada y tus páginas, el menú, la identidad de la marca, los datos de contacto y las páginas legales del sitio público."
         >
             <template #actions>
                 <Button
@@ -120,6 +134,23 @@ const mediaMap = computed(() => props.media);
 
             <TabsContent value="portada">
                 <EditorLauncher :editor="props.editor" />
+            </TabsContent>
+
+            <TabsContent value="paginas-web">
+                <SitePagesPanel
+                    :pages="props.sitePages"
+                    :templates="props.pageTemplates"
+                    :media="mediaMap"
+                    :can-publish="props.can.publish"
+                    :can-create="props.can.createPages"
+                />
+            </TabsContent>
+
+            <TabsContent value="menu">
+                <NavigationPanel
+                    :navigation="props.navigation"
+                    :can-publish="props.can.publish"
+                />
             </TabsContent>
 
             <TabsContent value="identidad">

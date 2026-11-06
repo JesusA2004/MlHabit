@@ -5,7 +5,6 @@ namespace App\Services\Web;
 use App\Models\Media;
 use App\Models\Page;
 use App\Models\ProductCategory;
-use App\Models\ShowcaseProject;
 use App\Models\SocialLink;
 use App\Support\ResponsiveImage;
 use App\Support\Settings;
@@ -71,15 +70,8 @@ class PublicSite
 
         $ogMedia = is_numeric($brand['og_media_id'] ?? null) ? $media->get((int) $brand['og_media_id']) : null;
 
-        $hasCategories = ProductCategory::query()->published()->exists();
-        $hasShowcase = ShowcaseProject::query()->published()->exists();
-
-        $navigation = array_values(array_filter([
-            $hasCategories ? ['label' => 'Catálogo', 'href' => '/catalogo'] : null,
-            $hasShowcase ? ['label' => 'Inspiración', 'href' => '/inspiracion'] : null,
-            ['label' => 'Cómo funciona', 'href' => '/#como-funciona'],
-            ['label' => 'Preguntas frecuentes', 'href' => '/preguntas-frecuentes'],
-        ]));
+        // Menú editable (Sitio web → Menú); sin editar es el de siempre.
+        $menu = Navigation::resolve();
 
         return [
             'name' => self::name(),
@@ -98,14 +90,14 @@ class PublicSite
             ])->values()->all(),
             'footerPages' => Page::query()->published()->where('show_in_footer', true)->orderBy('title')->get(['slug', 'title'])
                 ->map(fn (Page $page) => ['title' => $page->title, 'href' => '/legal/'.$page->slug])->values()->all(),
-            'navigation' => $navigation,
+            'navigation' => $menu['links'],
             'categories' => ProductCategory::query()->published()->ordered()->limit(8)->get(['name', 'slug'])
                 ->map(fn (ProductCategory $c) => ['label' => $c->name, 'href' => '/catalogo/'.$c->slug])->values()->all(),
             'footer' => [
                 'text' => $this->clean($footer['text'] ?? null),
                 'legalName' => $this->clean($footer['legal_name'] ?? null),
             ],
-            'cta' => ['label' => 'Solicita una asesoría', 'href' => '/solicitar'],
+            'cta' => $menu['cta'],
         ];
     }
 

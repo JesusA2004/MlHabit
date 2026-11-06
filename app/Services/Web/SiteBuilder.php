@@ -225,6 +225,45 @@ class SiteBuilder
     }
 
     /**
+     * Borrador inicial de una página nueva (plantilla o copia). Las claves de
+     * sección se regeneran: son únicas en todo el sitio.
+     *
+     * @param  list<array<string, mixed>>  $sections
+     *
+     * @throws ValidationException
+     */
+    public function seed(string $page, array $sections, ?User $user = null): SitePageDraft
+    {
+        $fresh = array_map(fn (array $s) => [...$s, 'key' => (string) Str::uuid()], $sections);
+        $clean = LayoutValidator::snapshot(['sections' => $fresh]);
+
+        return SitePageDraft::query()->updateOrCreate(['page' => $page], [
+            'snapshot' => $clean,
+            'revision' => 1,
+            'updated_by' => $user?->id,
+        ]);
+    }
+
+    /** ¿La página ya tiene alguna versión publicada? */
+    public function hasVersions(string $page): bool
+    {
+        return SitePageVersion::query()->where('page', $page)->exists();
+    }
+
+    /** Borra todo el contenido de una página (secciones, borrador e historial). */
+    public function forget(string $page): void
+    {
+        abort_if($page === 'home', 422, 'La portada no se puede eliminar.');
+
+        DB::transaction(function () use ($page) {
+            SiteSection::query()->where('page', $page)->delete();
+            SitePageDraft::query()->where('page', $page)->delete();
+            SitePageVersion::query()->where('page', $page)->delete();
+        });
+        PublicSite::flush();
+    }
+
+    /**
      * Instalación nueva sin sembrar: crea las secciones curadas de la
      * portada. Si el equipo ya publicó alguna versión, se respeta (aunque
      * haya borrado todas las secciones).

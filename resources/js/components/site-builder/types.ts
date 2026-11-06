@@ -33,7 +33,12 @@ export type StaticBlockType =
     | 'spacer'
     | 'video'
     | 'stat'
-    | 'list';
+    | 'list'
+    | 'gallery'
+    | 'embed';
+
+/** Foto de un bloque de galería. */
+export type GalleryItem = { mediaId: number; alt: string; caption: string };
 
 export type DynamicBlockType =
     | 'categories'

@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 final class Blocks
 {
     /** Bloques de contenido libre. */
-    public const STATIC = ['heading', 'text', 'button', 'image', 'icon', 'badge', 'shape', 'spacer', 'video', 'stat', 'list'];
+    public const STATIC = ['heading', 'text', 'button', 'image', 'icon', 'badge', 'shape', 'spacer', 'video', 'stat', 'list', 'gallery', 'embed'];
 
     /** @return list<string> */
     public static function types(): array
@@ -38,6 +38,8 @@ final class Blocks
             'video' => ['mediaId' => null, 'autoplay' => true, 'loop' => true, 'controls' => false],
             'stat' => ['value' => '', 'label' => '', 'color' => 'auto'],
             'list' => ['items' => [], 'marker' => 'check', 'color' => 'auto'],
+            'gallery' => ['items' => [], 'layout' => 'grid', 'columns' => 3, 'gap' => 'md', 'aspect' => '4:3', 'lightbox' => true, 'showOrigin' => true],
+            'embed' => ['url' => '', 'provider' => null, 'videoId' => null, 'title' => '', 'aspect' => '16:9'],
             default => DynamicBlocks::exists($type) ? DynamicBlocks::schema($type)->defaults() : [],
         };
     }

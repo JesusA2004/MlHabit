@@ -38,6 +38,8 @@ const props = defineProps<{
     pageName: string;
     previewUrl: string;
     canPublish: boolean;
+    /** A dónde vuelve la flecha (portada: Sitio web; páginas: pestaña Páginas). */
+    backHref?: string;
 }>();
 
 const emit = defineEmits<{ publish: []; history: [] }>();
@@ -128,7 +130,7 @@ const mod = isMac ? '⌘' : 'Ctrl';
                 <TooltipTrigger as-child>
                     <Button as-child variant="ghost" size="icon" class="size-9">
                         <Link
-                            href="/admin/sitio"
+                            :href="props.backHref ?? '/admin/sitio'"
                             aria-label="Volver a Sitio web"
                         >
                             <ArrowLeft class="size-4" />

@@ -26,6 +26,7 @@ import {
     watch,
 } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
+import NavAnchor from '@/components/ds/marketing/NavAnchor.vue';
 import SiteAccount from '@/components/ds/marketing/SiteAccount.vue';
 import { getInitials } from '@/composables/useInitials';
 import { categoryIcon, ICON_STROKE } from '@/components/web/visual/icons';
@@ -40,16 +41,21 @@ import {
     normalizePath,
 } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import type { SiteData, SiteNavLink } from '@/types/public';
+import type { SiteCta, SiteData, SiteNavItem } from '@/types/public';
 
 /**
- * Cabecera del sitio público.
+ * Cabecera del sitio público. Los enlaces vienen del menú editable
+ * (Sitio web → Menú, `site.navigation` y `site.cta`).
  * - Con `overlay` es transparente sobre el hero y se vuelve sólida con
  *   desenfoque al hacer scroll; se encoge, se esconde al bajar y reaparece
  *   al subir (nunca con un menú abierto o con el foco dentro).
- * - Indicador activo que se desliza entre enlaces.
- * - Mega-menú de Catálogo (escritorio) con categorías e iconos.
- * - Menú móvil a pantalla completa con entrada escalonada.
+ * - Indicador (pastilla + subrayado de roble) que se desliza siguiendo el
+ *   puntero o el foco y regresa al enlace activo.
+ * - Submenús con apertura animada; el Catálogo sin submenú propio abre el
+ *   mega-menú de categorías.
+ * - Menú móvil a pantalla completa con entrada escalonada y submenús
+ *   desplegables.
+ * - `prefers-reduced-motion`: sin animaciones.
  */
 const props = withDefaults(
     defineProps<{
@@ -58,7 +64,7 @@ const props = withDefaults(
                   categories?: { label: string; href: string }[];
               })
             | null;
-        navigation?: SiteNavLink[];
+        navigation?: SiteNavItem[];
         overlay?: boolean;
         ctaLabel?: string;
         ctaHref?: string;
@@ -68,18 +74,26 @@ const props = withDefaults(
 
 const page = usePage();
 const menuOpen = ref(false);
-const megaOpen = ref(false);
+/** Submenú abierto en escritorio (clave del elemento) o null. */
+const openKey = ref<string | null>(null);
 const scrolled = ref(false);
 const hidden = ref(false);
 const focusWithin = ref(false);
 
-const links = computed(() =>
+const links = computed<SiteNavItem[]>(() =>
     props.navigation?.length
         ? props.navigation
         : props.site?.navigation?.length
           ? props.site.navigation
           : defaultSiteNavigation,
 );
+
+/** Botón destacado: el del menú; si el equipo lo ocultó (`null`), no se muestra. */
+const cta = computed<SiteCta | null>(() => {
+    if (props.site && props.site.cta === null) return null;
+
+    return props.site?.cta ?? { label: props.ctaLabel, href: props.ctaHref };
+});
 
 const categories = computed(() => props.site?.categories ?? []);
 
@@ -93,22 +107,52 @@ function logout() {
 
 const transparent = computed(
     () =>
-        props.overlay && !scrolled.value && !menuOpen.value && !megaOpen.value,
+        props.overlay &&
+        !scrolled.value &&
+        !menuOpen.value &&
+        openKey.value === null,
 );
 const phone = computed(() => props.site?.contact?.phone ?? null);
 const phoneHref = computed(() =>
     phone.value ? `tel:${phone.value.replace(/\s+/g, '')}` : null,
 );
 
-function active(href: string): boolean {
-    return !href.includes('#') && isActivePath(page.url, { href });
+function keyOf(item: SiteNavItem, index: number): string {
+    return item.id ?? `${index}-${item.href ?? item.label}`;
 }
 
-function hasMega(link: SiteNavLink): boolean {
+function activeHref(href: string | null | undefined): boolean {
     return (
-        normalizePath(link.href) === '/catalogo' && categories.value.length > 0
+        !!href &&
+        href.startsWith('/') &&
+        !href.includes('#') &&
+        isActivePath(page.url, { href })
     );
 }
+
+function active(item: SiteNavItem): boolean {
+    return (
+        activeHref(item.href) ||
+        (item.children ?? []).some((child) => activeHref(child.href))
+    );
+}
+
+type Kind = 'link' | 'dropdown' | 'mega';
+
+function kindOf(item: SiteNavItem): Kind {
+    if (item.children?.length) return 'dropdown';
+    if (
+        item.href &&
+        normalizePath(item.href) === '/catalogo' &&
+        categories.value.length > 0
+    ) {
+        return 'mega';
+    }
+
+    return 'link';
+}
+
+const megaOpen = computed(() => openKey.value === 'mega');
 
 /* ── Scroll: sólida, encogida y escondida al bajar ─────────────── */
 let lastY = 0;
@@ -129,7 +173,7 @@ function onScroll() {
             goingDown &&
             y > 180 &&
             !menuOpen.value &&
-            !megaOpen.value &&
+            openKey.value === null &&
             !focusWithin.value
         ) {
             hidden.value = true;
@@ -154,24 +198,26 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', moveIndicator);
     document.documentElement.removeAttribute('data-menu-open');
     if (frame) cancelAnimationFrame(frame);
+    window.clearTimeout(menuTimer);
 });
 
-/* ── Indicador activo deslizante ───────────────────────────────── */
+/* ── Indicador deslizante ──────────────────────────────────────── */
 const navList = ref<HTMLElement | null>(null);
-const hoverHref = ref<string | null>(null);
-const indicator = ref({ x: 0, w: 0, visible: false });
+const hoverKey = ref<string | null>(null);
+const indicator = ref({ x: 0, w: 0, visible: false, hovering: false });
 
 function moveIndicator() {
     const list = navList.value;
 
     if (!list) return;
 
+    const hovered =
+        hoverKey.value &&
+        list.querySelector<HTMLElement>(
+            `[data-nav-key="${CSS.escape(hoverKey.value)}"]`,
+        );
     const target =
-        (hoverHref.value &&
-            list.querySelector<HTMLElement>(
-                `[data-nav-href="${CSS.escape(hoverHref.value)}"]`,
-            )) ||
-        list.querySelector<HTMLElement>('[aria-current="page"]');
+        hovered || list.querySelector<HTMLElement>('[data-nav-active]');
 
     if (!target) {
         indicator.value = { ...indicator.value, visible: false };
@@ -183,38 +229,48 @@ function moveIndicator() {
         x: target.offsetLeft,
         w: target.offsetWidth,
         visible: true,
+        hovering: !!hovered,
     };
 }
 
-watch([hoverHref, () => page.url], () => void nextTick(moveIndicator));
+watch([hoverKey, () => page.url, links], () => void nextTick(moveIndicator));
 
-/* ── Mega-menú ─────────────────────────────────────────────────── */
-let megaTimer = 0;
-let megaTrigger: HTMLButtonElement | null = null;
+/* ── Submenús de escritorio ────────────────────────────────────── */
+let menuTimer = 0;
+const triggers = new Map<string, HTMLElement>();
 
-function setMegaTrigger(el: unknown) {
-    megaTrigger = el instanceof HTMLButtonElement ? el : megaTrigger;
+function setTrigger(key: string, el: unknown) {
+    if (el instanceof HTMLElement) triggers.set(key, el);
 }
 
-function openMega(delay = 90) {
-    window.clearTimeout(megaTimer);
-    megaTimer = window.setTimeout(() => (megaOpen.value = true), delay);
+function openMenu(key: string, delay = 90) {
+    window.clearTimeout(menuTimer);
+    menuTimer = window.setTimeout(() => (openKey.value = key), delay);
 }
 
-function closeMega(delay = 160) {
-    window.clearTimeout(megaTimer);
-    megaTimer = window.setTimeout(() => (megaOpen.value = false), delay);
+function closeMenu(delay = 160) {
+    window.clearTimeout(menuTimer);
+    menuTimer = window.setTimeout(() => (openKey.value = null), delay);
 }
 
-function toggleMega() {
-    window.clearTimeout(megaTimer);
-    megaOpen.value = !megaOpen.value;
+function toggleMenu(key: string) {
+    window.clearTimeout(menuTimer);
+    openKey.value = openKey.value === key ? null : key;
+}
+
+function onEnterItem(item: SiteNavItem, key: string) {
+    hoverKey.value = key;
+    const kind = kindOf(item);
+    if (kind === 'dropdown') openMenu(key);
+    else if (kind === 'mega') openMenu('mega');
+    else closeMenu(60);
 }
 
 function onKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape' && megaOpen.value) {
-        megaOpen.value = false;
-        megaTrigger?.focus();
+    if (event.key === 'Escape' && openKey.value !== null) {
+        const key = openKey.value;
+        openKey.value = null;
+        triggers.get(key)?.focus();
     }
 }
 
@@ -224,21 +280,40 @@ function onFocusOut(event: FocusEvent) {
 
     if (!next || !header.contains(next)) {
         focusWithin.value = false;
-        megaOpen.value = false;
+        openKey.value = null;
     }
+}
+
+/* ── Menú móvil ────────────────────────────────────────────────── */
+const mobileExpanded = ref<Set<string>>(new Set());
+
+function toggleMobile(key: string) {
+    const next = new Set(mobileExpanded.value);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    mobileExpanded.value = next;
 }
 
 watch(
     () => page.url,
     () => {
         menuOpen.value = false;
-        megaOpen.value = false;
+        openKey.value = null;
         hidden.value = false;
     },
 );
 
 watch(menuOpen, (open) => {
     document.documentElement.toggleAttribute('data-menu-open', open);
+    if (open) {
+        // Abre el submenú que contiene la página actual.
+        mobileExpanded.value = new Set(
+            links.value
+                .map((item, i) => [item, keyOf(item, i)] as const)
+                .filter(([item]) => item.children?.length && active(item))
+                .map(([, key]) => key),
+        );
+    }
 });
 
 const megaFeatures = [
@@ -257,6 +332,15 @@ const megaFeatures = [
         tone: 'light' as const,
     },
 ];
+
+const linkClass = (item: SiteNavItem) =>
+    cn(
+        'relative inline-flex h-10 items-center gap-1 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:px-4 xl:text-[0.9375rem]',
+        transparent.value
+            ? 'text-white/85 hover:text-white'
+            : 'text-muted-foreground hover:text-foreground',
+        active(item) && (transparent.value ? 'text-white' : 'text-foreground'),
+    );
 </script>
 
 <template>
@@ -264,7 +348,7 @@ const megaFeatures = [
         data-site-header
         :class="
             cn(
-                'inset-x-0 top-0 z-40 transition-[background-color,border-color,color,box-shadow,translate] duration-500 ease-out',
+                'site-header inset-x-0 top-0 z-40 transition-[background-color,border-color,color,box-shadow,translate] duration-500 ease-out',
                 props.overlay ? 'fixed' : 'sticky',
                 transparent
                     ? 'border-b border-transparent bg-transparent text-white'
@@ -278,7 +362,7 @@ const megaFeatures = [
         @keydown="onKeydown"
         @focusin="focusWithin = true"
         @focusout="onFocusOut"
-        @mouseleave="closeMega()"
+        @mouseleave="closeMenu()"
     >
         <div
             :class="
@@ -315,12 +399,13 @@ const megaFeatures = [
                 <ul
                     ref="navList"
                     class="relative flex items-center gap-1"
-                    @mouseleave="hoverHref = null"
+                    @mouseleave="hoverKey = null"
                 >
+                    <!-- Pastilla + subrayado que siguen al puntero -->
                     <span
                         :class="
                             cn(
-                                'pointer-events-none absolute top-1/2 left-0 h-9 rounded-full transition-[transform,width,opacity] duration-500 ease-out',
+                                'nav-indicator pointer-events-none absolute top-1/2 left-0 h-9 rounded-full',
                                 transparent
                                     ? 'bg-white/14'
                                     : 'bg-foreground/[0.06]',
@@ -332,78 +417,198 @@ const megaFeatures = [
                             transform: `translate3d(${indicator.x}px, -50%, 0)`,
                         }"
                         aria-hidden="true"
-                    />
-                    <li
-                        v-for="link in links"
-                        :key="link.href"
-                        class="relative flex items-center"
-                        @mouseenter="
-                            hoverHref = link.href;
-                            hasMega(link) ? openMega() : closeMega(60);
-                        "
                     >
-                        <Link
-                            :href="link.href"
-                            :data-nav-href="link.href"
-                            :aria-current="
-                                active(link.href) ? 'page' : undefined
-                            "
+                        <span
                             :class="
                                 cn(
-                                    'relative inline-flex h-10 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors xl:px-4 xl:text-[0.9375rem]',
-                                    hasMega(link) && 'pr-9 xl:pr-10',
-                                    transparent
-                                        ? 'text-white/85 hover:text-white'
-                                        : 'text-muted-foreground hover:text-foreground',
-                                    active(link.href) &&
-                                        (transparent
-                                            ? 'text-white'
-                                            : 'text-foreground'),
+                                    'nav-indicator__bar absolute bottom-1 left-1/2 h-0.5 -translate-x-1/2 rounded-full bg-oak',
+                                    indicator.hovering
+                                        ? 'w-[calc(100%-1.5rem)] opacity-100'
+                                        : 'w-1 opacity-100',
                                 )
                             "
-                            @focus="hoverHref = link.href"
-                        >
-                            {{ link.label }}
-                            <span
-                                v-if="active(link.href)"
-                                class="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-oak"
-                                aria-hidden="true"
-                            />
-                        </Link>
+                        />
+                    </span>
+
+                    <li
+                        v-for="(item, i) in links"
+                        :key="keyOf(item, i)"
+                        class="relative flex items-center"
+                        @mouseenter="onEnterItem(item, keyOf(item, i))"
+                    >
+                        <!-- Grupo sin enlace propio: botón que abre el submenú -->
                         <button
-                            v-if="hasMega(link)"
-                            :ref="setMegaTrigger"
+                            v-if="!item.href"
+                            :ref="(el) => setTrigger(keyOf(item, i), el)"
                             type="button"
-                            :class="
-                                cn(
-                                    'absolute right-1.5 grid size-7 place-items-center rounded-full transition-colors',
-                                    transparent
-                                        ? 'hover:bg-white/15'
-                                        : 'hover:bg-foreground/8',
-                                )
-                            "
-                            :aria-expanded="megaOpen"
-                            aria-controls="mega-catalogo"
-                            :aria-label="`${megaOpen ? 'Cerrar' : 'Abrir'} menú de ${link.label}`"
-                            @click="toggleMega"
+                            :data-nav-key="keyOf(item, i)"
+                            :data-nav-active="active(item) ? '' : undefined"
+                            :class="linkClass(item)"
+                            :aria-expanded="openKey === keyOf(item, i)"
+                            :aria-controls="`submenu-${keyOf(item, i)}`"
+                            @click="toggleMenu(keyOf(item, i))"
+                            @focus="hoverKey = keyOf(item, i)"
                         >
+                            {{ item.label }}
                             <ChevronDown
                                 :class="
                                     cn(
-                                        'size-4 transition-transform duration-300',
-                                        megaOpen && 'rotate-180',
+                                        'chevron size-4',
+                                        openKey === keyOf(item, i) &&
+                                            'rotate-180',
                                     )
                                 "
                                 :stroke-width="ICON_STROKE"
                                 aria-hidden="true"
                             />
                         </button>
+
+                        <template v-else>
+                            <NavAnchor
+                                :href="item.href"
+                                :external="item.external"
+                                :new-tab="item.newTab"
+                                :data-nav-key="keyOf(item, i)"
+                                :data-nav-active="active(item) ? '' : undefined"
+                                :aria-current="
+                                    activeHref(item.href) ? 'page' : undefined
+                                "
+                                :class="
+                                    cn(
+                                        linkClass(item),
+                                        kindOf(item) !== 'link' &&
+                                            'pr-9 xl:pr-10',
+                                    )
+                                "
+                                @focus="hoverKey = keyOf(item, i)"
+                            >
+                                {{ item.label }}
+                                <ArrowUpRight
+                                    v-if="item.newTab"
+                                    class="size-3.5 opacity-70"
+                                    :stroke-width="ICON_STROKE"
+                                    aria-hidden="true"
+                                />
+                            </NavAnchor>
+                            <button
+                                v-if="kindOf(item) !== 'link'"
+                                :ref="
+                                    (el) =>
+                                        setTrigger(
+                                            kindOf(item) === 'mega'
+                                                ? 'mega'
+                                                : keyOf(item, i),
+                                            el,
+                                        )
+                                "
+                                type="button"
+                                :class="
+                                    cn(
+                                        'absolute right-1.5 grid size-7 place-items-center rounded-full transition-colors',
+                                        transparent
+                                            ? 'hover:bg-white/15'
+                                            : 'hover:bg-foreground/8',
+                                    )
+                                "
+                                :aria-expanded="
+                                    openKey ===
+                                    (kindOf(item) === 'mega'
+                                        ? 'mega'
+                                        : keyOf(item, i))
+                                "
+                                :aria-controls="
+                                    kindOf(item) === 'mega'
+                                        ? 'mega-catalogo'
+                                        : `submenu-${keyOf(item, i)}`
+                                "
+                                :aria-label="`${
+                                    openKey ===
+                                    (kindOf(item) === 'mega'
+                                        ? 'mega'
+                                        : keyOf(item, i))
+                                        ? 'Cerrar'
+                                        : 'Abrir'
+                                } menú de ${item.label}`"
+                                @click="
+                                    toggleMenu(
+                                        kindOf(item) === 'mega'
+                                            ? 'mega'
+                                            : keyOf(item, i),
+                                    )
+                                "
+                            >
+                                <ChevronDown
+                                    :class="
+                                        cn(
+                                            'chevron size-4',
+                                            openKey ===
+                                                (kindOf(item) === 'mega'
+                                                    ? 'mega'
+                                                    : keyOf(item, i)) &&
+                                                'rotate-180',
+                                        )
+                                    "
+                                    :stroke-width="ICON_STROKE"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                        </template>
+
+                        <!-- Submenú -->
+                        <Transition name="dropdown">
+                            <div
+                                v-if="
+                                    kindOf(item) === 'dropdown' &&
+                                    openKey === keyOf(item, i)
+                                "
+                                :id="`submenu-${keyOf(item, i)}`"
+                                class="dropdown absolute top-full left-1/2 z-10 w-max min-w-60 -translate-x-1/2 pt-3"
+                                @mouseenter="openMenu(keyOf(item, i), 0)"
+                            >
+                                <ul
+                                    class="rounded-2xl border border-border/80 bg-background p-2 text-foreground shadow-lg"
+                                >
+                                    <li
+                                        v-for="(child, j) in item.children"
+                                        :key="child.href + j"
+                                        class="dropdown-item"
+                                        :style="{ '--i': j }"
+                                    >
+                                        <NavAnchor
+                                            :href="child.href"
+                                            :external="child.external"
+                                            :new-tab="child.newTab"
+                                            :aria-current="
+                                                activeHref(child.href)
+                                                    ? 'page'
+                                                    : undefined
+                                            "
+                                            class="group flex min-h-11 items-center justify-between gap-6 rounded-xl px-3 py-2 text-[0.9375rem] font-medium transition-colors hover:bg-stone/70 focus-visible:bg-stone/70 aria-[current=page]:text-primary"
+                                            @click="openKey = null"
+                                        >
+                                            <span>{{ child.label }}</span>
+                                            <component
+                                                :is="
+                                                    child.newTab ||
+                                                    child.external
+                                                        ? ArrowUpRight
+                                                        : ArrowRight
+                                                "
+                                                class="size-4 -translate-x-1 text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
+                                                :stroke-width="ICON_STROKE"
+                                                aria-hidden="true"
+                                            />
+                                        </NavAnchor>
+                                    </li>
+                                </ul>
+                            </div>
+                        </Transition>
                     </li>
                 </ul>
             </nav>
 
             <!--
-                Acciones: acceso (icono bajo xl) + CTA principal + menú.
+                Acciones: acceso (icono bajo xl) + botón destacado + menú.
                 Sin teléfono en la barra: no cabe junto a la navegación sin
                 encimarse; vive en el menú móvil y en el pie.
             -->
@@ -411,8 +616,11 @@ const megaFeatures = [
                 <div class="hidden sm:flex">
                     <SiteAccount :transparent="transparent" />
                 </div>
-                <Link
-                    :href="props.ctaHref"
+                <NavAnchor
+                    v-if="cta"
+                    :href="cta.href"
+                    :external="cta.external"
+                    :new-tab="cta.newTab"
                     data-magnetic="0.25"
                     :class="
                         cn(
@@ -423,13 +631,13 @@ const megaFeatures = [
                         )
                     "
                 >
-                    {{ props.ctaLabel }}
+                    {{ cta.label }}
                     <ArrowRight
                         class="nudge size-4 lg:max-xl:hidden"
                         :stroke-width="1.75"
                         aria-hidden="true"
                     />
-                </Link>
+                </NavAnchor>
                 <button
                     type="button"
                     :class="
@@ -451,16 +659,16 @@ const megaFeatures = [
 
         <!-- Mega-menú de Catálogo (escritorio) -->
         <Transition
-            enter-active-class="transition duration-400 ease-out"
+            enter-active-class="mega-enter transition duration-400 ease-out"
             enter-from-class="opacity-0 -translate-y-2"
-            leave-active-class="transition duration-200 ease-in"
+            leave-active-class="mega-leave transition duration-200 ease-in"
             leave-to-class="opacity-0 -translate-y-1"
         >
             <div
                 v-show="megaOpen"
                 id="mega-catalogo"
                 class="absolute inset-x-0 top-full hidden border-b border-border/70 bg-background text-foreground shadow-lg lg:block"
-                @mouseenter="openMega(0)"
+                @mouseenter="openMenu('mega', 0)"
             >
                 <div class="container-site grid grid-cols-12 gap-8 py-8">
                     <div class="col-span-6">
@@ -597,26 +805,126 @@ const megaFeatures = [
                     >
                         <ul class="flex flex-col">
                             <li
-                                v-for="(link, i) in links"
-                                :key="link.href"
+                                v-for="(item, i) in links"
+                                :key="keyOf(item, i)"
                                 class="menu-item border-b border-border/80"
                                 :style="{ '--i': i }"
                             >
-                                <Link
-                                    :href="link.href"
-                                    :aria-current="
-                                        active(link.href) ? 'page' : undefined
+                                <div class="flex items-center gap-2">
+                                    <NavAnchor
+                                        v-if="item.href"
+                                        :href="item.href"
+                                        :external="item.external"
+                                        :new-tab="item.newTab"
+                                        :aria-current="
+                                            activeHref(item.href)
+                                                ? 'page'
+                                                : undefined
+                                        "
+                                        class="group flex min-h-16 flex-1 items-center justify-between gap-4 py-3 font-display text-[2rem] leading-none font-semibold tracking-tight aria-[current=page]:text-primary"
+                                        @click="menuOpen = false"
+                                    >
+                                        {{ item.label }}
+                                        <component
+                                            :is="
+                                                item.newTab || item.external
+                                                    ? ArrowUpRight
+                                                    : ArrowRight
+                                            "
+                                            v-if="!item.children?.length"
+                                            class="size-6 text-oak transition-transform duration-300 group-hover:translate-x-1"
+                                            :stroke-width="1.5"
+                                            aria-hidden="true"
+                                        />
+                                    </NavAnchor>
+                                    <button
+                                        v-else
+                                        type="button"
+                                        :class="
+                                            cn(
+                                                'flex min-h-16 flex-1 items-center py-3 text-left font-display text-[2rem] leading-none font-semibold tracking-tight',
+                                                active(item) && 'text-primary',
+                                            )
+                                        "
+                                        :aria-expanded="
+                                            mobileExpanded.has(keyOf(item, i))
+                                        "
+                                        :aria-controls="`m-submenu-${keyOf(item, i)}`"
+                                        @click="toggleMobile(keyOf(item, i))"
+                                    >
+                                        {{ item.label }}
+                                    </button>
+                                    <button
+                                        v-if="item.children?.length"
+                                        type="button"
+                                        class="grid size-11 shrink-0 place-items-center rounded-full border border-border bg-card"
+                                        :aria-expanded="
+                                            mobileExpanded.has(keyOf(item, i))
+                                        "
+                                        :aria-controls="`m-submenu-${keyOf(item, i)}`"
+                                        :aria-label="`${mobileExpanded.has(keyOf(item, i)) ? 'Cerrar' : 'Abrir'} submenú de ${item.label}`"
+                                        @click="toggleMobile(keyOf(item, i))"
+                                    >
+                                        <ChevronDown
+                                            :class="
+                                                cn(
+                                                    'chevron size-5 text-oak',
+                                                    mobileExpanded.has(
+                                                        keyOf(item, i),
+                                                    ) && 'rotate-180',
+                                                )
+                                            "
+                                            :stroke-width="1.75"
+                                            aria-hidden="true"
+                                        />
+                                    </button>
+                                </div>
+                                <div
+                                    v-if="item.children?.length"
+                                    :id="`m-submenu-${keyOf(item, i)}`"
+                                    class="m-submenu"
+                                    :data-open="
+                                        mobileExpanded.has(keyOf(item, i))
+                                            ? ''
+                                            : undefined
                                     "
-                                    class="group flex min-h-16 items-center justify-between gap-4 py-3 font-display text-[2rem] leading-none font-semibold tracking-tight aria-[current=page]:text-primary"
-                                    @click="menuOpen = false"
                                 >
-                                    {{ link.label }}
-                                    <ArrowRight
-                                        class="size-6 text-oak transition-transform duration-300 group-hover:translate-x-1"
-                                        :stroke-width="1.5"
-                                        aria-hidden="true"
-                                    />
-                                </Link>
+                                    <ul class="m-submenu__inner">
+                                        <li
+                                            v-for="(child, j) in item.children"
+                                            :key="child.href + j"
+                                            class="m-submenu__item"
+                                            :style="{ '--j': j }"
+                                        >
+                                            <NavAnchor
+                                                :href="child.href"
+                                                :external="child.external"
+                                                :new-tab="child.newTab"
+                                                :aria-current="
+                                                    activeHref(child.href)
+                                                        ? 'page'
+                                                        : undefined
+                                                "
+                                                :tabindex="
+                                                    mobileExpanded.has(
+                                                        keyOf(item, i),
+                                                    )
+                                                        ? undefined
+                                                        : -1
+                                                "
+                                                class="flex min-h-12 items-center justify-between gap-3 pl-1 text-lg font-medium text-foreground/80 aria-[current=page]:text-primary"
+                                                @click="menuOpen = false"
+                                            >
+                                                {{ child.label }}
+                                                <ArrowRight
+                                                    class="size-4 text-oak"
+                                                    :stroke-width="1.5"
+                                                    aria-hidden="true"
+                                                />
+                                            </NavAnchor>
+                                        </li>
+                                    </ul>
+                                </div>
                             </li>
                         </ul>
 
@@ -674,17 +982,20 @@ const megaFeatures = [
                         class="menu-item relative container-site flex flex-col gap-2 border-t border-border bg-linen/90 py-4 pb-safe backdrop-blur"
                         :style="{ '--i': links.length + 2 }"
                     >
-                        <Link
-                            :href="props.ctaHref"
+                        <NavAnchor
+                            v-if="cta"
+                            :href="cta.href"
+                            :external="cta.external"
+                            :new-tab="cta.newTab"
                             class="btn-nudge inline-flex h-13 items-center justify-center gap-2 rounded-full bg-primary text-base font-medium text-primary-foreground"
                             @click="menuOpen = false"
                         >
-                            {{ props.ctaLabel }}
+                            {{ cta.label }}
                             <ArrowRight
                                 class="nudge size-4"
                                 aria-hidden="true"
                             />
-                        </Link>
+                        </NavAnchor>
                         <a
                             v-if="phone && phoneHref"
                             :href="phoneHref"
@@ -754,6 +1065,56 @@ const megaFeatures = [
 </template>
 
 <style scoped>
+/* Indicador: pastilla que se desliza y subrayado de roble que se estira. */
+.nav-indicator {
+    transition:
+        transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
+        width 460ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 240ms ease-out,
+        background-color 300ms ease-out;
+}
+
+.nav-indicator__bar {
+    transition:
+        width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 200ms ease-out;
+}
+
+.chevron {
+    transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Submenú de escritorio */
+.dropdown-enter-active {
+    transition:
+        opacity 260ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+        filter 260ms ease-out;
+}
+
+.dropdown-leave-active {
+    transition:
+        opacity 160ms ease-in,
+        transform 160ms ease-in;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+    /* El centrado lo da `translate` (Tailwind 4); aquí solo `transform`. */
+    opacity: 0;
+    transform: translate3d(0, -6px, 0) scale(0.97);
+    filter: blur(2px);
+}
+
+.dropdown {
+    transform-origin: top center;
+}
+
+.dropdown-enter-active .dropdown-item {
+    animation: mega-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(60ms + var(--i, 0) * 40ms);
+}
+
 .mega-item {
     animation: mega-in 520ms var(--motion-ease, ease-out) both;
     animation-delay: calc(var(--i, 0) * 35ms);
@@ -766,6 +1127,7 @@ const megaFeatures = [
     }
 }
 
+/* Menú móvil */
 .mobile-menu[data-state='open'] {
     animation: menu-in 420ms var(--motion-ease, ease-out) both;
 }
@@ -801,11 +1163,63 @@ const megaFeatures = [
     }
 }
 
+/* Submenú móvil: se despliega con grid-rows (sin medir alturas). */
+.m-submenu {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.m-submenu[data-open] {
+    grid-template-rows: 1fr;
+}
+
+.m-submenu__inner {
+    min-height: 0;
+    overflow: hidden;
+    padding-left: 0.25rem;
+}
+
+.m-submenu[data-open] .m-submenu__inner {
+    padding-bottom: 0.75rem;
+}
+
+.m-submenu__item {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    transition:
+        opacity 300ms ease-out,
+        transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.m-submenu[data-open] .m-submenu__item {
+    opacity: 1;
+    transform: none;
+    transition-delay: calc(80ms + var(--j, 0) * 45ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .mega-item,
     .mobile-menu,
-    .mobile-menu .menu-item {
+    .mobile-menu .menu-item,
+    .dropdown-enter-active .dropdown-item {
         animation: none !important;
+    }
+
+    .nav-indicator,
+    .nav-indicator__bar,
+    .chevron,
+    .dropdown-enter-active,
+    .dropdown-leave-active,
+    .m-submenu,
+    .m-submenu__item {
+        transition: none !important;
+    }
+
+    .dropdown-enter-from,
+    .dropdown-leave-to {
+        filter: none;
+        transform: none;
     }
 }
 </style>

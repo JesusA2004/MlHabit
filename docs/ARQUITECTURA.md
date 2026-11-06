@@ -38,7 +38,7 @@ Visitante → solicitud (`/solicitar`, crea Customer + Lead con folio y atribuci
 - **Proyecto**: el estado solo cambia con `App\Services\Projects\ProjectWorkflow::transition()`; eventos de cronología con `record()` (`visibility` `client` o `internal`).
 - **Agenda**: `App\Services\Scheduling\SlotFinder` (horarios libres) y `BookingService::reserve()` (bloqueo FOR UPDATE + traslape + `slot_key` UNIQUE). Apartados con `holdUntil` expiran; `confirm()` y `release()` son idempotentes.
 - **Cobertura**: `App\Services\CoverageService` es la única verdad para vender visitas.
-- **Configuración de negocio**: `App\Support\Settings` (grupos `commercial`, `consultation`, `contact`, `brand`, `seo`, `footer`, `leads`). Los valores que afectan dinero se congelan en la entidad.
+- **Configuración de negocio**: `App\Support\Settings` (grupos `commercial`, `consultation`, `contact`, `brand`, `seo`, `footer`, `leads`, `navigation`). Los valores que afectan dinero se congelan en la entidad.
 - **Archivos**: `Media` con `visibility` public/private. Privados en disco `media_private`, descargables solo por `GET /archivos/{media:uuid}` (`archivos.show`) que autoriza contra la entidad dueña. Vincular con el trait `App\Concerns\HasAttachments` (`media_attachments`, `role`: gallery, cover, photo, sketch, render, document, evidence, receipt…). Subida: `ChunkedUploadService`/`MediaUploadService` con visibilidad.
 - **Auditoría**: `App\Services\ActivityLogger::log('modulo.verbo', $model, ['before'=>…, 'after'=>…])`; sanea secretos y tarjetas.
 - **Transacciones**: `DB::transaction` en reservar, pagar, confirmar pago, acreditar visita, crear proyecto, aceptar cotización.

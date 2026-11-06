@@ -147,6 +147,13 @@ final class LayoutValidator
                     $ids[] = $block['props'][$key];
                 }
             }
+            if (($block['type'] ?? null) === 'gallery' && is_array($block['props']['items'] ?? null)) {
+                foreach ($block['props']['items'] as $item) {
+                    if (is_array($item) && is_int($item['mediaId'] ?? null)) {
+                        $ids[] = $item['mediaId'];
+                    }
+                }
+            }
         }
 
         return array_values(array_unique($ids));
@@ -414,6 +421,20 @@ final class LayoutValidator
                 'marker' => $this->enum($props, 'marker', Options::LIST_MARKERS, 'check', $p),
                 'color' => $this->color($props, 'color', Options::INKS, 'auto', $p),
             ],
+            'gallery' => [
+                'items' => $this->galleryItems($props, $p),
+                'layout' => $this->enum($props, 'layout', Options::GALLERY_LAYOUTS, 'grid', $p),
+                'columns' => $this->int($props, 'columns', 1, 4, 3, $p),
+                'gap' => $this->enum($props, 'gap', Options::GALLERY_GAPS, 'md', $p),
+                'aspect' => $this->enum($props, 'aspect', Options::GALLERY_ASPECTS, '4:3', $p),
+                'lightbox' => $this->bool($props, 'lightbox', true),
+                'showOrigin' => $this->bool($props, 'showOrigin', true),
+            ],
+            'embed' => [
+                ...$this->embed($props, $p),
+                'title' => $this->plain($props, 'title', 160, $p),
+                'aspect' => $this->enum($props, 'aspect', Options::EMBED_ASPECTS, '16:9', $p),
+            ],
             default => $this->dynamicProps($type, $props, $p),
         };
     }
@@ -470,6 +491,72 @@ final class LayoutValidator
         }
 
         return $out;
+    }
+
+    /**
+     * Fotos de una galería: solo imágenes públicas de la biblioteca.
+     *
+     * @param  array<string, mixed>  $props
+     * @return list<array{mediaId: int, alt: string, caption: string}>
+     */
+    private function galleryItems(array $props, string $p): array
+    {
+        $items = $props['items'] ?? [];
+        if (! is_array($items) || ! array_is_list($items)) {
+            $this->fail("$p.items", 'La galería no tiene fotos válidas.');
+
+            return [];
+        }
+        if (count($items) > 24) {
+            $this->fail("$p.items", 'La galería admite hasta 24 fotos.');
+            $items = array_slice($items, 0, 24);
+        }
+
+        $out = [];
+        $seen = [];
+        foreach ($items as $i => $item) {
+            if (! is_array($item)) {
+                $this->fail("$p.items.$i", 'Foto inválida.');
+
+                continue;
+            }
+            $id = $this->media($item, 'mediaId', 'image', "$p.items.$i");
+            if ($id === null || in_array($id, $seen, true)) {
+                continue;
+            }
+            $seen[] = $id;
+            $out[] = [
+                'mediaId' => $id,
+                'alt' => $this->plain($item, 'alt', 200, "$p.items.$i"),
+                'caption' => $this->plain($item, 'caption', 160, "$p.items.$i"),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Video de YouTube o Vimeo: solo dominios de la lista blanca; se guarda
+     * el proveedor y el identificador (el reproductor usa un dominio fijo).
+     *
+     * @param  array<string, mixed>  $props
+     * @return array{url: string, provider: string|null, videoId: string|null}
+     */
+    private function embed(array $props, string $p): array
+    {
+        $url = is_string($props['url'] ?? null) ? trim($props['url']) : '';
+        if ($url === '') {
+            return ['url' => '', 'provider' => null, 'videoId' => null];
+        }
+
+        $parsed = VideoEmbed::parse($url);
+        if ($parsed === null) {
+            $this->fail("$p.url", 'Pega el enlace de un video de YouTube o Vimeo (p. ej. https://youtu.be/…).');
+
+            return ['url' => '', 'provider' => null, 'videoId' => null];
+        }
+
+        return ['url' => mb_substr($url, 0, 300), 'provider' => $parsed['provider'], 'videoId' => $parsed['id']];
     }
 
     // ------------------------------------------------------------------

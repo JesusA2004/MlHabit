@@ -569,7 +569,9 @@ export function createEditor(init: EditorInit) {
             props: { ...clone(dynamicDefaults), ...clone(def.props), ...props },
             style: {
                 align: 'start',
-                radius: type === 'image' || type === 'video' ? '2xl' : 'none',
+                radius: ['image', 'video', 'embed', 'gallery'].includes(type)
+                    ? '2xl'
+                    : 'none',
                 shadow: 'none',
                 opacity: 100,
                 rotate: 0,

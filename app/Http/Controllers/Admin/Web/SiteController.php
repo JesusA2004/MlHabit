@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers\Admin\Web;
 
+use App\Cms\Layout\PageTemplates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\SiteSettingsRequest;
 use App\Models\Media;
 use App\Models\Page;
 use App\Models\ShowcaseProject;
+use App\Models\SitePage;
+use App\Models\SitePageDraft;
 use App\Models\SitePageVersion;
 use App\Models\SocialLink;
 use App\Models\Testimonial;
 use App\Services\ActivityLogger;
 use App\Services\MediaUsageService;
 use App\Services\Web\MediaPresenter;
+use App\Services\Web\Navigation;
 use App\Services\Web\PublicSite;
 use App\Services\Web\SiteBuilder;
 use App\Support\Settings;
@@ -29,7 +33,7 @@ use Inertia\Response;
  */
 class SiteController extends Controller
 {
-    public const TABS = ['portada', 'identidad', 'contacto', 'redes', 'seo', 'pie', 'testimonios', 'paginas'];
+    public const TABS = ['portada', 'paginas-web', 'menu', 'identidad', 'contacto', 'redes', 'seo', 'pie', 'testimonios', 'paginas'];
 
     public function index(Request $request, SiteBuilder $builder): Response
     {
@@ -47,6 +51,20 @@ class SiteController extends Controller
                 $mediaIds->push((int) $brand[$key]);
             }
         }
+
+        $sitePages = SitePage::query()->with(['editor:id,name', 'ogMedia.variants'])->orderBy('title')->get();
+        foreach ($sitePages as $sitePage) {
+            if ($sitePage->og_media_id !== null) {
+                $mediaIds->push($sitePage->og_media_id);
+            }
+        }
+        $pageKeys = $sitePages->map(fn (SitePage $p) => $p->pageKey())->all();
+        $published = $pageKeys !== []
+            ? SitePageVersion::query()->whereIn('page', $pageKeys)->selectRaw('page, MAX(number) as last, MAX(published_at) as at')->groupBy('page')->get()->keyBy('page')
+            : collect();
+        $drafts = $pageKeys !== []
+            ? SitePageDraft::query()->whereIn('page', $pageKeys)->get()->keyBy('page')
+            : collect();
 
         $testimonials = Testimonial::query()->with(['media.variants', 'showcaseProject:id,title'])->orderBy('sort')->orderByDesc('id')->get();
         $mediaIds = $mediaIds->unique()->values()->all();
@@ -104,10 +122,47 @@ class SiteController extends Controller
                 'updatedAt' => $p->updated_at?->toIso8601String(),
                 'updatedBy' => $p->editor?->name,
             ])->values(),
+            'sitePages' => $sitePages->map(function (SitePage $p) use ($published, $drafts, $builder) {
+                $version = $published->get($p->pageKey());
+                $draft = $drafts->get($p->pageKey());
+
+                return [
+                    'id' => $p->id,
+                    'title' => $p->title,
+                    'slug' => $p->slug,
+                    'path' => $p->path(),
+                    'publicUrl' => $p->publicUrl(),
+                    'seoTitle' => $p->seo_title,
+                    'seoDescription' => $p->seo_description,
+                    'ogMediaId' => $p->og_media_id,
+                    'template' => $p->template,
+                    'isPublished' => $p->is_published,
+                    'publishedAt' => $p->published_at?->toIso8601String(),
+                    'lastVersion' => $version !== null ? (int) $version->getAttribute('last') : null,
+                    'hasChanges' => $draft instanceof SitePageDraft ? $builder->hasUnpublishedChanges($draft) : false,
+                    'sections' => $draft instanceof SitePageDraft ? count($draft->snapshot['sections']) : 0,
+                    'updatedAt' => ($draft instanceof SitePageDraft ? $draft->updated_at : null)?->toIso8601String() ?? $p->updated_at?->toIso8601String(),
+                    'updatedBy' => $p->editor?->name,
+                    'editorUrl' => route('admin.sitio.paginas-web.editor.edit', $p),
+                ];
+            })->values(),
+            'pageTemplates' => PageTemplates::catalog(),
+            'navigation' => [
+                ...Navigation::stored(),
+                'builtins' => Navigation::builtinOptions(),
+                'pages' => $sitePages->map(fn (SitePage $p) => [
+                    'value' => (string) $p->id,
+                    'label' => $p->title,
+                    'path' => $p->path(),
+                    'isPublished' => $p->is_published,
+                ])->values(),
+                'limits' => ['items' => Navigation::MAX_ITEMS, 'children' => Navigation::MAX_CHILDREN],
+            ],
             'showcaseOptions' => ShowcaseProject::query()->orderBy('title')->get(['id', 'title'])
                 ->map(fn ($p) => ['value' => $p->id, 'label' => $p->title])->values(),
             'can' => [
                 'publish' => Gate::allows('content.publish'),
+                'createPages' => Gate::allows('create', SitePage::class),
             ],
         ]);
     }

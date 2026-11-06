@@ -32,6 +32,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChunkedUpload } from '@/composables/useChunkedUpload';
 import editorRoutes from '@/routes/admin/sitio/editor';
 import versiones from '@/routes/admin/sitio/editor/versiones';
+import pageEditor from '@/routes/admin/sitio/paginas-web/editor';
+import pageVersiones from '@/routes/admin/sitio/paginas-web/editor/versiones';
 import type { VisitPolicyData } from '@/types/web';
 
 /**
@@ -40,7 +42,15 @@ import type { VisitPolicyData } from '@/types/web';
  * selector de dispositivo.
  */
 const props = defineProps<{
-    page: { slug: string; name: string; publicUrl: string };
+    page: {
+        slug: string;
+        id: number | null;
+        kind: 'home' | 'page';
+        name: string;
+        publicUrl: string;
+        isPublished: boolean;
+        backHref: string;
+    };
     draft: DraftMeta;
     sections: RenderSection[];
     library: LibraryMap;
@@ -67,13 +77,29 @@ const editor = createEditor({
     library: props.library,
     versions: props.versions,
     dynamic: props.dynamic,
-    urls: {
+    urls: editorUrls(),
+});
+
+/** Portada (`/admin/sitio/editor/*`) o página propia (`/admin/sitio/paginas-web/{id}/editor/*`). */
+function editorUrls() {
+    const id = props.page.kind === 'page' ? props.page.id : null;
+    if (id !== null) {
+        return {
+            save: pageEditor.borrador(id).url,
+            publish: pageEditor.publicar(id).url,
+            discard: pageEditor.descartar(id).url,
+            restore: (version: number) =>
+                pageVersiones.restaurar({ sitePage: id, version }).url,
+        };
+    }
+
+    return {
         save: editorRoutes.borrador().url,
         publish: editorRoutes.publicar().url,
         discard: editorRoutes.descartar().url,
-        restore: (id: number) => versiones.restaurar(id).url,
-    },
-});
+        restore: (version: number) => versiones.restaurar(version).url,
+    };
+}
 provide(editorKey, editor);
 
 const dragPayload = ref<
@@ -225,6 +251,7 @@ function reload() {
                 :page-name="props.page.name"
                 :preview-url="props.previewUrl"
                 :can-publish="props.can.publish"
+                :back-href="props.page.backHref"
                 @publish="publishOpen = true"
                 @history="historyOpen = true"
             />

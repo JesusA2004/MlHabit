@@ -43,6 +43,9 @@ return [
             ],
             'frame-src' => [
                 'https://*.openpay.mx',
+                // Videos incrustados del editor visual (App\Cms\Layout\VideoEmbed).
+                'https://www.youtube-nocookie.com',
+                'https://player.vimeo.com',
             ],
         ],
     ],

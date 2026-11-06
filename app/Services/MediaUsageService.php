@@ -9,6 +9,7 @@ use App\Models\MediaAttachment;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
+use App\Models\SitePage;
 use App\Models\SitePageDraft;
 use App\Models\SiteSection;
 use App\Models\Testimonial;
@@ -63,9 +64,23 @@ class MediaUsageService
             $usages[] = $this->describeAttachment($attachment);
         }
 
+        // Páginas propias del editor visual (clave `pagina-{id}`).
+        $sitePages = SitePage::query()->get(['id', 'title', 'og_media_id'])->keyBy(fn (SitePage $p) => $p->pageKey());
+        $where = function (string $page) use ($sitePages): array {
+            if ($page === 'home') {
+                return ['Portada', '/admin/sitio/editor'];
+            }
+            $sitePage = $sitePages->get($page);
+
+            return $sitePage instanceof SitePage
+                ? [$sitePage->title, '/admin/sitio/paginas-web/'.$sitePage->id.'/editor']
+                : ['Página del sitio', '/admin/sitio?pestana=paginas-web'];
+        };
+
         foreach (SiteSection::query()->get() as $section) {
             if (in_array($id, $section->mediaIds(), true)) {
-                $usages[] = ['type' => 'Portada del sitio', 'label' => $section->schema()->label(), 'href' => '/admin/sitio/editor'];
+                [$pageLabel, $href] = $where($section->page);
+                $usages[] = ['type' => $section->page === 'home' ? 'Portada del sitio' : 'Página del sitio', 'label' => $section->page === 'home' ? $section->schema()->label() : $pageLabel, 'href' => $href];
             }
         }
 
@@ -73,9 +88,16 @@ class MediaUsageService
         foreach (SitePageDraft::query()->get() as $draft) {
             foreach ($draft->snapshot['sections'] as $section) {
                 if (in_array($id, LayoutValidator::mediaIds(is_array($section['layout'] ?? null) ? $section['layout'] : null), true)) {
-                    $usages[] = ['type' => 'Borrador del editor visual', 'label' => 'Portada (sin publicar)', 'href' => '/admin/sitio/editor'];
-                    break 2;
+                    [$pageLabel, $href] = $where($draft->page);
+                    $usages[] = ['type' => 'Borrador del editor visual', 'label' => $pageLabel.' (sin publicar)', 'href' => $href];
+                    break;
                 }
+            }
+        }
+
+        foreach ($sitePages as $sitePage) {
+            if ($sitePage->og_media_id === $id) {
+                $usages[] = ['type' => 'Imagen para compartir', 'label' => $sitePage->title, 'href' => '/admin/sitio?pestana=paginas-web'];
             }
         }
 
