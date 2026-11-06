@@ -5,14 +5,12 @@ namespace App\Services\Web;
 use App\Enums\MediaStatus;
 use App\Enums\MediaType;
 use App\Enums\MediaVariantType;
-use App\Enums\SiteSectionType;
 use App\Models\Media;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
 use App\Models\SitePage;
-use App\Models\SiteSection;
 use App\Support\Settings;
 use GdImage;
 use Illuminate\Support\Facades\Storage;
@@ -32,6 +30,7 @@ use Throwable;
  * Diseños:
  *  - `split`: lino + fotografía con esquinas redondeadas (producto, categoría, proyecto).
  *  - `cover`: fotografía a sangre con degradado espresso (portada con hero).
+ *  - `brand`: logotipo oficial grande sobre el verde de la marca (portada).
  *  - `type`: tarjeta tipográfica con el abanico de acabados (sin fotografía).
  *  - `override`: imagen elegida por el administrador (`brand.og_media_id`), solo recortada.
  */
@@ -44,7 +43,7 @@ final class OgImage
     public const TYPES = ['home', 'category', 'product', 'showcase', 'page'];
 
     /** Súbelo al cambiar el diseño para regenerar todas las imágenes. */
-    private const VERSION = 4;
+    private const VERSION = 5;
 
     /** Supermuestreo: se dibuja al doble y se reduce (bordes suaves). */
     private const S = 2;
@@ -103,15 +102,14 @@ final class OgImage
             return $this->spec('home', 'inicio', $title, null, $override, 'override', $name);
         }
 
-        $hero = $this->heroMedia();
-
+        // Al compartir el dominio se muestra el logotipo oficial completo.
         return $this->spec(
             'home',
             'inicio',
             $title,
-            'Diseño, fabricación e instalación',
-            $hero,
-            $hero !== null ? 'cover' : 'type',
+            'Diseño · Fabricación · Instalación',
+            null,
+            'brand',
             "{$name}: {$title}",
         );
     }
@@ -269,12 +267,13 @@ final class OgImage
         imagesavealpha($canvas, false);
 
         $photo = $spec['media'] !== null ? $this->loadImage($spec['media']) : null;
-        $layout = $photo === null && $spec['layout'] !== 'type' ? 'type' : $spec['layout'];
+        $layout = $photo === null && ! in_array($spec['layout'], ['type', 'brand'], true) ? 'type' : $spec['layout'];
 
         match ($layout) {
             'override' => $this->drawOverride($canvas, $photo),
             'cover' => $this->drawCover($canvas, $spec, $photo),
             'split' => $this->drawSplit($canvas, $spec, $photo),
+            'brand' => $this->drawBrand($canvas, $spec),
             default => $this->drawTypographic($canvas, $spec),
         };
 
@@ -291,6 +290,98 @@ final class OgImage
         imagedestroy($out);
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * Portada: el logotipo oficial completo (`public/logoSinFondo.png`, solo
+     * redimensionado) sobre el verde profundo del muro del logotipo.
+     *
+     * @param  array{type: string, slug: string, title: string, eyebrow: string|null, media: Media|null, layout: string, alt: string}  $spec
+     */
+    private function drawBrand(GdImage $canvas, array $spec): void
+    {
+        $w = self::WIDTH * self::S;
+        $h = self::HEIGHT * self::S;
+
+        // Degradado horizontal verde bosque → casi negro.
+        [$r1, $g1, $b1] = $this->rgb('#24443A');
+        [$r2, $g2, $b2] = $this->rgb('#101C18');
+        for ($x = 0; $x < $w; $x += 2) {
+            $t = $x / $w;
+            imagefilledrectangle($canvas, $x, 0, $x + 1, $h, $this->rgba(
+                $canvas,
+                (int) round($r1 + ($r2 - $r1) * $t),
+                (int) round($g1 + ($g2 - $g1) * $t),
+                (int) round($b1 + ($b2 - $b1) * $t),
+                0,
+            ));
+        }
+
+        $size = 500;
+        $lx = 70;
+        $ly = (int) round((self::HEIGHT - $size) / 2);
+        $cx = (int) round(($lx + $size / 2) * self::S);
+        $cy = (int) round(($ly + $size / 2) * self::S);
+
+        // Halo cálido detrás del logotipo.
+        [$or, $og, $ob] = $this->rgb(self::C_OAK);
+        for ($i = 0; $i < 14; $i++) {
+            $d = (int) round(($size + 240 - $i * 16) * self::S);
+            imagefilledellipse($canvas, $cx, $cy, $d, $d, $this->rgba($canvas, $or, $og, $ob, 122));
+        }
+
+        // Sombra suave bajo la insignia.
+        for ($i = 0; $i < 8; $i++) {
+            $d = (int) round(($size + 24 - $i * 3) * self::S);
+            imagefilledellipse($canvas, $cx, $cy + 14 * self::S, $d, $d, $this->rgba($canvas, 0, 0, 0, 118));
+        }
+
+        // Logotipo oficial completo, sin recortes.
+        $path = public_path('logoSinFondo.png');
+        $logo = is_file($path) ? @imagecreatefrompng($path) : false;
+        if ($logo instanceof GdImage) {
+            $sw = imagesx($logo);
+            $sh = imagesy($logo);
+            $scale = $size / max($sw, $sh);
+            $dw = (int) round($sw * $scale);
+            $dh = (int) round($sh * $scale);
+            imagealphablending($canvas, true);
+            imagecopyresampled(
+                $canvas,
+                $logo,
+                (int) round(($lx + ($size - $dw) / 2) * self::S),
+                (int) round(($ly + ($size - $dh) / 2) * self::S),
+                0,
+                0,
+                $dw * self::S,
+                $dh * self::S,
+                $sw,
+                $sh,
+            );
+            imagedestroy($logo);
+        }
+
+        // Texto a la derecha.
+        $x = $lx + $size + 64;
+        $maxWidth = self::WIDTH - $x - 56;
+        $lines = $this->fitTitle($spec['title'], $maxWidth, [60, 54, 48, 42, 38], 3);
+        $fs = $lines['size'];
+        $lineHeight = (int) round($fs * 1.08);
+        $block = 40 + $fs + $lineHeight * (count($lines['lines']) - 1) + 80;
+        $top = (int) round((self::HEIGHT - $block) / 2) - 10;
+
+        if ($spec['eyebrow'] !== null && $spec['eyebrow'] !== '') {
+            $this->text($canvas, 19, $this->font('figtree-semibold'), $x, $top + 20, '#D9B48C', $this->trimTo($spec['eyebrow'], 19, 'figtree-semibold', $maxWidth));
+        }
+
+        foreach ($lines['lines'] as $i => $line) {
+            $this->text($canvas, $fs, $this->font('familjen-bold'), $x, $top + 40 + $fs + $i * $lineHeight, '#FFFFFF', $line, -0.02);
+        }
+
+        $after = $top + 40 + $fs + (count($lines['lines']) - 1) * $lineHeight;
+        imagefilledrectangle($canvas, $x * self::S, ($after + 28) * self::S, ($x + 56) * self::S, ($after + 31) * self::S, $this->color($canvas, self::C_OAK));
+        $this->text($canvas, 21, $this->font('figtree-medium'), $x, $after + 72, '#EADFD2', $this->trimTo('Asesoría por videollamada y visita a domicilio', 21, 'figtree-medium', $maxWidth));
+        $this->text($canvas, 22, $this->font('figtree-semibold'), $x, self::HEIGHT - 64, '#D9B48C', $this->domain());
     }
 
     private function drawOverride(GdImage $canvas, ?GdImage $photo): void
@@ -934,24 +1025,6 @@ final class OgImage
     private function media(mixed $id): ?Media
     {
         return is_numeric($id) ? $this->usable(Media::query()->find((int) $id)) : null;
-    }
-
-    /** Imagen del hero de la portada (CMS), si la primera sección visible es un hero. */
-    private function heroMedia(): ?Media
-    {
-        try {
-            $hero = SiteSection::query()->forPage('home')->where('is_visible', true)->first();
-        } catch (Throwable) {
-            return null;
-        }
-
-        if ($hero === null || $hero->type !== SiteSectionType::Hero) {
-            return null;
-        }
-
-        $id = $hero->content['media_id'] ?? null;
-
-        return $this->media($id);
     }
 
     /** Carga la variante de 1600 px (o el original) como imagen GD. */
