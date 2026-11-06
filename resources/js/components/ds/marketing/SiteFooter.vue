@@ -70,6 +70,11 @@ type ContactItem = {
     external?: boolean;
 };
 
+/** Sin columna de contacto, las listas de enlaces ocupan su espacio. */
+const linkColumnClass = computed(() =>
+    contactItems.value.length ? 'lg:col-span-2' : 'lg:col-span-3',
+);
+
 const contactItems = computed<ContactItem[]>(() => {
     const items: ContactItem[] = [];
     const c = contact.value;
@@ -264,7 +269,7 @@ const platformLabel = (platform: string) =>
                     </p>
                 </div>
 
-                <nav aria-label="Explora" class="lg:col-span-2">
+                <nav aria-label="Explora" :class="linkColumnClass">
                     <h3 class="text-sm font-semibold text-espresso-foreground">
                         Explora
                     </h3>
@@ -277,7 +282,7 @@ const platformLabel = (platform: string) =>
                                 :href="link.href"
                                 :external="link.external"
                                 :new-tab="link.newTab"
-                                class="group inline-flex min-h-10 items-center gap-1 text-[0.9375rem] text-espresso-foreground/70 transition-colors hover:text-white"
+                                class="group inline-flex min-h-10 items-center gap-1 py-1 text-[0.9375rem] leading-snug text-espresso-foreground/70 transition-colors hover:text-white"
                             >
                                 <span class="link-underline">{{
                                     link.label
@@ -290,7 +295,7 @@ const platformLabel = (platform: string) =>
                 <nav
                     v-if="props.site?.footerPages?.length"
                     aria-label="Información"
-                    class="lg:col-span-2"
+                    :class="linkColumnClass"
                 >
                     <h3 class="text-sm font-semibold text-espresso-foreground">
                         Información
@@ -302,7 +307,7 @@ const platformLabel = (platform: string) =>
                         >
                             <Link
                                 :href="item.href"
-                                class="inline-flex min-h-10 items-center text-[0.9375rem] text-espresso-foreground/70 transition-colors hover:text-white"
+                                class="inline-flex min-h-10 items-center py-1 text-[0.9375rem] leading-snug text-espresso-foreground/70 transition-colors hover:text-white"
                             >
                                 <span class="link-underline">{{
                                     item.title

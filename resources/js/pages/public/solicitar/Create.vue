@@ -408,7 +408,7 @@ const contactOptions = computed(() =>
     </Head>
 
     <section
-        class="motion-calm relative isolate overflow-hidden bg-background pb-32 md:pb-20"
+        class="motion-calm relative isolate z-10 overflow-hidden bg-background pb-32 md:pb-20"
     >
         <div
             class="tex-blueprint pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 [mask-image:linear-gradient(to_bottom,#000,transparent)]"

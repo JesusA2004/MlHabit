@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { ArrowLeft, ArrowRight, Check, X } from '@lucide/vue';
 import { useMediaQuery } from '@vueuse/core';
-import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    useId,
+    watch,
+} from 'vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { scrollTargetIntoView } from './targets';
@@ -16,6 +24,11 @@ import { useTour } from './useTour';
  */
 const tour = useTour();
 const { state, target } = tour;
+
+// La capa solo existe en el navegador: sin esto el HTML del servidor (SSR)
+// no coincide con la hidratación del Teleport y Vue avisa de un desajuste.
+const mounted = ref(false);
+onMounted(() => (mounted.value = true));
 
 const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 const isMobile = useMediaQuery('(max-width: 639px)');
@@ -349,7 +362,7 @@ const animate = computed(() => !reducedMotion.value);
 </script>
 
 <template>
-    <Teleport to="body">
+    <Teleport v-if="mounted" to="body">
         <div
             v-if="state.tour"
             class="tour-root fixed inset-0 z-[200]"
@@ -418,9 +431,7 @@ const animate = computed(() => !reducedMotion.value);
 
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p
-                            class="truncate text-xs font-medium tracking-wide text-primary uppercase"
-                        >
+                        <p class="truncate text-xs font-medium text-primary">
                             {{ state.tour.title }}
                         </p>
                         <p class="mt-0.5 text-xs text-muted-foreground">

@@ -96,7 +96,7 @@ function go(event: MouseEvent, id: string) {
         :class="cn('min-w-0 xl:sticky xl:top-20 xl:self-start', props.class)"
     >
         <p
-            class="mb-2 hidden px-3 text-xs font-medium tracking-wide text-muted-foreground uppercase xl:block"
+            class="mb-2 hidden px-3 text-xs font-medium text-muted-foreground xl:block"
         >
             En esta página
         </p>

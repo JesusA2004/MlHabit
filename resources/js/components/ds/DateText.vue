@@ -35,6 +35,7 @@ const isoValue = computed(() => date.value?.toISOString());
         v-if="date"
         :datetime="isoValue"
         :title="props.relative ? (absolute ?? undefined) : undefined"
+        :data-allow-mismatch="props.relative ? 'text' : undefined"
         :class="cn('tabular-nums', props.class)"
     >
         {{ text }}

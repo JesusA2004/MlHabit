@@ -42,6 +42,11 @@ const props = withDefaults(
         invalid?: boolean;
         /** Si es true, no filtra localmente (búsqueda en servidor). */
         remote?: boolean;
+        /**
+         * Nombre accesible cuando no hay `<label for>` (p. ej. en filtros).
+         * Sin `id` ni `ariaLabel` se usa el texto de ayuda (placeholder).
+         */
+        ariaLabel?: string;
         class?: HTMLAttributes['class'];
     }>(),
     {
@@ -110,6 +115,10 @@ function onSelect(value: unknown) {
                         :id="props.id"
                         type="button"
                         role="combobox"
+                        :aria-label="
+                            props.ariaLabel ??
+                            (props.id ? undefined : props.placeholder)
+                        "
                         :aria-expanded="open"
                         :aria-invalid="props.invalid || undefined"
                         :disabled="props.disabled"

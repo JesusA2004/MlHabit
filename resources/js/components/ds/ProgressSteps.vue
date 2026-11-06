@@ -13,7 +13,8 @@ export type ProgressStep = {
 /**
  * Recorrido del cliente (asesoría → visita → diseño → fabricación →
  * instalación…). Muestra pasos completados, el actual y los siguientes.
- * Horizontal en escritorio y vertical en móvil (o forzado con `orientation`).
+ * Horizontal cuando su contenedor mide ≥ 768 px y vertical si es más angosto
+ * (consulta de contenedor), o forzado con `orientation`.
  */
 const props = withDefaults(
     defineProps<{
@@ -56,12 +57,12 @@ const horizontal = computed(() =>
         ? 'flex-row'
         : props.orientation === 'vertical'
           ? 'flex-col'
-          : 'flex-col md:flex-row',
+          : 'flex-col @3xl:flex-row',
 );
 </script>
 
 <template>
-    <nav :aria-label="props.label" :class="props.class">
+    <nav :aria-label="props.label" :class="cn('@container', props.class)">
         <ol :class="cn('flex gap-0', horizontal)">
             <li
                 v-for="(step, index) in props.steps"
@@ -74,7 +75,7 @@ const horizontal = computed(() =>
                             ? 'flex-col'
                             : 'pb-6 last:pb-0',
                         props.orientation === 'responsive' &&
-                            'md:flex-col md:pb-0',
+                            '@3xl:flex-col @3xl:pb-0',
                     )
                 "
             >
@@ -89,7 +90,7 @@ const horizontal = computed(() =>
                                 ? 'top-3.5 right-0 left-9 h-px'
                                 : 'top-9 bottom-1 left-3.5 w-px',
                             props.orientation === 'responsive' &&
-                                'md:top-3.5 md:right-0 md:bottom-auto md:left-9 md:h-px md:w-auto',
+                                '@3xl:top-3.5 @3xl:right-0 @3xl:bottom-auto @3xl:left-9 @3xl:h-px @3xl:w-auto',
                             state(index) === 'done' && 'bg-primary',
                         )
                     "
@@ -115,7 +116,7 @@ const horizontal = computed(() =>
                     />
                     <template v-else>{{ index + 1 }}</template>
                 </span>
-                <div class="min-w-0 pr-3 md:pt-0.5">
+                <div class="min-w-0 pr-3 @3xl:pt-0.5">
                     <p
                         :class="
                             cn(

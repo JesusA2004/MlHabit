@@ -10,7 +10,7 @@ if (typeof window !== 'undefined') {
 </script>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import type { HTMLAttributes } from 'vue';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,11 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{ cancel: [] }>();
+
+// Con SSR el Teleport se activa tras montar: el HTML del servidor y la
+// hidratación coinciden (la capa nunca está abierta al cargar).
+const mounted = ref(false);
+onMounted(() => (mounted.value = true));
 
 const titleId = useId();
 const descriptionId = useId();
@@ -115,7 +120,7 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-    <Teleport to="body" :disabled="props.variant !== 'fullscreen'">
+    <Teleport to="body" :disabled="props.variant !== 'fullscreen' || !mounted">
         <Transition
             enter-active-class="transition-opacity duration-200 ease-out motion-reduce:transition-none"
             enter-from-class="opacity-0"

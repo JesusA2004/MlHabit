@@ -16,7 +16,9 @@ const isMobile = useMediaQuery('(max-width: 767px)');
         :visible-toasts="3"
         :duration="5000"
         close-button
+        container-aria-label="Notificaciones"
         :toast-options="{
+            closeButtonAriaLabel: 'Cerrar aviso',
             classes: {
                 toast: 'rounded-xl! border-border! shadow-lg! font-sans!',
                 title: 'font-medium! text-foreground!',

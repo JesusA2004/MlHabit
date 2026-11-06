@@ -65,6 +65,9 @@ export const JOURNEY_STEPS: JourneyStep[] = [
 ];
 
 const STEP_KEYS = new Set<string>(JOURNEY_STEPS.map((s) => s.key));
+const STEP_ORDER = new Map<string, number>(
+    JOURNEY_STEPS.map((s, i) => [s.key, i]),
+);
 
 /** Páginas transaccionales: calma total, sin riel ni botón flotante. */
 const QUIET_PREFIXES = [
@@ -157,14 +160,24 @@ export function useJourney() {
         const viewport = window.innerHeight;
         const line = viewport * 0.42;
         let active: JourneyStepKey | null = null;
+        let activeOrder = -1;
 
+        // El recorrido solo avanza: si una sección de un paso anterior
+        // aparece más abajo (p. ej. la banda de materiales o la inspiración
+        // de la portada), el riel no retrocede al pasar por ella.
         for (const anchor of anchors) {
             if (!anchor.el.isConnected) {
                 continue;
             }
 
-            if (anchor.el.getBoundingClientRect().top <= line) {
+            const order = STEP_ORDER.get(anchor.key) ?? -1;
+
+            if (
+                anchor.el.getBoundingClientRect().top <= line &&
+                order > activeOrder
+            ) {
                 active = anchor.key;
+                activeOrder = order;
             }
         }
 

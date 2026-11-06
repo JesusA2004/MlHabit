@@ -183,7 +183,7 @@ async function resetTours(): Promise<void> {
             >
                 <h2
                     v-if="!compact || groups.length > 1"
-                    class="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                    class="mb-3 text-xs font-medium text-muted-foreground"
                 >
                     {{ group.label }}
                 </h2>

@@ -72,14 +72,16 @@ async function check() {
 </script>
 
 <template>
-    <div>
+    <!-- Consulta de contenedor: en columnas angostas del editor el campo y
+         el botón se apilan para que el código postal no quede recortado. -->
+    <div class="@container">
         <form
-            class="flex flex-col gap-3 sm:flex-row"
+            class="flex flex-col gap-3 @lg:flex-row"
             novalidate
             @submit.prevent="check"
         >
             <label for="coverage-cp" class="sr-only">Código postal</label>
-            <div class="relative flex-1">
+            <div class="relative min-w-0 flex-1 @lg:min-w-48">
                 <MapPin
                     class="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"

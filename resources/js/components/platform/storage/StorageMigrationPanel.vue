@@ -308,7 +308,7 @@ const purgeLabel = computed(() =>
                         v-if="props.storage.pendingSync > 0"
                         size="sm"
                         variant="outline"
-                        :class="cn('mt-auto self-start', TOUCH)"
+                        class="mt-auto h-auto min-h-9 max-w-full self-start py-2 text-left whitespace-normal pointer-coarse:min-h-11"
                         :disabled="busy === 'sync'"
                         @click="run('sync', almacenamiento.sincronizar().url)"
                     >
@@ -323,7 +323,7 @@ const purgeLabel = computed(() =>
             </div>
         </section>
 
-        <div class="grid gap-6 xl:grid-cols-3">
+        <div class="grid items-start gap-6 xl:grid-cols-3">
             <!-- Traslado -->
             <section
                 class="flex flex-col gap-5 rounded-xl border bg-card p-5 xl:col-span-2"
@@ -467,7 +467,7 @@ const purgeLabel = computed(() =>
                             están hoy en el servidor.
                         </p>
                         <Button
-                            :class="cn('mt-auto self-start', TOUCH)"
+                            class="mt-auto h-auto min-h-9 max-w-full self-start py-2 text-left whitespace-normal pointer-coarse:min-h-11"
                             :disabled="
                                 !props.synologyReady ||
                                 props.plan.toSynology.files === 0
@@ -509,7 +509,7 @@ const purgeLabel = computed(() =>
                         </p>
                         <Button
                             variant="outline"
-                            :class="cn('mt-auto self-start', TOUCH)"
+                            class="mt-auto h-auto min-h-9 max-w-full self-start py-2 text-left whitespace-normal pointer-coarse:min-h-11"
                             :disabled="props.plan.toLocal.files === 0"
                             @click="askStart('to_local')"
                         >

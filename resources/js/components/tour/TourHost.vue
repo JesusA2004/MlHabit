@@ -14,6 +14,10 @@ import { useTourActions } from './useTourActions';
  * recorrido y, la primera vez que alguien entra, le ofrece el recorrido
  * general. Si lo empieza, lo termina o dice "Ahora no", no se vuelve a
  * ofrecer (se guarda en el servidor; localStorage solo como respaldo).
+ *
+ * La oferta nunca estorba: en cuanto la persona empieza a trabajar (toca,
+ * escribe o enfoca algo fuera de la tarjeta) se pliega a una pastilla
+ * pequeña en la esquina, que se puede volver a abrir o cerrar.
  */
 const props = defineProps<{ area: TourArea }>();
 
@@ -23,6 +27,9 @@ const progress = useTourProgress();
 const { general, ctx, startGeneral } = useTourActions(props.area);
 
 const offer = ref(false);
+/** Plegada a pastilla tras interactuar con la página. */
+const compact = ref(false);
+const card = ref<HTMLElement | null>(null);
 let timer: number | undefined;
 
 const userId = computed(() => page.props.auth?.user?.id ?? null);
@@ -82,6 +89,32 @@ watch(
     },
 );
 
+/**
+ * Cualquier interacción fuera de la tarjeta la pliega (no la descarta). Si
+ * la persona ya estaba trabajando cuando llega la oferta, aparece plegada.
+ */
+function onPageInteraction(event: Event): void {
+    const target = event.target as Node | null;
+
+    if (target && card.value?.contains(target)) {
+        return;
+    }
+
+    compact.value = true;
+}
+
+const INTERACTIONS = ['pointerdown', 'focusin', 'keydown'] as const;
+
+function listen(on: boolean): void {
+    for (const type of INTERACTIONS) {
+        if (on) {
+            document.addEventListener(type, onPageInteraction, true);
+        } else {
+            document.removeEventListener(type, onPageInteraction, true);
+        }
+    }
+}
+
 watch(quietPage, (quiet) => {
     if (quiet) {
         offer.value = false;
@@ -89,10 +122,14 @@ watch(quietPage, (quiet) => {
 });
 
 onMounted(() => {
+    listen(true);
     void maybeOffer();
 });
 
-onBeforeUnmount(() => window.clearTimeout(timer));
+onBeforeUnmount(() => {
+    window.clearTimeout(timer);
+    listen(false);
+});
 
 const withTabBar = computed(() => props.area !== 'admin');
 </script>
@@ -106,13 +143,42 @@ const withTabBar = computed(() => props.area !== 'admin');
         leave-active-class="motion-safe:transition motion-safe:duration-150"
         leave-to-class="opacity-0"
     >
+        <div
+            v-if="offer && compact"
+            ref="card"
+            data-tour-offer
+            :class="[
+                'fixed right-3 z-40 flex items-center gap-1 rounded-full border bg-card p-1 pl-1 text-card-foreground shadow-lg sm:right-5',
+                withTabBar
+                    ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))] lg:bottom-5'
+                    : 'bottom-[calc(0.75rem+env(safe-area-inset-bottom))] sm:bottom-5',
+            ]"
+        >
+            <button
+                type="button"
+                class="inline-flex h-8 items-center gap-2 rounded-full px-3 text-sm font-medium text-primary transition-colors hover:bg-primary-soft focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                @click="accept"
+            >
+                <Compass class="size-4" aria-hidden="true" />
+                Ver recorrido guiado
+            </button>
+            <button
+                type="button"
+                class="grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                aria-label="Cerrar sin ver el recorrido"
+                @click="decline"
+            >
+                <X class="size-4" aria-hidden="true" />
+            </button>
+        </div>
         <section
-            v-if="offer"
+            v-else-if="offer"
+            ref="card"
             role="region"
             aria-labelledby="tour-offer-title"
             data-tour-offer
             :class="[
-                'fixed right-3 left-3 z-[60] rounded-xl border bg-card p-4 text-card-foreground shadow-xl sm:right-5 sm:left-auto sm:w-[22rem]',
+                'fixed right-3 left-3 z-40 rounded-xl border bg-card p-3.5 text-card-foreground shadow-lg sm:right-5 sm:left-auto sm:w-[20rem]',
                 withTabBar
                     ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))] lg:bottom-5'
                     : 'bottom-[calc(0.75rem+env(safe-area-inset-bottom))] sm:bottom-5',
@@ -120,10 +186,10 @@ const withTabBar = computed(() => props.area !== 'admin');
         >
             <div class="flex items-start gap-3">
                 <span
-                    class="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"
+                    class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"
                     aria-hidden="true"
                 >
-                    <Compass class="size-5" />
+                    <Compass class="size-4" />
                 </span>
                 <div class="min-w-0 flex-1">
                     <h2
@@ -132,7 +198,7 @@ const withTabBar = computed(() => props.area !== 'admin');
                     >
                         ¿Te mostramos cómo funciona?
                     </h2>
-                    <p class="mt-1 text-sm text-muted-foreground">
+                    <p class="mt-0.5 text-xs text-muted-foreground">
                         Un recorrido guiado por
                         {{
                             area === 'admin'
@@ -140,8 +206,7 @@ const withTabBar = computed(() => props.area !== 'admin');
                                 : area === 'portal'
                                   ? 'tu portal'
                                   : 'la app de campo'
-                        }}. Lo puedes repetir cuando quieras desde el botón de
-                        ayuda (?).
+                        }}. Puedes repetirlo desde el botón de ayuda (?).
                     </p>
                 </div>
                 <button
@@ -153,7 +218,7 @@ const withTabBar = computed(() => props.area !== 'admin');
                     <X class="size-4" aria-hidden="true" />
                 </button>
             </div>
-            <div class="mt-3 flex justify-end gap-2">
+            <div class="mt-2.5 flex justify-end gap-2">
                 <Button variant="ghost" size="sm" @click="decline"
                     >Ahora no</Button
                 >

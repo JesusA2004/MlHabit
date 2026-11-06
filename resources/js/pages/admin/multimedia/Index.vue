@@ -228,94 +228,93 @@ const typeLabel = (t: string) =>
             />
         </section>
 
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <FilterBar
-                v-model:search="search"
-                class="flex-1"
-                placeholder="Buscar por nombre, título o texto alternativo"
-                :active-count="activeFilters"
-                @clear="clearFilters"
-            >
-                <template #filters>
-                    <Select v-model="type">
-                        <SelectTrigger class="w-full md:w-36" aria-label="Tipo"
-                            ><SelectValue
-                        /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="todos"
-                                >Todos los tipos</SelectItem
-                            >
-                            <SelectItem value="image">Imágenes</SelectItem>
-                            <SelectItem value="video">Videos</SelectItem>
-                            <SelectItem value="document">Documentos</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <SearchSelect
-                        v-model="collection"
-                        :options="collectionOptions"
-                        clearable
-                        placeholder="Todas las colecciones"
-                        class="w-full md:w-56"
-                    />
-                    <Select v-model="origin">
-                        <SelectTrigger
-                            class="w-full md:w-44"
-                            aria-label="Origen"
-                            ><SelectValue
-                        /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="todos"
-                                >Cualquier origen</SelectItem
-                            >
-                            <SelectItem value="render"
-                                >Render conceptual</SelectItem
-                            >
-                            <SelectItem value="real_photo"
-                                >Proyecto real</SelectItem
-                            >
-                            <SelectItem value="sin">Sin indicar</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select v-if="props.can.viewPrivate" v-model="visibility">
-                        <SelectTrigger
-                            class="w-full md:w-36"
-                            aria-label="Visibilidad"
-                            ><SelectValue
-                        /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="public">Públicos</SelectItem>
-                            <SelectItem value="private">Privados</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </template>
-            </FilterBar>
-            <div class="flex items-center gap-2">
-                <Select v-model="sort">
-                    <SelectTrigger class="w-40" aria-label="Ordenar"
+        <FilterBar
+            v-model:search="search"
+            placeholder="Buscar por nombre, título o texto alternativo"
+            :active-count="activeFilters"
+            @clear="clearFilters"
+        >
+            <template #filters>
+                <Select v-model="type">
+                    <SelectTrigger class="w-full md:w-36" aria-label="Tipo"
                         ><SelectValue
                     /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="reciente">Más recientes</SelectItem>
-                        <SelectItem value="antiguo">Más antiguos</SelectItem>
-                        <SelectItem value="nombre">Nombre</SelectItem>
-                        <SelectItem value="tamano">Tamaño</SelectItem>
+                        <SelectItem value="todos">Todos los tipos</SelectItem>
+                        <SelectItem value="image">Imágenes</SelectItem>
+                        <SelectItem value="video">Videos</SelectItem>
+                        <SelectItem value="document">Documentos</SelectItem>
                     </SelectContent>
                 </Select>
-                <ToggleGroup
-                    v-model="view"
-                    type="single"
-                    variant="outline"
-                    aria-label="Vista"
-                >
-                    <ToggleGroupItem value="cuadricula" aria-label="Cuadrícula"
-                        ><LayoutGrid class="size-4"
-                    /></ToggleGroupItem>
-                    <ToggleGroupItem value="lista" aria-label="Lista"
-                        ><List class="size-4"
-                    /></ToggleGroupItem>
-                </ToggleGroup>
-            </div>
-        </div>
+                <SearchSelect
+                    v-model="collection"
+                    :options="collectionOptions"
+                    clearable
+                    placeholder="Todas las colecciones"
+                    class="w-full md:w-56"
+                />
+                <Select v-model="origin">
+                    <SelectTrigger class="w-full md:w-44" aria-label="Origen"
+                        ><SelectValue
+                    /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="todos">Cualquier origen</SelectItem>
+                        <SelectItem value="render"
+                            >Render conceptual</SelectItem
+                        >
+                        <SelectItem value="real_photo"
+                            >Proyecto real</SelectItem
+                        >
+                        <SelectItem value="sin">Sin indicar</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select v-if="props.can.viewPrivate" v-model="visibility">
+                    <SelectTrigger
+                        class="w-full md:w-36"
+                        aria-label="Visibilidad"
+                        ><SelectValue
+                    /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="public">Públicos</SelectItem>
+                        <SelectItem value="private">Privados</SelectItem>
+                    </SelectContent>
+                </Select>
+            </template>
+            <template #actions>
+                <div class="flex items-center gap-2">
+                    <Select v-model="sort">
+                        <SelectTrigger class="w-40" aria-label="Ordenar"
+                            ><SelectValue
+                        /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="reciente"
+                                >Más recientes</SelectItem
+                            >
+                            <SelectItem value="antiguo"
+                                >Más antiguos</SelectItem
+                            >
+                            <SelectItem value="nombre">Nombre</SelectItem>
+                            <SelectItem value="tamano">Tamaño</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <ToggleGroup
+                        v-model="view"
+                        type="single"
+                        variant="outline"
+                        aria-label="Vista"
+                    >
+                        <ToggleGroupItem
+                            value="cuadricula"
+                            aria-label="Cuadrícula"
+                            ><LayoutGrid class="size-4"
+                        /></ToggleGroupItem>
+                        <ToggleGroupItem value="lista" aria-label="Lista"
+                            ><List class="size-4"
+                        /></ToggleGroupItem>
+                    </ToggleGroup>
+                </div>
+            </template>
+        </FilterBar>
 
         <p
             v-if="visibility === 'private'"

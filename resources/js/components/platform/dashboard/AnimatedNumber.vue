@@ -31,8 +31,9 @@ function prefersReducedMotion(): boolean {
     );
 }
 
-// Arranca en 0 para no mostrar un cuadro con la cifra final antes de contar.
-const shown = ref(prefersReducedMotion() ? props.value : 0);
+// El primer render (servidor e hidratación) muestra la cifra final para que
+// el HTML del SSR coincida; al montarse cuenta desde 0.
+const shown = ref(props.value);
 let frame = 0;
 
 function animate(from: number, to: number) {
@@ -62,7 +63,13 @@ function animate(from: number, to: number) {
     frame = requestAnimationFrame(tick);
 }
 
-onMounted(() => animate(0, props.value));
+onMounted(() => {
+    if (!prefersReducedMotion()) {
+        shown.value = 0;
+    }
+
+    animate(0, props.value);
+});
 watch(
     () => props.value,
     (to, from) => animate(from ?? 0, to),

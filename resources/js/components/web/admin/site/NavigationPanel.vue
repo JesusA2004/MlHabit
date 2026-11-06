@@ -193,6 +193,7 @@ function openEditor(next: Path, item: MenuLink | null) {
               visible: true,
               children: [],
           };
+    draftTouched.value = false;
     sheetOpen.value = true;
 }
 
@@ -252,7 +253,16 @@ const draftError = computed(() => {
     return null;
 });
 
+/** Los errores se muestran tras salir del campo o al intentar guardar. */
+const draftTouched = ref(false);
+const shownDraftError = computed(() =>
+    draftTouched.value || draft.value.label.trim() !== ''
+        ? draftError.value
+        : null,
+);
+
 function applyDraft() {
+    draftTouched.value = true;
     if (draftError.value || !path.value) return;
     const item: MenuLink = {
         id: draft.value.id,
@@ -682,6 +692,7 @@ const preview = computed(() => form.items.filter((i) => i.visible));
                         v-model="draft.label"
                         maxlength="40"
                         placeholder="Ej. Cocinas"
+                        @blur="draftTouched = true"
                     />
                     <p class="text-xs text-muted-foreground tabular-nums">
                         {{ draft.label.length }}/40
@@ -811,7 +822,7 @@ const preview = computed(() => form.items.filter((i) => i.visible));
                     <Switch v-model="draft.visible" />
                 </label>
 
-                <InputError :message="draftError ?? undefined" />
+                <InputError :message="shownDraftError ?? undefined" />
             </form>
             <template #footer>
                 <Button variant="outline" @click="sheetOpen = false"

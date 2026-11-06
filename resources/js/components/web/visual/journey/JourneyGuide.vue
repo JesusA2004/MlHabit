@@ -151,7 +151,7 @@ const railFill = computed(() => {
 </script>
 
 <template>
-    <!-- Escritorio: riel vertical -->
+    <!-- Escritorio ancho (≥1360 px, con margen libre junto al contenedor de 1200 px): riel vertical -->
     <Transition
         enter-active-class="transition duration-500 ease-out"
         enter-from-class="opacity-0 translate-x-3"
@@ -162,7 +162,7 @@ const railFill = computed(() => {
             v-if="railVisible"
             data-journey-rail
             aria-label="Tu recorrido por ML Habitat"
-            class="fixed top-1/2 right-4 z-30 hidden -translate-y-1/2 xl:block"
+            class="fixed top-1/2 right-4 z-30 hidden -translate-y-1/2 min-[1360px]:block"
         >
             <ol class="relative flex flex-col items-end gap-1">
                 <span
@@ -233,7 +233,7 @@ const railFill = computed(() => {
     <div
         v-if="!journey.quiet.value && currentIndex >= 0"
         data-journey-bar
-        class="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[3px] gap-[3px] xl:hidden"
+        class="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[3px] gap-[3px] min-[1360px]:hidden"
         aria-hidden="true"
     >
         <span

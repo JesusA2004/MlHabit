@@ -17,6 +17,7 @@ const forwardedProps = useForwardProps(delegatedProps)
 <template>
   <RangeCalendarPrev
     data-slot="range-calendar-prev-button"
+    aria-label="Mes anterior"
     :class="cn(
       buttonVariants({ variant: 'outline' }),
       'absolute left-1',

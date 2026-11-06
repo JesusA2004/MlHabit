@@ -262,7 +262,7 @@ const urgent = computed(
                         >
                             <div class="p-5">
                                 <p
-                                    class="flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                    class="flex items-center gap-2 text-xs font-medium text-muted-foreground"
                                 >
                                     <ReceiptText
                                         class="size-3.5"
