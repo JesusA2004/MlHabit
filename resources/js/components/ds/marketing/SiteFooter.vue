@@ -19,7 +19,7 @@ import LineIllustration from '@/components/web/visual/illustrations/LineIllustra
 import type { IllustrationName } from '@/components/web/visual/illustrations/types';
 import Marquee from '@/components/web/visual/Marquee.vue';
 import type { MarqueeItem } from '@/components/web/visual/Marquee.vue';
-import { defaultSiteNavigation } from '@/lib/navigation';
+import { defaultSiteNavigation, flattenNavigation } from '@/lib/navigation';
 import type { SiteData, SiteNavLink } from '@/types/public';
 import NavAnchor from './NavAnchor.vue';
 import SocialIcon from './SocialIcon.vue';
@@ -39,20 +39,21 @@ const props = withDefaults(
         ctaLabel?: string;
         ctaHref?: string;
     }>(),
-    { ctaLabel: 'Solicitar asesoría', ctaHref: '/solicitar' },
+    {
+        ctaLabel: 'Agenda tu asesoría',
+        ctaHref: '/solicitar?servicio=asesoria',
+    },
 );
 
 const year = new Date().getFullYear();
 const name = computed(() => props.site?.name || 'ML Habitat');
 /** Enlaces del menú del sitio; los submenús se aplanan en el pie. */
 const navigation = computed<SiteNavLink[]>(() =>
-    props.site?.navigation?.length
-        ? props.site.navigation.flatMap((item) =>
-              item.href
-                  ? [{ ...item, href: item.href }]
-                  : (item.children ?? []),
-          )
-        : defaultSiteNavigation,
+    flattenNavigation(
+        props.site?.navigation?.length
+            ? props.site.navigation
+            : defaultSiteNavigation,
+    ),
 );
 const contact = computed(() => props.site?.contact ?? {});
 const whatsappUrl = computed(() => {
@@ -254,7 +255,7 @@ const platformLabel = (platform: string) =>
                         :alt="name"
                         class="h-9 w-auto brightness-0 invert"
                     />
-                    <AppLogo v-else inverted size="lg" />
+                    <AppLogo v-else inverted size="xl" :wordmark="false" />
                     <p
                         class="mt-4 max-w-xs text-sm text-espresso-foreground/60"
                     >

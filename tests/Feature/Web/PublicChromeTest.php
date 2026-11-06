@@ -15,7 +15,7 @@ it('shares the same site navigation with every public page, also the CRM flows',
         $this->get($url)->assertOk()->assertInertia(fn ($page) => $page
             ->has('site.navigation')
             ->has('site.contact')
-            ->where('site.cta.href', '/solicitar'));
+            ->where('site.cta.href', '/solicitar?servicio=asesoria'));
     }
 });
 

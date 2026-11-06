@@ -4,9 +4,12 @@ import {
     ArrowRight,
     ArrowUpRight,
     ChevronDown,
+    House,
     LogIn,
     Menu,
     Phone,
+    ReceiptText,
+    Video,
     X,
 } from '@lucide/vue';
 import {
@@ -17,6 +20,7 @@ import {
     DialogRoot,
     DialogTitle,
 } from 'reka-ui';
+import type { Component } from 'vue';
 import {
     computed,
     nextTick,
@@ -25,7 +29,7 @@ import {
     ref,
     watch,
 } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NavAnchor from '@/components/ds/marketing/NavAnchor.vue';
 import SiteAccount from '@/components/ds/marketing/SiteAccount.vue';
 import { getInitials } from '@/composables/useInitials';
@@ -35,10 +39,16 @@ import { illustrationFor } from '@/components/web/visual/illustrations';
 import {
     accountArea,
     accountLinks,
+    ANCHOR_SCROLL_END_EVENT,
+    ANCHOR_SCROLL_EVENT,
+    defaultSiteCta,
     defaultSiteNavigation,
+    hashOf,
     isActivePath,
     loginPath,
     normalizePath,
+    samePageHash,
+    scrollToSection,
 } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import type { SiteCta, SiteData, SiteNavItem } from '@/types/public';
@@ -49,12 +59,20 @@ import type { SiteCta, SiteData, SiteNavItem } from '@/types/public';
  * - Con `overlay` es transparente sobre el hero y se vuelve sólida con
  *   desenfoque al hacer scroll; se encoge, se esconde al bajar y reaparece
  *   al subir (nunca con un menú abierto o con el foco dentro).
+ * - Insignia oficial completa (sin el nombre escrito: la insignia ya dice
+ *   "ML HÁBITAT"), grande arriba y más chica al compactarse.
  * - Indicador (pastilla + subrayado de roble) que se desliza siguiendo el
- *   puntero o el foco y regresa al enlace activo.
+ *   puntero o el foco y regresa al enlace activo. Se mide con
+ *   getBoundingClientRect relativo a la lista (cada <li> es `relative`, así
+ *   que offsetLeft siempre valía 0 y la pastilla se encimaba con el primer
+ *   enlace) y se recalcula al cambiar tamaño, fuentes o página.
+ * - Enlaces a secciones (`/#como-funciona`): activos solo mientras esa
+ *   sección está a la vista en su página; al saltar a una sección la
+ *   cabecera no se esconde y el desplazamiento deja libre su altura.
  * - Submenús con apertura animada; el Catálogo sin submenú propio abre el
  *   mega-menú de categorías.
- * - Menú móvil a pantalla completa con entrada escalonada y submenús
- *   desplegables.
+ * - Navegación completa desde `xl` (1280 px); debajo, menú a pantalla
+ *   completa con entrada escalonada y submenús desplegables.
  * - `prefers-reduced-motion`: sin animaciones.
  */
 const props = withDefaults(
@@ -69,7 +87,11 @@ const props = withDefaults(
         ctaLabel?: string;
         ctaHref?: string;
     }>(),
-    { overlay: false, ctaLabel: 'Solicitar asesoría', ctaHref: '/solicitar' },
+    {
+        overlay: false,
+        ctaLabel: defaultSiteCta.label,
+        ctaHref: defaultSiteCta.href,
+    },
 );
 
 const page = usePage();
@@ -121,20 +143,93 @@ function keyOf(item: SiteNavItem, index: number): string {
     return item.id ?? `${index}-${item.href ?? item.label}`;
 }
 
-function activeHref(href: string | null | undefined): boolean {
-    return (
-        !!href &&
-        href.startsWith('/') &&
-        !href.includes('#') &&
-        isActivePath(page.url, { href })
+/* ── Enlace activo ─────────────────────────────────────────────── */
+
+/** Sección enlazada desde el menú que está a la vista (`#id`), o null. */
+const sectionInView = ref<string | null>(null);
+
+/** Parámetros de la consulta de una URL (sin `#`). */
+function queryOf(url: string): URLSearchParams {
+    const query = url.split('#')[0].split('?')[1] ?? '';
+
+    return new URLSearchParams(query);
+}
+
+/**
+ * Qué tan bien coincide `href` con la página actual: -1 = no coincide;
+ * si coincide, cuántos parámetros de su consulta comparte con la URL (para
+ * preferir `/solicitar?servicio=asesoria` sobre `/solicitar`).
+ */
+function matchScore(href: string | null | undefined): number {
+    if (!href || !href.startsWith('/')) return -1;
+
+    const id = hashOf(href);
+    if (id) {
+        // Sección: solo mientras está a la vista en su propia página.
+        return samePageHash(href, page.url) && sectionInView.value === id
+            ? 1
+            : -1;
+    }
+
+    const path = normalizePath(href);
+    if (!isActivePath(page.url, { href, exact: path === '/' })) return -1;
+    // En el inicio, «Inicio» cede el lugar a la sección que se está viendo.
+    if (path === '/' && sectionInView.value) return -1;
+
+    const wanted = queryOf(href);
+    const current = queryOf(page.url);
+    let score = 0;
+    for (const [key, value] of wanted) {
+        if (current.get(key) !== value) return -1;
+        score++;
+    }
+
+    return score;
+}
+
+/** ¿Este enlace es el que mejor describe la página actual? */
+function activeHref(
+    href: string | null | undefined,
+    siblings: (string | null | undefined)[] = [],
+): boolean {
+    const score = matchScore(href);
+
+    return score >= 0 && siblings.every((other) => matchScore(other) <= score);
+}
+
+function activeChild(item: SiteNavItem, href: string): boolean {
+    return activeHref(
+        href,
+        (item.children ?? []).map((child) => child.href),
     );
 }
 
 function active(item: SiteNavItem): boolean {
     return (
         activeHref(item.href) ||
-        (item.children ?? []).some((child) => activeHref(child.href))
+        (item.children ?? []).some((child) => activeChild(item, child.href))
     );
+}
+
+/** Ids de las secciones de esta página a las que apunta el menú. */
+const sectionIds = computed(() =>
+    links.value
+        .flatMap((item) => [item, ...(item.children ?? [])])
+        .map((link) => (link.href ? samePageHash(link.href, page.url) : null))
+        .filter((id): id is string => !!id),
+);
+
+/** La sección activa es la que cruza una línea al 35 % de la ventana. */
+function updateSectionInView() {
+    const line = window.innerHeight * 0.35;
+    let current: string | null = null;
+
+    for (const id of sectionIds.value) {
+        const rect = document.getElementById(id)?.getBoundingClientRect();
+        if (rect && rect.top <= line && rect.bottom > line) current = id;
+    }
+
+    sectionInView.value = current;
 }
 
 type Kind = 'link' | 'dropdown' | 'mega';
@@ -157,6 +252,13 @@ const megaOpen = computed(() => openKey.value === 'mega');
 /* ── Scroll: sólida, encogida y escondida al bajar ─────────────── */
 let lastY = 0;
 let frame = 0;
+/** Hasta cuándo la cabecera no se esconde (salto a una sección). */
+let pinnedUntil = 0;
+
+function pin(ms = 4000) {
+    pinnedUntil = performance.now() + ms;
+    hidden.value = false;
+}
 
 function onScroll() {
     if (frame) return;
@@ -172,6 +274,7 @@ function onScroll() {
         if (
             goingDown &&
             y > 180 &&
+            performance.now() > pinnedUntil &&
             !menuOpen.value &&
             openKey.value === null &&
             !focusWithin.value
@@ -182,20 +285,76 @@ function onScroll() {
         }
 
         if (Math.abs(y - lastY) > 4) lastY = y;
+        updateSectionInView();
     });
 }
+
+/* Llegada con `#seccion` (desde otra página o al abrir el enlace): ajusta
+   el desplazamiento cuando ya hay fuentes y diseño, y deja la cabecera
+   visible. */
+let lastLocation = '';
+
+function settleOnHash() {
+    const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (here === lastLocation) return;
+    lastLocation = here;
+
+    const id = hashOf(window.location.hash);
+    if (!id) return;
+
+    pin();
+    const fonts = document.fonts?.ready ?? Promise.resolve();
+    void fonts.then(() =>
+        requestAnimationFrame(() => {
+            if (document.getElementById(id)) {
+                pin();
+                scrollToSection(id, { smooth: false });
+            }
+        }),
+    );
+}
+
+const onAnchorScroll = () => pin();
+/* Terminó el salto: un respiro y la cabecera vuelve a esconderse al bajar. */
+const onAnchorScrollEnd = () => {
+    pinnedUntil = performance.now() + 250;
+    lastY = window.scrollY;
+};
+let stopNavigate: (() => void) | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
     lastY = window.scrollY;
     scrolled.value = lastY > 24;
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener(ANCHOR_SCROLL_EVENT, onAnchorScroll);
+    window.addEventListener(ANCHOR_SCROLL_END_EVENT, onAnchorScrollEnd);
+    stopNavigate = router.on('navigate', () => {
+        void nextTick(() => {
+            settleOnHash();
+            updateSectionInView();
+        });
+    });
+
+    if (typeof ResizeObserver !== 'undefined' && navList.value) {
+        resizeObserver = new ResizeObserver(() => moveIndicator());
+        resizeObserver.observe(navList.value);
+    }
+    void document.fonts?.ready.then(() => moveIndicator());
+
+    settleOnHash();
+    updateSectionInView();
     void nextTick(moveIndicator);
-    window.addEventListener('resize', moveIndicator, { passive: true });
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('scroll', onScroll);
-    window.removeEventListener('resize', moveIndicator);
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener(ANCHOR_SCROLL_EVENT, onAnchorScroll);
+    window.removeEventListener(ANCHOR_SCROLL_END_EVENT, onAnchorScrollEnd);
+    stopNavigate?.();
+    resizeObserver?.disconnect();
     document.documentElement.removeAttribute('data-menu-open');
     if (frame) cancelAnimationFrame(frame);
     window.clearTimeout(menuTimer);
@@ -204,12 +363,24 @@ onBeforeUnmount(() => {
 /* ── Indicador deslizante ──────────────────────────────────────── */
 const navList = ref<HTMLElement | null>(null);
 const hoverKey = ref<string | null>(null);
-const indicator = ref({ x: 0, w: 0, visible: false, hovering: false });
+const indicator = ref({
+    x: 0,
+    w: 0,
+    visible: false,
+    hovering: false,
+    /** Primera colocación (o tras ocultarse): sin deslizar desde 0. */
+    instant: true,
+});
 
 function moveIndicator() {
     const list = navList.value;
 
-    if (!list) return;
+    if (!list || list.offsetParent === null) {
+        // Lista oculta (menú compacto): la próxima vez aparece en su sitio.
+        indicator.value = { ...indicator.value, visible: false, instant: true };
+
+        return;
+    }
 
     const hovered =
         hoverKey.value &&
@@ -220,20 +391,39 @@ function moveIndicator() {
         hovered || list.querySelector<HTMLElement>('[data-nav-active]');
 
     if (!target) {
-        indicator.value = { ...indicator.value, visible: false };
+        indicator.value = { ...indicator.value, visible: false, instant: true };
 
         return;
     }
 
+    // Relativo a la lista: cada <li> es `relative`, por eso no offsetLeft.
+    const box = list.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+
     indicator.value = {
-        x: target.offsetLeft,
-        w: target.offsetWidth,
+        x: Math.round(rect.left - box.left),
+        w: Math.round(rect.width),
         visible: true,
         hovering: !!hovered,
+        instant: !indicator.value.visible,
     };
 }
 
-watch([hoverKey, () => page.url, links], () => void nextTick(moveIndicator));
+let resizeFrame = 0;
+
+function onResize() {
+    if (resizeFrame) return;
+    resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        moveIndicator();
+        updateSectionInView();
+    });
+}
+
+watch(
+    [hoverKey, () => page.url, links, sectionInView],
+    () => void nextTick(moveIndicator),
+);
 
 /* ── Submenús de escritorio ────────────────────────────────────── */
 let menuTimer = 0;
@@ -306,11 +496,15 @@ watch(
 watch(menuOpen, (open) => {
     document.documentElement.toggleAttribute('data-menu-open', open);
     if (open) {
-        // Abre el submenú que contiene la página actual.
+        // Abre los grupos sin página propia (así se ven todas las opciones)
+        // y el submenú que contiene la página actual.
         mobileExpanded.value = new Set(
             links.value
                 .map((item, i) => [item, keyOf(item, i)] as const)
-                .filter(([item]) => item.children?.length && active(item))
+                .filter(
+                    ([item]) =>
+                        item.children?.length && (!item.href || active(item)),
+                )
                 .map(([, key]) => key),
         );
     }
@@ -333,9 +527,29 @@ const megaFeatures = [
     },
 ];
 
+/** Icono y una línea de contexto para los servicios conocidos del submenú. */
+const SERVICE_META: Record<string, { icon: Component; body: string }> = {
+    '/solicitar?servicio=asesoria': {
+        icon: Video,
+        body: 'Platica con un asesor desde casa.',
+    },
+    '/agendar-visita': {
+        icon: House,
+        body: 'Medimos tu espacio en tu domicilio.',
+    },
+    '/solicitar': {
+        icon: ReceiptText,
+        body: 'Recibe una propuesta a la medida.',
+    },
+};
+
+function serviceMeta(href: string) {
+    return SERVICE_META[href] ?? null;
+}
+
 const linkClass = (item: SiteNavItem) =>
     cn(
-        'relative inline-flex h-10 items-center gap-1 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:px-4 xl:text-[0.9375rem]',
+        'relative inline-flex h-10 items-center gap-1 rounded-full px-3.5 text-[0.9375rem] font-medium whitespace-nowrap transition-colors duration-200 focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none',
         transparent.value
             ? 'text-white/85 hover:text-white'
             : 'text-muted-foreground hover:text-foreground',
@@ -367,38 +581,55 @@ const linkClass = (item: SiteNavItem) =>
         <div
             :class="
                 cn(
-                    'container-site flex items-center gap-4 transition-[height] duration-500 ease-out xl:gap-6',
-                    scrolled ? 'h-16' : 'h-16 md:h-[76px]',
+                    'container-site flex items-center gap-3 transition-[height] duration-500 ease-out xl:gap-5',
+                    scrolled ? 'h-16' : 'h-16 md:h-20 xl:h-[88px]',
                 )
             "
         >
             <Link
                 href="/"
-                class="group shrink-0 rounded-md"
+                class="group shrink-0 rounded-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                 :aria-label="`${props.site?.name ?? 'ML Habitat'}, inicio`"
+                data-site-logo
             >
                 <img
                     v-if="props.site?.logoUrl"
                     :src="props.site.logoUrl"
                     :alt="props.site?.name ?? 'ML Habitat'"
                     :class="
-                        cn('h-8 w-auto', transparent && 'brightness-0 invert')
+                        cn(
+                            'w-auto transition-[height] duration-500 ease-out',
+                            scrolled ? 'h-9' : 'h-9 md:h-11',
+                            transparent && 'brightness-0 invert',
+                        )
                     "
                 />
-                <AppLogo
+                <!-- La insignia ya dice "ML HÁBITAT": sin nombre escrito al lado. -->
+                <AppLogoIcon
                     v-else
-                    :inverted="transparent"
-                    class="transition-transform duration-500 ease-out group-hover:-rotate-2"
+                    title="ML Hábitat"
+                    sizes="(min-width: 1280px) 60px, (min-width: 768px) 52px, 44px"
+                    :class-name="
+                        cn(
+                            'site-logo shrink-0 transition-[width,height,box-shadow,rotate] duration-500 ease-out group-hover:-rotate-3',
+                            scrolled
+                                ? 'size-11'
+                                : 'size-11 md:size-[52px] xl:size-[60px]',
+                            transparent
+                                ? 'shadow-[0_6px_20px_-6px_rgb(0_0_0/0.55)]'
+                                : 'shadow-[0_4px_14px_-6px_rgb(35_30_26/0.45)]',
+                        )
+                    "
                 />
             </Link>
 
             <nav
                 aria-label="Principal"
-                class="hidden flex-1 justify-center lg:flex"
+                class="hidden min-w-0 flex-1 justify-center xl:flex"
             >
                 <ul
                     ref="navList"
-                    class="relative flex items-center gap-1"
+                    class="relative flex items-center gap-0.5"
                     @mouseleave="hoverKey = null"
                 >
                     <!-- Pastilla + subrayado que siguen al puntero -->
@@ -410,6 +641,7 @@ const linkClass = (item: SiteNavItem) =>
                                     ? 'bg-white/14'
                                     : 'bg-foreground/[0.06]',
                                 indicator.visible ? 'opacity-100' : 'opacity-0',
+                                indicator.instant && 'nav-indicator--instant',
                             )
                         "
                         :style="{
@@ -476,8 +708,7 @@ const linkClass = (item: SiteNavItem) =>
                                 :class="
                                     cn(
                                         linkClass(item),
-                                        kindOf(item) !== 'link' &&
-                                            'pr-9 xl:pr-10',
+                                        kindOf(item) !== 'link' && 'pr-9',
                                     )
                                 "
                                 @focus="hoverKey = keyOf(item, i)"
@@ -566,7 +797,7 @@ const linkClass = (item: SiteNavItem) =>
                                 @mouseenter="openMenu(keyOf(item, i), 0)"
                             >
                                 <ul
-                                    class="rounded-2xl border border-border/80 bg-background p-2 text-foreground shadow-lg"
+                                    class="max-w-[24rem] rounded-2xl border border-border/80 bg-background p-2 text-foreground shadow-lg"
                                 >
                                     <li
                                         v-for="(child, j) in item.children"
@@ -579,14 +810,42 @@ const linkClass = (item: SiteNavItem) =>
                                             :external="child.external"
                                             :new-tab="child.newTab"
                                             :aria-current="
-                                                activeHref(child.href)
+                                                activeChild(item, child.href)
                                                     ? 'page'
                                                     : undefined
                                             "
-                                            class="group flex min-h-11 items-center justify-between gap-6 rounded-xl px-3 py-2 text-[0.9375rem] font-medium transition-colors hover:bg-stone/70 focus-visible:bg-stone/70 aria-[current=page]:text-primary"
+                                            class="group flex min-h-11 items-center justify-between gap-4 rounded-xl px-3 py-2 text-[0.9375rem] font-medium transition-colors hover:bg-stone/70 focus-visible:bg-stone/70 aria-[current=page]:text-primary"
                                             @click="openKey = null"
                                         >
-                                            <span>{{ child.label }}</span>
+                                            <span
+                                                v-if="serviceMeta(child.href)"
+                                                class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary transition-[background-color,color,rotate] duration-300 group-hover:-rotate-6 group-hover:bg-primary group-hover:text-primary-foreground"
+                                                aria-hidden="true"
+                                            >
+                                                <component
+                                                    :is="
+                                                        serviceMeta(child.href)
+                                                            ?.icon
+                                                    "
+                                                    class="size-5"
+                                                    :stroke-width="ICON_STROKE"
+                                                />
+                                            </span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block">{{
+                                                    child.label
+                                                }}</span>
+                                                <span
+                                                    v-if="
+                                                        serviceMeta(child.href)
+                                                    "
+                                                    class="mt-0.5 block text-[0.8125rem] font-normal text-muted-foreground"
+                                                    >{{
+                                                        serviceMeta(child.href)
+                                                            ?.body
+                                                    }}</span
+                                                >
+                                            </span>
                                             <component
                                                 :is="
                                                     child.newTab ||
@@ -612,7 +871,7 @@ const linkClass = (item: SiteNavItem) =>
                 Sin teléfono en la barra: no cabe junto a la navegación sin
                 encimarse; vive en el menú móvil y en el pie.
             -->
-            <div class="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
+            <div class="ml-auto flex shrink-0 items-center gap-2 xl:ml-0">
                 <div class="hidden sm:flex">
                     <SiteAccount :transparent="transparent" />
                 </div>
@@ -624,7 +883,7 @@ const linkClass = (item: SiteNavItem) =>
                     data-magnetic="0.25"
                     :class="
                         cn(
-                            'btn-nudge btn-sweep hidden h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[0.9375rem] font-medium whitespace-nowrap shadow-xs transition-colors sm:inline-flex xl:px-5',
+                            'btn-nudge btn-sweep hidden h-11 shrink-0 items-center gap-2 rounded-full px-5 text-[0.9375rem] font-medium whitespace-nowrap shadow-xs transition-colors sm:inline-flex',
                             transparent
                                 ? 'bg-white text-espresso [--sweep:var(--stone)]'
                                 : 'bg-primary text-primary-foreground [--sweep:var(--primary-hover)]',
@@ -633,7 +892,7 @@ const linkClass = (item: SiteNavItem) =>
                 >
                     {{ cta.label }}
                     <ArrowRight
-                        class="nudge size-4 lg:max-xl:hidden"
+                        class="nudge size-4"
                         :stroke-width="1.75"
                         aria-hidden="true"
                     />
@@ -642,7 +901,7 @@ const linkClass = (item: SiteNavItem) =>
                     type="button"
                     :class="
                         cn(
-                            'grid size-11 place-items-center rounded-full lg:hidden',
+                            'grid size-11 place-items-center rounded-full xl:hidden',
                             transparent
                                 ? 'text-white hover:bg-white/10'
                                 : 'text-foreground hover:bg-accent',
@@ -667,7 +926,7 @@ const linkClass = (item: SiteNavItem) =>
             <div
                 v-show="megaOpen"
                 id="mega-catalogo"
-                class="absolute inset-x-0 top-full hidden border-b border-border/70 bg-background text-foreground shadow-lg lg:block"
+                class="absolute inset-x-0 top-full hidden border-b border-border/70 bg-background text-foreground shadow-lg xl:block"
                 @mouseenter="openMenu('mega', 0)"
             >
                 <div class="container-site grid grid-cols-12 gap-8 py-8">
@@ -721,7 +980,7 @@ const linkClass = (item: SiteNavItem) =>
                             Ver todo el catálogo
                         </Link>
                     </div>
-                    <Link
+                    <NavAnchor
                         v-for="(feature, i) in megaFeatures"
                         :key="feature.href"
                         :href="feature.href"
@@ -734,6 +993,7 @@ const linkClass = (item: SiteNavItem) =>
                             )
                         "
                         :style="{ '--i': categories.length + i }"
+                        @click="openKey = null"
                     >
                         <LineIllustration
                             :name="feature.illustration"
@@ -769,7 +1029,7 @@ const linkClass = (item: SiteNavItem) =>
                             "
                             >{{ feature.body }}</span
                         >
-                    </Link>
+                    </NavAnchor>
                 </div>
             </div>
         </Transition>
@@ -787,7 +1047,12 @@ const linkClass = (item: SiteNavItem) =>
                     <div
                         class="relative container-site flex h-16 shrink-0 items-center justify-between"
                     >
-                        <DialogTitle as="div"><AppLogo /></DialogTitle>
+                        <DialogTitle as="div"
+                            ><AppLogoIcon
+                                title="ML Hábitat"
+                                sizes="44px"
+                                class-name="size-11 shadow-[0_4px_14px_-6px_rgb(35_30_26/0.45)]"
+                        /></DialogTitle>
                         <DialogDescription class="sr-only"
                             >Menú del sitio</DialogDescription
                         >
@@ -901,7 +1166,10 @@ const linkClass = (item: SiteNavItem) =>
                                                 :external="child.external"
                                                 :new-tab="child.newTab"
                                                 :aria-current="
-                                                    activeHref(child.href)
+                                                    activeChild(
+                                                        item,
+                                                        child.href,
+                                                    )
                                                         ? 'page'
                                                         : undefined
                                                 "
@@ -1070,6 +1338,13 @@ const linkClass = (item: SiteNavItem) =>
     transition:
         transform 460ms cubic-bezier(0.22, 1, 0.36, 1),
         width 460ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 240ms ease-out,
+        background-color 300ms ease-out;
+}
+
+/* Primera colocación: aparece en su sitio, sin deslizarse desde la izquierda. */
+.nav-indicator--instant {
+    transition:
         opacity 240ms ease-out,
         background-color 300ms ease-out;
 }

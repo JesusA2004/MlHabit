@@ -739,7 +739,8 @@ const preview = computed(() => form.items.filter((i) => i.visible));
                         "
                         class="text-xs text-muted-foreground"
                     >
-                        Se oculta sola mientras no haya contenido publicado.
+                        Siempre visible: mientras no publiques contenido, la
+                        página muestra un aviso amable para solicitar asesoría.
                     </p>
                 </div>
                 <div v-else-if="draft.type === 'page'" class="grid gap-1.5">

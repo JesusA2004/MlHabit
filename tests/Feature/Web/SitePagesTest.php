@@ -263,6 +263,6 @@ it('lists custom pages and the menu in the site admin', function () {
         ->assertInertia(fn ($p) => $p->where('tab', 'paginas-web')
             ->has('sitePages', 1)
             ->has('pageTemplates', count(PageTemplates::ids()))
-            ->has('navigation.items', 4)
+            ->has('navigation.items', 6)
             ->where('navigation.customized', false));
 });

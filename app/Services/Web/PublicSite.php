@@ -17,10 +17,11 @@ use Illuminate\Support\Facades\Cache;
  */
 class PublicSite
 {
-    private const CACHE_KEY = 'web.public_site.v1';
+    // v2: menú predeterminado completo (Navigation::defaults()).
+    private const CACHE_KEY = 'web.public_site.v2';
 
     /** Claves de caché que dependen del contenido editable. */
-    private const KEYS = [self::CACHE_KEY, 'web.home.v1', 'web.sitemap.v1', 'web.sitemap.v2'];
+    private const KEYS = [self::CACHE_KEY, 'web.public_site.v1', 'web.home.v1', 'web.sitemap.v1', 'web.sitemap.v2'];
 
     public static function flush(): void
     {

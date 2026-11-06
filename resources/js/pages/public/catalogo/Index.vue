@@ -1,16 +1,8 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import {
-    Factory,
-    LayoutGrid,
-    PencilRuler,
-    SwatchBook,
-    Wrench,
-} from '@lucide/vue';
+import { Factory, PencilRuler, SwatchBook, Wrench } from '@lucide/vue';
 import { computed } from 'vue';
-import EmptyState from '@/components/ds/EmptyState.vue';
-import { Button } from '@/components/ui/button';
 import CategoryTile from '@/components/web/public/CategoryTile.vue';
+import ComingSoonPanel from '@/components/web/public/ComingSoonPanel.vue';
 import CtaBand from '@/components/web/public/CtaBand.vue';
 import PageIntro from '@/components/web/public/PageIntro.vue';
 import SeoHead from '@/components/web/public/SeoHead.vue';
@@ -100,18 +92,13 @@ const promises = [
                     "
                 />
             </div>
-            <EmptyState
+            <ComingSoonPanel
                 v-else
-                :icon="LayoutGrid"
+                eyebrow="Catálogo en preparación"
                 title="Estamos preparando nuestro catálogo"
-                description="Muy pronto podrás ver aquí nuestras líneas de muebles. Mientras tanto, cuéntanos qué necesitas y te orientamos."
-            >
-                <Button as-child
-                    ><Link href="/solicitar"
-                        >Solicita una asesoría</Link
-                    ></Button
-                >
-            </EmptyState>
+                description="Muy pronto verás aquí cada línea con sus modelos y acabados. Mientras tanto, diseñamos contigo desde cero: cuéntanos de tu espacio y te orientamos sin compromiso."
+                :illustrations="['kitchen', 'closet', 'tv']"
+            />
         </div>
     </section>
 

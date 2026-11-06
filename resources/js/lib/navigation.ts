@@ -37,7 +37,7 @@ import {
     Wrench,
 } from '@lucide/vue';
 import type { AdminNavGroup, TabNavItem } from '@/types/navigation';
-import type { SiteNavLink } from '@/types/public';
+import type { SiteCta, SiteNavItem, SiteNavLink } from '@/types/public';
 
 /**
  * Navegación del panel como datos. Cada elemento declara el permiso que
@@ -330,13 +330,190 @@ export function isActivePath(
     return current === target || current.startsWith(`${target}/`);
 }
 
-/** Navegación pública por defecto si el backend no envía `site.navigation`. */
-export const defaultSiteNavigation: SiteNavLink[] = [
-    { label: 'Catálogo', href: '/catalogo' },
-    { label: 'Inspiración', href: '/inspiracion' },
-    { label: 'Cómo funciona', href: '/#como-funciona' },
-    { label: 'Preguntas frecuentes', href: '/preguntas-frecuentes' },
+/**
+ * Navegación pública por defecto si el backend no envía `site.navigation`.
+ * Es el mismo menú que `App\Services\Web\Navigation::defaults()`.
+ */
+export const defaultSiteNavigation: SiteNavItem[] = [
+    { id: 'inicio', label: 'Inicio', href: '/' },
+    { id: 'catalogo', label: 'Catálogo', href: '/catalogo' },
+    { id: 'inspiracion', label: 'Inspiración', href: '/inspiracion' },
+    { id: 'como-funciona', label: 'Cómo funciona', href: '/#como-funciona' },
+    {
+        id: 'servicios',
+        label: 'Servicios',
+        href: null,
+        children: [
+            {
+                label: 'Asesoría por videollamada',
+                href: '/solicitar?servicio=asesoria',
+            },
+            { label: 'Visita a domicilio', href: '/agendar-visita' },
+            { label: 'Cotiza tu proyecto', href: '/solicitar' },
+        ],
+    },
+    {
+        id: 'preguntas',
+        label: 'Preguntas frecuentes',
+        href: '/preguntas-frecuentes',
+    },
 ];
+
+/** Botón destacado por defecto (igual que en el backend). */
+export const defaultSiteCta: SiteCta = {
+    label: 'Agenda tu asesoría',
+    href: '/solicitar?servicio=asesoria',
+};
+
+/**
+ * Aplana el menú (para el pie): cada enlace con destino y luego los de su
+ * submenú, sin repetir destinos.
+ */
+export function flattenNavigation(items: SiteNavItem[]): SiteNavLink[] {
+    const seen = new Set<string>();
+    const out: SiteNavLink[] = [];
+
+    for (const item of items) {
+        const own: SiteNavLink[] = item.href
+            ? [
+                  {
+                      label: item.label,
+                      href: item.href,
+                      external: item.external,
+                      newTab: item.newTab,
+                  },
+              ]
+            : [];
+
+        for (const link of [...own, ...(item.children ?? [])]) {
+            if (seen.has(link.href)) continue;
+            seen.add(link.href);
+            out.push(link);
+        }
+    }
+
+    return out;
+}
+
+/* ── Enlaces a secciones (`/#como-funciona`) ───────────────────────── */
+
+/** Id de la sección de un enlace con `#`, o null. */
+export function hashOf(href: string | null | undefined): string | null {
+    if (!href) return null;
+    const i = href.indexOf('#');
+    if (i < 0) return null;
+
+    const id = href.slice(i + 1);
+
+    try {
+        return id ? decodeURIComponent(id) : null;
+    } catch {
+        return id || null;
+    }
+}
+
+/**
+ * Si `href` apunta a una sección de la página actual (`#id`, `/#id` estando
+ * en `/`, `/ruta#id` estando en `/ruta`), devuelve el id; si no, null.
+ */
+export function samePageHash(href: string, currentUrl: string): string | null {
+    const id = hashOf(href);
+    if (!id) return null;
+
+    const path = href.slice(0, href.indexOf('#'));
+    if (path === '') return id;
+    if (!path.startsWith('/')) return null;
+
+    return normalizePath(path) === normalizePath(currentUrl) ? id : null;
+}
+
+/** Evento que avisa a la cabecera de un salto a sección (no esconderse). */
+export const ANCHOR_SCROLL_EVENT = 'site:anchor-scroll';
+
+/** El salto a sección terminó (la cabecera vuelve a su comportamiento). */
+export const ANCHOR_SCROLL_END_EVENT = 'site:anchor-scroll-end';
+
+/** Espacio mínimo sobre la sección: cabecera compacta (64 px) + aire. */
+const ANCHOR_OFFSET = 88;
+
+/**
+ * Ejecuta `run` cuando la página puede desplazarse: si un menú o diálogo
+ * (menú móvil) la tiene bloqueada, espera a que se cierre (máx. ~0.7 s).
+ */
+export function whenScrollable(run: () => void, tries = 40): void {
+    const locked =
+        document.documentElement.hasAttribute('data-menu-open') ||
+        getComputedStyle(document.body).overflow === 'hidden';
+
+    if (!locked || tries <= 0) {
+        run();
+
+        return;
+    }
+
+    requestAnimationFrame(() => whenScrollable(run, tries - 1));
+}
+
+/**
+ * Desplaza hasta `el` dejando libre la cabecera fija (compacta al bajar):
+ * respeta su `scroll-margin-top` si es mayor que el mínimo. Suave salvo con
+ * `prefers-reduced-motion`. Avisa a la cabecera para que no se esconda
+ * durante el recorrido y corrige al final si el diseño cambió de alto.
+ */
+export function scrollBelowHeader(
+    el: HTMLElement,
+    options: { smooth?: boolean } = {},
+): void {
+    const target = () => {
+        const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+
+        return Math.max(
+            0,
+            Math.round(
+                el.getBoundingClientRect().top +
+                    window.scrollY -
+                    Math.max(margin, ANCHOR_OFFSET),
+            ),
+        );
+    };
+    const reduce = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    ).matches;
+    const smooth = options.smooth !== false && !reduce;
+
+    window.dispatchEvent(new CustomEvent(ANCHOR_SCROLL_EVENT));
+    window.scrollTo({ top: target(), behavior: smooth ? 'smooth' : 'auto' });
+
+    // Si algo arriba cambió de alto durante el recorrido (imágenes,
+    // revelados), corrige al terminar para no quedar desfasado.
+    const settle = () => {
+        window.removeEventListener('scrollend', settle);
+        window.clearTimeout(fallback);
+        const top = target();
+        if (Math.abs(window.scrollY - top) > 3) {
+            window.dispatchEvent(new CustomEvent(ANCHOR_SCROLL_EVENT));
+            window.scrollTo({ top, behavior: 'auto' });
+        }
+        window.dispatchEvent(new CustomEvent(ANCHOR_SCROLL_END_EVENT));
+    };
+    const fallback = window.setTimeout(settle, smooth ? 1600 : 120);
+    if ('onscrollend' in window) {
+        window.addEventListener('scrollend', settle, { once: true });
+    }
+}
+
+/** `scrollBelowHeader` por id. Devuelve false si la sección no existe. */
+export function scrollToSection(
+    id: string,
+    options: { smooth?: boolean } = {},
+): boolean {
+    const el = document.getElementById(id);
+    if (!el) return false;
+
+    scrollBelowHeader(el, options);
+
+    return true;
+}
 
 /** Ruta de inicio de sesión (Fortify). */
 export const loginPath = '/login';

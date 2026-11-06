@@ -16,19 +16,51 @@ function menuItem(array $data = []): array
 
 $cta = ['visible' => true, 'label' => 'Agenda tu visita', 'type' => 'builtin', 'target' => 'agendar-visita', 'newTab' => false];
 
-it('keeps the previous header until the owner edits the menu', function () {
+it('shows the complete default menu until the owner edits it, even without published content', function () {
     WebFixtures::sections();
 
+    // Sin catálogo ni inspiración publicados: Catálogo e Inspiración siguen
+    // en el menú (sus páginas muestran un estado vacío propio).
     $this->get('/')->assertOk()->assertInertia(fn ($page) => $page
-        ->where('site.navigation', fn ($links) => collect($links)->pluck('href')->all() === ['/#como-funciona', '/preguntas-frecuentes'])
-        ->where('site.cta.href', '/solicitar')
-        ->where('site.cta.label', 'Solicitar asesoría'));
+        ->where('site.navigation', fn ($links) => collect($links)->pluck('label')->all() === ['Inicio', 'Catálogo', 'Inspiración', 'Cómo funciona', 'Servicios', 'Preguntas frecuentes'])
+        ->where('site.navigation', fn ($links) => collect($links)->pluck('href')->all() === ['/', '/catalogo', '/inspiracion', '/#como-funciona', null, '/preguntas-frecuentes'])
+        ->where('site.navigation.4.children', fn ($children) => collect($children)->map(fn ($c) => [$c['label'], $c['href']])->all() === [
+            ['Asesoría por videollamada', '/solicitar?servicio=asesoria'],
+            ['Visita a domicilio', '/agendar-visita'],
+            ['Cotiza tu proyecto', '/solicitar'],
+        ])
+        ->where('site.cta.href', '/solicitar?servicio=asesoria')
+        ->where('site.cta.label', 'Agenda tu asesoría'));
 
-    // Con catálogo publicado aparece Catálogo, como antes.
+    // Con contenido publicado el menú es el mismo.
     ProductCategory::factory()->create(['is_published' => true]);
     $this->get('/')->assertInertia(fn ($page) => $page
-        ->where('site.navigation.0.href', '/catalogo')
-        ->where('site.navigation.0.label', 'Catálogo'));
+        ->where('site.navigation.1.href', '/catalogo')
+        ->where('site.navigation.2.href', '/inspiracion'));
+
+    // Las páginas de Catálogo e Inspiración responden aun vacías.
+    $this->get('/inspiracion')->assertOk();
+});
+
+it('offers every builtin target to the menu editor and accepts the new ones in a stored menu', function () use ($cta) {
+    expect(collect(Navigation::builtinOptions())->pluck('value')->all())
+        ->toContain('inicio', 'catalogo', 'inspiracion', 'como-funciona', 'preguntas', 'asesoria', 'agendar-visita', 'solicitar');
+
+    // Un menú guardado antes del cambio puede sumar las nuevas secciones.
+    $this->actingAs(WebFixtures::staff(['content.manage', 'content.publish']))
+        ->put(route('admin.sitio.menu.update'), [
+            'items' => [
+                menuItem(['id' => 'inicio', 'label' => 'Inicio', 'target' => 'inicio']),
+                menuItem(['id' => 'asesoria', 'label' => 'Asesoría', 'target' => 'asesoria']),
+            ],
+            'cta' => $cta,
+        ])
+        ->assertSessionHasNoErrors();
+
+    auth()->logout();
+    $this->get('/preguntas-frecuentes')->assertInertia(fn ($page) => $page
+        ->where('site.navigation.0.href', '/')
+        ->where('site.navigation.1.href', '/solicitar?servicio=asesoria'));
 });
 
 it('saves an ordered menu with a dropdown, a custom page and an external link', function () use ($cta) {
@@ -100,7 +132,9 @@ it('lets the owner hide the highlighted button and reset the menu', function () 
 
     $this->actingAs($user)->post(route('admin.sitio.menu.restablecer'))->assertRedirect();
     expect(Navigation::stored()['customized'])->toBeFalse();
-    $this->get('/preguntas-frecuentes')->assertInertia(fn ($page) => $page->where('site.cta.href', '/solicitar'));
+    $this->get('/preguntas-frecuentes')->assertInertia(fn ($page) => $page
+        ->where('site.cta.href', '/solicitar?servicio=asesoria')
+        ->has('site.navigation', 6));
 });
 
 it('requires content.publish to change the menu', function () use ($cta) {

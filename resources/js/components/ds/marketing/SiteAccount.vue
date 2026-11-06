@@ -21,8 +21,9 @@ import { cn } from '@/lib/utils';
  *   quien a su área según su rol: cliente → portal, técnico → agenda,
  *   equipo → panel.
  * - Con sesión: avatar + menú con "Ir a mi panel" y "Cerrar sesión".
- * Bajo `xl` se muestra compacto (solo icono / iniciales) para que nunca
- * choque con el botón principal.
+ * Con la navegación completa (`xl`) y en móvil se muestra compacto (solo
+ * icono / iniciales, con tooltip) para que nunca
+ * choque con los enlaces ni con el botón principal; en tableta, con texto.
  */
 const props = defineProps<{ transparent: boolean }>();
 
@@ -51,8 +52,9 @@ function logout() {
     <Link
         v-if="!user"
         :href="loginPath"
-        :class="cn(pill, 'w-11 justify-center xl:w-auto xl:px-4')"
+        :class="cn(pill, 'w-11 justify-center md:max-xl:w-auto md:max-xl:px-4')"
         aria-label="Iniciar sesión"
+        title="Iniciar sesión"
         data-test="site-login"
     >
         <LogIn
@@ -60,12 +62,12 @@ function logout() {
             :stroke-width="ICON_STROKE"
             aria-hidden="true"
         />
-        <span class="hidden xl:inline">Iniciar sesión</span>
+        <span class="hidden md:max-xl:inline">Iniciar sesión</span>
     </Link>
 
     <DropdownMenu v-else :modal="false">
         <DropdownMenuTrigger
-            :class="cn(pill, 'pr-1 pl-1 xl:pr-4')"
+            :class="cn(pill, 'pr-1 pl-1 md:max-xl:pr-4')"
             :aria-label="`Tu cuenta: ${user.name}`"
             data-test="site-account"
         >
@@ -75,7 +77,7 @@ function logout() {
             >
                 {{ getInitials(user.name) }}
             </span>
-            <span class="hidden max-w-[9rem] truncate xl:inline">{{
+            <span class="hidden max-w-[9rem] truncate md:max-xl:inline">{{
                 firstName
             }}</span>
         </DropdownMenuTrigger>

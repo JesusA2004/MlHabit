@@ -438,13 +438,14 @@ final class OgImage
     /** Insignia oficial + "ML Habitat". */
     private function brandRow(GdImage $canvas, int $x, int $y, bool $inverted): void
     {
-        $this->badge($canvas, $x - 4, $y - 6, 64);
-        $this->text($canvas, 30, $this->font('familjen-semibold'), $x + 72, $y + 37, $inverted ? '#FFFFFF' : self::C_INK, PublicSite::name(), -0.02);
+        // Insignia completa, un poco mayor para que se lea su aro y monograma.
+        $this->badge($canvas, $x - 4, $y - 12, 76);
+        $this->text($canvas, 30, $this->font('familjen-semibold'), $x + 84, $y + 37, $inverted ? '#FFFFFF' : self::C_INK, PublicSite::name(), -0.02);
     }
 
     /**
-     * Logotipo oficial (insignia redonda, `public/brand/logo-256.png`,
-     * generado desde `public/logoSinFondo.png`) con su transparencia.
+     * Logotipo oficial: la insignia completa (`public/brand/logo-256.png`,
+     * `public/logoSinFondo.png` solo redimensionado) con su transparencia.
      */
     private function badge(GdImage $canvas, int $x, int $y, int $size): void
     {

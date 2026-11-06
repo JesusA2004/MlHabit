@@ -3,8 +3,6 @@
 namespace App\Services\Web;
 
 use App\Cms\Field;
-use App\Models\ProductCategory;
-use App\Models\ShowcaseProject;
 use App\Models\SitePage;
 use App\Support\Settings;
 use Illuminate\Support\Str;
@@ -13,9 +11,8 @@ use Illuminate\Validation\ValidationException;
 /**
  * Menú del sitio (Sitio web → Menú): enlaces de la cabecera en orden, con
  * un nivel de submenú, y el botón destacado. Se guarda en
- * Settings('navigation'); sin guardar se usa defaults(), idéntico a la
- * cabecera anterior. El resultado se cachea con el resto del sitio
- * (PublicSite) y se invalida al guardar.
+ * Settings('navigation'); sin guardar se usa defaults(). El resultado se
+ * cachea con el resto del sitio (PublicSite) y se invalida al guardar.
  *
  * Cada elemento apunta a una página fija del sitio (`builtin`), a una
  * página propia (`page`, solo si está publicada), a una URL (`url`: ruta
@@ -33,31 +30,34 @@ final class Navigation
     private const ID_REGEX = '/^[a-z0-9-]{2,40}$/';
 
     /**
-     * Páginas fijas del sitio: [etiqueta sugerida, ruta, condición].
-     * `catalogo` e `inspiracion` se ocultan solas mientras no tengan
-     * contenido publicado (como antes).
+     * Páginas fijas del sitio: [etiqueta sugerida, ruta]. Todas aparecen
+     * siempre: Catálogo e Inspiración muestran su propio estado vacío
+     * mientras no haya contenido publicado.
      *
-     * @var array<string, array{0: string, 1: string, 2: string|null}>
+     * @var array<string, array{0: string, 1: string}>
      */
     public const BUILTINS = [
-        'inicio' => ['Inicio', '/', null],
-        'catalogo' => ['Catálogo', '/catalogo', 'categories'],
-        'inspiracion' => ['Inspiración', '/inspiracion', 'showcase'],
-        'como-funciona' => ['Cómo funciona', '/#como-funciona', null],
-        'preguntas' => ['Preguntas frecuentes', '/preguntas-frecuentes', null],
-        'solicitar' => ['Solicitar asesoría', '/solicitar', null],
-        'agendar-visita' => ['Agendar visita', '/agendar-visita', null],
+        'inicio' => ['Inicio', '/'],
+        'catalogo' => ['Catálogo', '/catalogo'],
+        'inspiracion' => ['Inspiración', '/inspiracion'],
+        'como-funciona' => ['Cómo funciona', '/#como-funciona'],
+        'preguntas' => ['Preguntas frecuentes', '/preguntas-frecuentes'],
+        'asesoria' => ['Asesoría por videollamada', '/solicitar?servicio=asesoria'],
+        'agendar-visita' => ['Visita a domicilio', '/agendar-visita'],
+        'solicitar' => ['Cotiza tu proyecto', '/solicitar'],
     ];
 
     /**
-     * Menú predeterminado = la cabecera que tenía el sitio.
+     * Menú predeterminado: Inicio · Catálogo · Inspiración · Cómo funciona ·
+     * Servicios ▾ (asesoría, visita, cotización) · Preguntas frecuentes, con
+     * «Agenda tu asesoría» como botón destacado.
      *
      * @return array{items: list<array<string, mixed>>, cta: array<string, mixed>}
      */
     public static function defaults(): array
     {
-        $item = fn (string $key) => [
-            'id' => $key,
+        $item = fn (string $key, ?string $id = null) => [
+            'id' => $id ?? $key,
             'label' => self::BUILTINS[$key][0],
             'type' => 'builtin',
             'target' => $key,
@@ -67,8 +67,27 @@ final class Navigation
         ];
 
         return [
-            'items' => [$item('catalogo'), $item('inspiracion'), $item('como-funciona'), $item('preguntas')],
-            'cta' => ['visible' => true, 'label' => 'Solicitar asesoría', 'type' => 'builtin', 'target' => 'solicitar', 'newTab' => false],
+            'items' => [
+                $item('inicio'),
+                $item('catalogo'),
+                $item('inspiracion'),
+                $item('como-funciona'),
+                [
+                    'id' => 'servicios',
+                    'label' => 'Servicios',
+                    'type' => 'group',
+                    'target' => '',
+                    'newTab' => false,
+                    'visible' => true,
+                    'children' => [
+                        $item('asesoria', 'servicio-asesoria'),
+                        $item('agendar-visita', 'servicio-visita'),
+                        $item('solicitar', 'servicio-cotizacion'),
+                    ],
+                ],
+                $item('preguntas'),
+            ],
+            'cta' => ['visible' => true, 'label' => 'Agenda tu asesoría', 'type' => 'builtin', 'target' => 'asesoria', 'newTab' => false],
         ];
     }
 
@@ -239,11 +258,6 @@ final class Navigation
     public static function resolve(): array
     {
         $stored = self::stored();
-        $conditions = [
-            'categories' => fn () => ProductCategory::query()->published()->exists(),
-            'showcase' => fn () => ShowcaseProject::query()->published()->exists(),
-        ];
-        $checked = [];
         $pageIds = [];
         foreach ([...$stored['items'], ...array_merge(...array_map(fn ($i) => is_array($i['children'] ?? null) ? $i['children'] : [], $stored['items'])), $stored['cta']] as $item) {
             if (($item['type'] ?? null) === 'page' && is_numeric($item['target'] ?? null)) {
@@ -254,25 +268,11 @@ final class Navigation
             ? SitePage::query()->published()->whereIn('id', array_unique($pageIds))->pluck('slug', 'id')->all()
             : [];
 
-        $href = function (array $item) use (&$checked, $conditions, $pages): ?string {
+        $href = function (array $item) use ($pages): ?string {
             $target = (string) ($item['target'] ?? '');
 
             return match ($item['type'] ?? null) {
-                'builtin' => (function () use ($target, &$checked, $conditions): ?string {
-                    $builtin = self::BUILTINS[$target] ?? null;
-                    if ($builtin === null) {
-                        return null;
-                    }
-                    $condition = $builtin[2];
-                    if ($condition !== null) {
-                        $checked[$condition] ??= ($conditions[$condition])();
-                        if (! $checked[$condition]) {
-                            return null;
-                        }
-                    }
-
-                    return $builtin[1];
-                })(),
+                'builtin' => self::BUILTINS[$target][1] ?? null,
                 'page' => isset($pages[(int) $target]) ? '/'.$pages[(int) $target] : null,
                 'url' => $target !== '' && preg_match(Field::SAFE_LINK_REGEX, $target) === 1 ? $target : null,
                 default => null,

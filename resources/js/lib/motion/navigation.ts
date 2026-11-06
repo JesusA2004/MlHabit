@@ -6,7 +6,8 @@
  *   navegador la soporta; si no, una entrada CSS breve en `<main>`.
  */
 import { config, router } from '@inertiajs/vue3';
-import { anchorOffset, prefersReducedMotion } from './env';
+import { scrollBelowHeader, whenScrollable } from '@/lib/navigation';
+import { prefersReducedMotion } from './env';
 
 /** Busca el destino de un hash: `#id` o, si no existe, `[data-journey="id"]`. */
 export function findAnchorTarget(hash: string): HTMLElement | null {
@@ -26,20 +27,18 @@ export function findAnchorTarget(hash: string): HTMLElement | null {
 
 /** Desplaza suavemente hasta un elemento y le pasa el foco (accesible). */
 export function scrollToElement(target: HTMLElement): void {
-    const top =
-        target.getBoundingClientRect().top + window.scrollY - anchorOffset();
+    // Misma lógica que la cabecera (lib/navigation): espera a que se cierre
+    // el menú móvil, deja libre la cabecera compacta y la mantiene visible.
+    whenScrollable(() => {
+        scrollBelowHeader(target);
 
-    window.scrollTo({
-        top: Math.max(0, top),
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        if (!target.hasAttribute('tabindex') && !isFocusable(target)) {
+            target.setAttribute('tabindex', '-1');
+            target.dataset.anchorFocus = '';
+        }
+
+        target.focus({ preventScroll: true });
     });
-
-    if (!target.hasAttribute('tabindex') && !isFocusable(target)) {
-        target.setAttribute('tabindex', '-1');
-        target.dataset.anchorFocus = '';
-    }
-
-    target.focus({ preventScroll: true });
 }
 
 function isFocusable(el: HTMLElement): boolean {
@@ -83,9 +82,10 @@ function onAnchorClick(event: MouseEvent): void {
         return;
     }
 
-    // Fase de captura: evitamos también la visita de Inertia al mismo URL.
+    // Fase de captura: preventDefault evita también la visita de Inertia al
+    // mismo URL. Sin stopPropagation: el enlace debe seguir recibiendo el
+    // clic (p. ej. para cerrar el menú móvil).
     event.preventDefault();
-    event.stopPropagation();
     history.replaceState(history.state, '', url.hash);
     scrollToElement(target);
 }

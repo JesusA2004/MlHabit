@@ -48,7 +48,7 @@ const year = new Date().getFullYear();
                 class="w-fit rounded-md"
                 aria-label="ML Habitat, ir al sitio"
             >
-                <AppLogo />
+                <AppLogo size="lg" :wordmark="false" />
             </Link>
 
             <div

@@ -6,13 +6,15 @@ import { cn } from '@/lib/utils';
 /**
  * Marca ML Hábitat: insignia oficial + nombre. `subtitle` añade una línea
  * secundaria (p. ej. "Panel"); `inverted` para fondos espresso o fotografía;
- * `wordmark=false` deja solo la insignia (con texto alternativo).
+ * `wordmark=false` deja solo la insignia (que ya dice "ML HÁBITAT") con su
+ * texto alternativo: úsalo donde la insignia es grande (≥ 48 px). El nombre
+ * escrito se queda donde la insignia es pequeña (barra del panel, portal).
  */
 const props = withDefaults(
     defineProps<{
         subtitle?: string;
         inverted?: boolean;
-        size?: 'sm' | 'md' | 'lg';
+        size?: 'sm' | 'md' | 'lg' | 'xl';
         wordmark?: boolean;
         class?: HTMLAttributes['class'];
     }>(),
@@ -24,9 +26,15 @@ const iconSize = {
     sm: 'size-8',
     md: 'size-10 group-data-[collapsible=icon]:size-8',
     lg: 'size-14',
+    xl: 'size-20',
 } as const;
-const iconSizes = { sm: '32px', md: '40px', lg: '56px' } as const;
-const textSize = { sm: 'text-[15px]', md: 'text-base', lg: 'text-xl' } as const;
+const iconSizes = { sm: '32px', md: '40px', lg: '56px', xl: '80px' } as const;
+const textSize = {
+    sm: 'text-[15px]',
+    md: 'text-base',
+    lg: 'text-xl',
+    xl: 'text-2xl',
+} as const;
 </script>
 
 <template>
@@ -56,7 +64,7 @@ const textSize = { sm: 'text-[15px]', md: 'text-base', lg: 'text-xl' } as const;
                     )
                 "
             >
-                ML Habitat
+                ML Hábitat
             </span>
             <span
                 v-if="props.subtitle"

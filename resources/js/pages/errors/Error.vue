@@ -96,7 +96,7 @@ function back() {
                 class="w-fit rounded-md"
                 aria-label="ML Habitat, inicio"
             >
-                <AppLogo />
+                <AppLogo size="lg" :wordmark="false" />
             </Link>
 
             <div

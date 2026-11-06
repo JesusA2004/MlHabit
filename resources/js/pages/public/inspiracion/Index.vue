@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import DataPagination from '@/components/ds/DataPagination.vue';
 import EmptyState from '@/components/ds/EmptyState.vue';
 import { Button } from '@/components/ui/button';
+import ComingSoonPanel from '@/components/web/public/ComingSoonPanel.vue';
 import CtaBand from '@/components/web/public/CtaBand.vue';
 import PageIntro from '@/components/web/public/PageIntro.vue';
 import SeoHead from '@/components/web/public/SeoHead.vue';
@@ -33,6 +34,10 @@ const props = defineProps<{
 
 const origin = computed(() => props.filters.origen ?? 'todos');
 const category = computed(() => props.filters.categoria ?? 'todas');
+/** Con filtros, el vacío es de la búsqueda; sin ellos, aún no hay galería. */
+const filtered = computed(
+    () => !!props.filters.origen || !!props.filters.categoria,
+);
 
 function apply(next: { origen?: string | null; categoria?: string | null }) {
     const query: Record<string, string> = {};
@@ -242,6 +247,13 @@ const materials: MarqueeItem[] = [
                     :class="layout(i).class"
                 />
             </div>
+            <ComingSoonPanel
+                v-else-if="!filtered"
+                eyebrow="Galería en preparación"
+                title="Pronto verás aquí nuestros proyectos"
+                description="Estamos reuniendo fotos de proyectos entregados y propuestas de diseño, siempre etiquetadas para que sepas qué es real y qué es render. Mientras tanto, cuéntanos tu idea y la diseñamos contigo."
+                :illustrations="['closet', 'kitchen', 'bedroom']"
+            />
             <EmptyState
                 v-else
                 :icon="Sparkles"
