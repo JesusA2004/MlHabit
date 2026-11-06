@@ -103,7 +103,7 @@ it('offers valid templates for every section kind', function () {
     $templates = Templates::all();
 
     expect(array_column($templates, 'id'))->toBe([
-        'hero', 'text_image', 'gallery', 'categories', 'featured_projects', 'process', 'benefits',
+        'hero', 'text_image', 'gallery', 'stats', 'materials', 'pricing', 'categories', 'featured_projects', 'process', 'benefits',
         'payment_options', 'home_visit', 'coverage', 'testimonials', 'faq', 'final_cta', 'blank',
     ]);
 
@@ -365,7 +365,7 @@ it('renders the visual editor with everything it needs', function () {
         ->assertInertia(fn ($page) => $page->component('admin/sitio/Editor')
             ->has('sections', 11)
             ->has('sections.0.layout.blocks')
-            ->has('templates', 14)
+            ->has('templates', 17)
             ->has('dynamic.process_steps.fields')
             ->has('icons')
             ->where('can.publish', true)

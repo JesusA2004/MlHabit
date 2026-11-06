@@ -68,6 +68,12 @@ export const GRADIENTS: {
         dark: false,
     },
     {
+        value: 'forest-night',
+        label: 'Bosque de noche (portada)',
+        css: 'radial-gradient(55% 65% at 80% 28%, rgb(196 140 88 / 0.34), transparent 62%), radial-gradient(70% 80% at 6% 100%, rgb(47 90 76 / 0.75), transparent 70%), linear-gradient(165deg, #1f3c33 0%, #162520 52%, #231b16 100%)',
+        dark: true,
+    },
+    {
         value: 'espresso-depth',
         label: 'Espresso profundo',
         css: 'radial-gradient(110% 80% at 0% 0%, #463a32, var(--color-espresso) 62%)',
@@ -199,6 +205,15 @@ export const MOTION_PRESETS: { value: string; label: string }[] = [
     { value: 'slide-right', label: 'Deslizar desde la izquierda' },
     { value: 'blur-in', label: 'Enfocar' },
     { value: 'mask-reveal', label: 'Revelar con máscara' },
+    { value: 'split', label: 'Palabra por palabra (títulos)' },
+    { value: 'blur-up', label: 'Enfocar y subir' },
+    { value: 'rise', label: 'Elevar (tarjetas)' },
+    { value: 'wipe-up', label: 'Descubrir hacia arriba' },
+    { value: 'wipe-right', label: 'Descubrir hacia la derecha' },
+    { value: 'wipe-left', label: 'Descubrir hacia la izquierda' },
+    { value: 'pop', label: 'Rebote' },
+    { value: 'tilt-in', label: 'Entrar inclinado' },
+    { value: 'zoom-out', label: 'Alejar la imagen' },
     { value: 'settle', label: 'Asentar (imagen principal)' },
     { value: 'none', label: 'Sin movimiento' },
 ];

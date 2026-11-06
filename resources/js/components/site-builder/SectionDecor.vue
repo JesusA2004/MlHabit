@@ -35,7 +35,7 @@ const props = withDefaults(
 
 const PARTICLE_TYPES: Record<string, ParticleVariant> = {
     hero: 'dust',
-    final_cta: 'mixed',
+    // final_cta: la banda dibuja sus propias partículas (FinalCtaBlock).
 };
 
 const particleVariant = computed<ParticleVariant | null>(() => {
@@ -94,9 +94,6 @@ const drawing = computed(() =>
 );
 const isHero = computed(() => props.type === 'hero' && !props.hasImage);
 const RING_TYPES = ['featured_projects', 'home_visit', 'benefits'];
-const ring = computed(() =>
-    props.dark ? 'border-white/10' : 'border-foreground/[0.07]',
-);
 </script>
 
 <template>
@@ -121,7 +118,7 @@ const ring = computed(() =>
             :beam="props.type === 'hero'"
         />
 
-        <!-- Portada: plano, aros que giran y cotas que se separan. -->
+        <!-- Portada: plano, luces cálidas e indicador de scroll. -->
         <template v-if="isHero">
             <div
                 class="tex-blueprint-dark absolute inset-0 [mask-image:radial-gradient(ellipse_at_70%_40%,#000_10%,transparent_70%)]"
@@ -134,35 +131,18 @@ const ring = computed(() =>
                 class="blob bottom-0 -left-20 size-96"
                 style="background: rgb(47 90 76 / 0.45); --blob-duration: 28s"
             />
+            <!-- Indicador de scroll al pie de la portada -->
             <span
-                class="scroll-move absolute top-[14%] right-[30%] hidden size-40 rounded-full border md:block"
-                :class="ring"
-                style="--move-y: 220px; --spin: 90deg"
+                class="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] font-medium tracking-wide text-white/55 md:flex"
             >
+                Desliza
                 <span
-                    class="absolute -top-1 left-1/2 size-2 -translate-x-1/2 rounded-full bg-oak"
-                />
-            </span>
-            <span
-                class="scroll-move absolute right-[6%] bottom-[22%] hidden size-72 rounded-full border border-dashed md:block"
-                :class="ring"
-                style="--move-y: -160px; --spin: -60deg"
-            />
-            <span
-                class="scroll-move absolute top-[30%] left-[52%] hidden w-40 text-white/25 lg:block"
-                style="--move-x: 160px"
-            >
-                <span class="dimension-line block" />
-                <span
-                    class="mt-2 block text-center font-mono text-[10px] tracking-widest"
-                    >240 cm</span
+                    class="relative block h-10 w-px overflow-hidden bg-white/15"
                 >
-            </span>
-            <span
-                class="scroll-move absolute bottom-[34%] left-[4%] hidden h-32 text-white/20 lg:block"
-                style="--move-y: -120px"
-            >
-                <span class="block h-full w-px bg-current" />
+                    <span
+                        class="hero-scroll-cue absolute inset-x-0 top-0 block h-4 bg-oak"
+                    />
+                </span>
             </span>
         </template>
 

@@ -19,10 +19,11 @@ final class Options
 
     public const HEX = '/^#[0-9a-f]{6}$/i';
 
-    public const GRADIENTS = ['linen-stone', 'espresso-depth', 'eucalyptus', 'oak-glow', 'dawn'];
+    /** `forest-night`: verde profundo del logotipo con luz cálida (portada). */
+    public const GRADIENTS = ['linen-stone', 'espresso-depth', 'eucalyptus', 'oak-glow', 'dawn', 'forest-night'];
 
     /** Gradientes oscuros (texto claro). */
-    public const DARK_GRADIENTS = ['espresso-depth', 'eucalyptus'];
+    public const DARK_GRADIENTS = ['espresso-depth', 'eucalyptus', 'forest-night'];
 
     public const OVERLAY_STYLES = ['flat', 'left', 'bottom'];
 
@@ -42,7 +43,11 @@ final class Options
 
     public const SHADOWS = ['none', 'sm', 'md', 'lg'];
 
-    public const MOTION = ['none', 'fade-up', 'fade-in', 'zoom-in', 'slide-left', 'slide-right', 'blur-in', 'mask-reveal', 'settle'];
+    public const MOTION = [
+        'none', 'fade-up', 'fade-in', 'zoom-in', 'slide-left', 'slide-right', 'blur-in', 'mask-reveal', 'settle',
+        // v2 (motion.css): palabra por palabra, recortes, elevación, rebote…
+        'split', 'wipe-up', 'wipe-left', 'wipe-right', 'rise', 'pop', 'blur-up', 'tilt-in', 'zoom-out',
+    ];
 
     /** Pasos del recorrido guiado del sitio (lib/motion/journey.ts). */
     public const JOURNEYS = ['', 'inspirate', 'espacio', 'proceso', 'visita', 'pagos', 'agenda'];
@@ -51,7 +56,8 @@ final class Options
 
     public const HEADING_LEVELS = ['h1', 'h2', 'h3'];
 
-    public const HEADING_SIZES = ['xl', 'lg', 'md', 'sm'];
+    /** `display`: titular de portada a sangre (más grande que `xl`). */
+    public const HEADING_SIZES = ['display', 'xl', 'lg', 'md', 'sm'];
 
     public const TEXT_SIZES = ['lead', 'base', 'sm'];
 
@@ -71,7 +77,12 @@ final class Options
     /** Proporción del reproductor de un video incrustado (YouTube/Vimeo). */
     public const EMBED_ASPECTS = ['16:9', '4:3', '1:1', '9:16'];
 
-    public const SHAPES = ['rect', 'circle', 'ring', 'line', 'rings', 'swatches', 'elevation'];
+    /**
+     * Formas decorativas. `interior`: escena ilustrada de un espacio (portada
+     * sin foto); `materials`: marquesina de materiales; `slats`: panel de
+     * listones de madera, como el muro del logotipo.
+     */
+    public const SHAPES = ['rect', 'circle', 'ring', 'line', 'rings', 'swatches', 'elevation', 'interior', 'materials', 'slats'];
 
     public const LIST_MARKERS = ['check', 'dot', 'number'];
 

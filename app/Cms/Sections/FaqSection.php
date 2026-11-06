@@ -24,6 +24,7 @@ final class FaqSection extends SectionSchema
             Field::textarea('subtitle', 'Texto de apoyo', 'Si no encuentras tu respuesta, escríbenos y con gusto te orientamos.', max: 300),
             Field::topics('topics', 'Temas a mostrar', 'Déjalo vacío para mostrar todos los temas.'),
             Field::number('limit', 'Máximo de preguntas', 8, 1, 20),
+            Field::toggle('show_example', 'Mostrar contenido de ejemplo si aún no hay publicados', false, 'Mientras no publiques preguntas, se muestran respuestas generales sobre cómo empezar.'),
             Field::text('cta_label', 'Texto del enlace', 'Ver todas las preguntas', max: 40),
         ];
     }

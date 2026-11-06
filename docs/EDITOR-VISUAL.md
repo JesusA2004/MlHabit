@@ -42,3 +42,25 @@ Sitio web → **Menú** (`/admin/sitio?pestana=menu`, requiere `content.manage` 
 - Se guarda en `Settings('navigation')` (`items`, `cta`); `null` = `App\Services\Web\Navigation::defaults()`, idéntico a la cabecera anterior (Catálogo e Inspiración se ocultan solas sin contenido publicado). Destinos: sección fija del sitio (`builtin`), página propia (`page`, solo si está publicada), enlace (`url`: ruta interna, https://, mailto:, tel:) o solo submenú (`group`).
 - `Navigation::resolve()` llega a todas las páginas públicas como `site.navigation` / `site.cta` (caché de `PublicSite`, se invalida al guardar el menú o cualquier página).
 - `SiteHeader.vue` lo dibuja: indicador deslizante (pastilla + subrayado de roble) que sigue al puntero, submenús animados, mega-menú del Catálogo, menú móvil a pantalla completa con submenús desplegables; todo sin animación con `prefers-reduced-motion`. El pie aplana los submenús en «Explora».
+
+## Portada v3 (rediseño, noviembre de 2026)
+
+La portada por defecto vive en `App\Cms\Layout\HomeBlueprint` (orden, textos sugeridos y lienzos) y la usan la siembra (`SiteSectionSeeder`), `SiteBuilder::ensureSections()` y la migración de abajo. `LegacyLayouts` genera ya el diseño nuevo de cada tipo curado (también al «Agregar sección»); el lienzo anterior quedó congelado en `App\Cms\Layout\Legacy\HomeV1Layouts` solo para comparar.
+
+Recorrido: portada a sangre (degradado `forest-night`, titular `display` palabra por palabra, escena ilustrada `shape: interior` con lámparas que respiran y etiquetas flotantes, polvo de luz) → cifras que cuentan (`stat` con `data-countup`) → líneas de servicio → por qué nosotros (muro de listones `shape: slats`) → **cómo funciona** (`#como-funciona`, línea que se rellena) → materiales (`shape: materials`, marquesina a sangre) → ideas y proyectos → **visita** (`#visita`) → cobertura → precios (`service_pricing`) → **formas de pago** (`#pagos`) → testimonios (carrusel) → preguntas → llamada final con partículas.
+
+- **Bloque nuevo `service_pricing`** («Precios de asesoría y visita»): el costo sale de `ConsultationSettings` (precio y duración; se oculta si las asesorías están desactivadas) y de la política de visita activa (sin política: «Costo según tu zona»). Nunca se escribe un monto a mano.
+- **«Mostrar contenido de ejemplo»** (`show_example`) en categorías, proyectos, testimonios y preguntas: si la lista viva está vacía, en lugar de ocultar la sección se dibuja un respaldo honesto (líneas de servicio ilustradas, ideas de diseño con comparador plano → espacio, compromisos de servicio —nunca testimonios inventados— y respuestas generales). Por defecto está apagado (una sección agregada después se sigue ocultando sola); la portada v3 lo trae encendido. En el editor el respaldo lleva un aviso «Ejemplo».
+- **Opciones nuevas**: tamaño de título `display` (2XL), movimientos `split`, `blur-up`, `rise`, `wipe-up/left/right`, `pop`, `tilt-in`, `zoom-out`; formas `interior`, `materials`, `slats`; degradado `forest-night`. Plantillas nuevas: Cifras, Materiales y Precios.
+- Todo respeta `prefers-reduced-motion` (sin lámparas, marquesina ni partículas animadas) y no usa librerías nuevas.
+
+### Cómo llega a producción
+
+Migración `2026_11_06_000200_publish_redesigned_home` → `App\Cms\Layout\HomeRedesign::apply()` (también `php artisan mlhabitat:redesign-home [--force]`):
+
+1. Respalda SIEMPRE la portada publicada como versión del historial «Portada anterior (antes del rediseño)» (y un borrador con cambios sin publicar como «Borrador sin publicar (antes del rediseño)»). Se restaura desde el editor → Historial → Restaurar → Publicar.
+2. Si la portada es la de fábrica (mismo orden de secciones, todas visibles y cada lienzo igual al v1 normalizado: sin ids de bloque ni `journey`) o el equipo nunca publicó desde el editor (sin versiones y `updated_by` vacío), publica la v3, registra la versión «Rediseño de la portada (v3)» y deja el borrador igual a lo publicado.
+3. Si el equipo ya la personalizó, no la toca: guarda la v3 como versión «Portada rediseñada (v3): restáurala para usarla».
+4. Solo trabaja con `page = home`; las páginas propias (`pagina-{id}`) nunca se tocan. Es idempotente (si ya existe alguna de esas versiones no hace nada; `--force` publica la v3 aunque esté personalizada, respaldando antes). En una base sin portada la migración no hace nada (la siembra ya crea la v3).
+
+Pruebas: `tests/Feature/Web/HomeRedesignTest.php`.

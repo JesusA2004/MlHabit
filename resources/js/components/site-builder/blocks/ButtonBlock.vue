@@ -17,9 +17,9 @@ const VARIANTS: Record<string, string> = {
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
     outline:
         'border border-input bg-transparent text-[color:var(--sb-ink)] hover:bg-foreground/5',
-    light: 'bg-white text-espresso shadow-xs hover:bg-linen',
+    light: 'bg-white text-espresso shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] hover:bg-linen hover:shadow-[0_16px_40px_-14px_rgb(0_0_0/0.55)]',
     'outline-light':
-        'border border-white/45 bg-transparent text-white hover:bg-white/10',
+        'border border-white/40 bg-white/[0.04] text-white backdrop-blur-sm hover:border-white/70 hover:bg-white/10',
     oak: 'bg-oak text-white hover:bg-oak/90',
     link: 'h-auto! px-0! font-medium text-[color:var(--sb-link)] underline-offset-4 hover:underline',
 };
@@ -27,7 +27,7 @@ const VARIANTS: Record<string, string> = {
 const variant = computed(() => str('variant', 'primary'));
 const classes = computed(() =>
     cn(
-        'group inline-flex max-w-full items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none',
+        'group inline-flex max-w-full items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-[color,background-color,box-shadow] duration-200 focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none',
         str('size', 'lg') === 'lg'
             ? 'h-12 px-7 text-base'
             : 'h-10 px-5 text-sm',
@@ -46,7 +46,12 @@ const label = computed(() => str('label') || 'Botón');
             aria-hidden="true"
         />
     </span>
-    <SmartLink v-else :href="str('href', '/solicitar')" :class="classes">
+    <SmartLink
+        v-else
+        :href="str('href', '/solicitar')"
+        :class="classes"
+        :data-magnetic="variant !== 'link' ? '0.22' : undefined"
+    >
         <span class="truncate">{{ label }}</span>
         <ArrowRight
             v-if="bool('icon', true)"

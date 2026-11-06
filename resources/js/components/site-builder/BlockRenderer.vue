@@ -35,7 +35,16 @@ const floats = computed(
         !bridge &&
         props.block.type === 'shape' &&
         props.placement.role !== 'backdrop' &&
-        props.block.props.kind !== 'line',
+        !['line', 'materials'].includes(String(props.block.props.kind)),
+);
+/** La marquesina de materiales no es un marco: mide lo que su contenido. */
+const framed = computed(
+    () =>
+        definition.value?.frame === true &&
+        !(
+            props.block.type === 'shape' &&
+            props.block.props.kind === 'materials'
+        ),
 );
 /** Solo los elementos «en línea» se encogen a su contenido; el resto llena su área. */
 const INLINE = ['button', 'badge', 'icon'];
@@ -148,7 +157,7 @@ function onFocus(event: FocusEvent) {
         :style="style"
         :data-sb-kind="composite ? composite.kind : props.block.type"
         :data-sb-composite="composite?.kind"
-        :data-sb-frame="definition?.frame && !composite ? '' : undefined"
+        :data-sb-frame="framed && !composite ? '' : undefined"
         :data-sb-role="props.placement.role"
         :data-hide-tablet="
             props.block.hideOn.includes('tablet') ? '' : undefined

@@ -5,12 +5,14 @@ import { cn } from '@/lib/utils';
 import type { CategoryCardData } from '@/types/web';
 import type { Block } from '../types';
 import DynamicEmpty from './DynamicEmpty.vue';
+import ExampleNote from './fallback/ExampleNote.vue';
+import ServiceLines from './fallback/ServiceLines.vue';
 import { useBlock } from './useBlock';
 
 /** Categorías publicadas en mosaico tipo bento (la primera, protagonista). */
 const props = defineProps<{ block: Block }>();
 
-const { section, bridge } = useBlock(() => props.block);
+const { section, bridge, bool } = useBlock(() => props.block);
 
 const categories = computed(
     () =>
@@ -80,7 +82,14 @@ function tileClass(i: number, total: number): string {
             :index="i"
             :large="i === 0"
             :class="cn(tileClass(i, categories.length))"
+            :data-tilt="bridge ? undefined : '3'"
         />
+    </div>
+    <div v-else-if="bool('show_example')" class="flex h-full flex-col gap-3">
+        <ExampleNote v-if="bridge">
+            Ejemplo: al publicar categorías del catálogo aparecerán aquí.
+        </ExampleNote>
+        <ServiceLines :editing="bridge !== null" class="flex-1" />
     </div>
     <DynamicEmpty
         v-else-if="bridge"

@@ -4,12 +4,14 @@ import ShowcaseCard from '@/components/web/public/ShowcaseCard.vue';
 import type { ShowcaseCardData } from '@/types/web';
 import type { Block } from '../types';
 import DynamicEmpty from './DynamicEmpty.vue';
+import ExampleNote from './fallback/ExampleNote.vue';
+import IdeasShowcase from './fallback/IdeasShowcase.vue';
 import { useBlock } from './useBlock';
 
 /** Proyectos destacados: composición asimétrica (uno grande + columna). */
 const props = defineProps<{ block: Block }>();
 
-const { section, bridge } = useBlock(() => props.block);
+const { section, bridge, bool } = useBlock(() => props.block);
 
 const projects = computed(
     () =>
@@ -51,6 +53,12 @@ const rest = computed(() => projects.value.slice(1));
                 :project="project"
             />
         </div>
+    </div>
+    <div v-else-if="bool('show_example')" class="flex flex-col gap-3">
+        <ExampleNote v-if="bridge">
+            Ejemplo: al destacar proyectos de Inspiración aparecerán aquí.
+        </ExampleNote>
+        <IdeasShowcase :editing="bridge !== null" />
     </div>
     <DynamicEmpty
         v-else-if="bridge"

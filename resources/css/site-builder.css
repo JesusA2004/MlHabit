@@ -312,3 +312,188 @@
 .sb-button-row a {
     max-width: 100%;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Portada v3 (rediseño): titular display, escena ilustrada, cifras,      */
+/* marquesina de materiales y respaldos de listas vivas.                  */
+/* Todo lo animado usa transform/opacity y se detiene con                 */
+/* `prefers-reduced-motion: reduce`.                                      */
+/* ---------------------------------------------------------------------- */
+
+.sb-heading--display {
+    font-size: clamp(2.9rem, 1.2rem + 6.4cqi, 6.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    font-weight: 600;
+}
+
+/* Énfasis tipográfico: la última palabra del titular display en roble. */
+.sb-heading--display .sb-accent {
+    color: var(--color-oak);
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* Escena ilustrada (HeroScene) ------------------------------------------ */
+.hero-chip {
+    position: absolute;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.95rem;
+    border-radius: 9999px;
+    border: 1px solid rgb(255 255 255 / 0.22);
+    background: rgb(28 46 40 / 0.55);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
+}
+
+.hero-scene .scene-lamp {
+    animation: scene-lamp 6s var(--motion-ease-in-out) infinite alternate;
+    transform-origin: 50% 55%;
+}
+
+.hero-scene .scene-lamp-b {
+    animation: scene-lamp 7.5s var(--motion-ease-in-out) -2s infinite alternate;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.hero-scene .scene-beam {
+    animation: scene-beam 9s var(--motion-ease-in-out) infinite alternate;
+}
+
+.hero-scene .scene-plant {
+    animation: scene-sway 7s var(--motion-ease-in-out) infinite alternate;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+}
+
+@keyframes scene-lamp {
+    from {
+        opacity: 0.7;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scene-beam {
+    from {
+        opacity: 0.55;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scene-sway {
+    from {
+        transform: rotate(-1.5deg);
+    }
+    to {
+        transform: rotate(2deg);
+    }
+}
+
+/* Cifras (StatBlock): regla de roble que se dibuja al revelarse. */
+.sb-stat-rule {
+    display: block;
+    height: 2px;
+    width: 2.5rem;
+    border-radius: 9999px;
+    background: var(--color-oak);
+    transform-origin: left center;
+    transition: transform 1.1s var(--motion-ease) 0.2s;
+}
+
+.motion-ready .motion-scope [data-motion]:not([data-motion-in]) .sb-stat-rule {
+    transform: scaleX(0);
+}
+
+/* Marquesina de materiales a sangre (forma `materials`). */
+.sb-bleed {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+}
+
+/* Compromisos (respaldo de testimonios) y tarjetas de idea. */
+.sb-quote-mark {
+    font-family: var(--font-display);
+    line-height: 0.7;
+}
+
+/* Carrusel de testimonios */
+.sb-carousel {
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+
+.sb-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.sb-carousel > * {
+    scroll-snap-align: start;
+}
+
+/* Indicador "Desliza" del hero. */
+.hero-scroll-cue {
+    animation: hero-cue 2.2s var(--motion-ease-in-out) infinite;
+}
+
+@keyframes hero-cue {
+    0% {
+        transform: translateY(-6px);
+        opacity: 0;
+    }
+    40% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+}
+
+/* Comparador "plano → realidad" (respaldo de proyectos). */
+.sb-compare {
+    --pos: 50%;
+}
+
+.sb-compare-after {
+    clip-path: inset(0 0 0 var(--pos));
+}
+
+.sb-compare-handle {
+    left: var(--pos);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-scene .scene-lamp,
+    .hero-scene .scene-lamp-b,
+    .hero-scene .scene-beam,
+    .hero-scene .scene-plant,
+    .hero-scroll-cue {
+        animation: none !important;
+    }
+
+    .sb-carousel {
+        scroll-behavior: auto;
+    }
+}
+
+/* Escena ilustrada de la portada en móvil: más alta que otras formas. */
+@container sbpage (max-width: 767.98px) {
+    .sb-block[data-sb-kind='shape']:has(.hero-scene) {
+        max-height: 58svh;
+    }
+}

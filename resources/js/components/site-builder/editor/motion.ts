@@ -30,6 +30,46 @@ const KEYFRAMES: Record<string, Keyframe[]> = {
         { clipPath: 'inset(0 0 100% 0)', transform: 'translateY(12px)' },
         { clipPath: 'inset(0 0 0% 0)', transform: 'none' },
     ],
+    split: [
+        { opacity: 0, transform: 'translateY(0.6em)' },
+        { opacity: 1, transform: 'none' },
+    ],
+    'blur-up': [
+        { opacity: 0, filter: 'blur(10px)', transform: 'translateY(20px)' },
+        { opacity: 1, filter: 'blur(0)', transform: 'none' },
+    ],
+    rise: [
+        {
+            opacity: 0,
+            transform: 'perspective(900px) translateY(48px) rotateX(10deg)',
+        },
+        { opacity: 1, transform: 'none' },
+    ],
+    'wipe-up': [
+        { clipPath: 'inset(100% 0 0 0)' },
+        { clipPath: 'inset(0 0 0 0)' },
+    ],
+    'wipe-left': [
+        { clipPath: 'inset(0 0 0 100%)' },
+        { clipPath: 'inset(0 0 0 0)' },
+    ],
+    'wipe-right': [
+        { clipPath: 'inset(0 100% 0 0)' },
+        { clipPath: 'inset(0 0 0 0)' },
+    ],
+    pop: [
+        { opacity: 0, transform: 'scale(0.82)' },
+        { opacity: 1, transform: 'scale(1.04)', offset: 0.7 },
+        { opacity: 1, transform: 'none' },
+    ],
+    'tilt-in': [
+        { opacity: 0, transform: 'translateY(28px) rotate(-2.5deg)' },
+        { opacity: 1, transform: 'none' },
+    ],
+    'zoom-out': [
+        { opacity: 0, transform: 'scale(1.08)' },
+        { opacity: 1, transform: 'none' },
+    ],
 };
 
 export function previewMotion(

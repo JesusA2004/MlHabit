@@ -2,41 +2,50 @@
 
 namespace Database\Seeders;
 
+use App\Cms\Layout\HomeBlueprint;
+use App\Cms\Layout\LayoutValidator;
 use App\Cms\Layout\LegacyLayouts;
+use App\Models\SitePageVersion;
 use App\Models\SiteSection;
-use App\Services\Web\SiteBuilder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * CONFIGURACIÓN: crea las 11 secciones de la portada con texto sugerido
- * neutral (sin cifras, ciudades ni testimonios inventados) y su lienzo del
- * editor visual. Idempotente: no sobrescribe secciones ya editadas y solo
- * completa el lienzo de las que aún no lo tienen.
+ * CONFIGURACIÓN: crea la portada (diseño v3, `HomeBlueprint`) con texto
+ * sugerido neutral (sin cifras de negocio, ciudades, precios ni testimonios
+ * inventados) y su lienzo del editor visual. Idempotente: si la portada ya
+ * existe no la sobrescribe; solo completa el lienzo de secciones antiguas
+ * que aún no lo tienen.
  */
 class SiteSectionSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (SiteBuilder::recommendedOrder() as $index => $type) {
-            $content = $type->schema()->defaults();
+        $existing = SiteSection::query()->where('page', 'home')->get();
 
-            $section = SiteSection::query()->firstOrCreate(
-                ['page' => 'home', 'type' => $type->value],
-                [
-                    'key' => (string) Str::uuid(),
+        if ($existing->isEmpty() && ! SitePageVersion::query()->where('page', 'home')->exists()) {
+            $snapshot = LayoutValidator::snapshot(['sections' => HomeBlueprint::sections()]);
+            foreach ($snapshot['sections'] as $index => $section) {
+                SiteSection::query()->create([
+                    'key' => $section['key'],
+                    'page' => 'home',
+                    'type' => $section['type'],
                     'sort' => ($index + 1) * 10,
                     'is_visible' => true,
-                    'content' => $content,
-                    'layout' => LegacyLayouts::for($type, $content),
-                    'layout_version' => 1,
-                ],
-            );
+                    'content' => $section['content'],
+                    'layout' => $section['layout'],
+                    'layout_version' => $section['layout']['version'],
+                ]);
+            }
 
+            return;
+        }
+
+        foreach ($existing as $section) {
             if ($section->layout === null || $section->key === null) {
                 $section->forceFill([
                     'key' => $section->key ?? (string) Str::uuid(),
-                    'layout' => $section->layout ?? LegacyLayouts::for($type, $section->content),
+                    'layout' => $section->layout ?? LegacyLayouts::for($section->type, $section->content),
                 ])->save();
             }
         }

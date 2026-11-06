@@ -26,6 +26,7 @@ final class TestimonialsSection extends SectionSchema
             Field::text('eyebrow', 'Antetítulo', 'Testimonios', max: 80),
             Field::text('title', 'Título', 'Lo que dicen nuestros clientes', required: true, max: 120),
             Field::number('limit', 'Máximo de testimonios', 6, 1, 12),
+            Field::toggle('show_example', 'Mostrar contenido de ejemplo si aún no hay publicados', false, 'Mientras no haya testimonios con consentimiento, se muestran nuestros compromisos de servicio (nunca testimonios inventados).'),
         ];
     }
 }

@@ -222,6 +222,9 @@ const SHAPES = [
     { value: 'rings', label: 'Anillos concéntricos' },
     { value: 'swatches', label: 'Muestrario de acabados' },
     { value: 'elevation', label: 'Alzado de cocina' },
+    { value: 'interior', label: 'Escena ilustrada (cocina)' },
+    { value: 'materials', label: 'Marquesina de materiales' },
+    { value: 'slats', label: 'Listones de madera' },
 ];
 </script>
 
@@ -337,6 +340,11 @@ const SHAPES = [
                             aria-label="Tamaño del título"
                             @update:model-value="(v) => v && set('size', v)"
                         >
+                            <ToggleGroupItem
+                                value="display"
+                                aria-label="Portada (enorme)"
+                                >2XL</ToggleGroupItem
+                            >
                             <ToggleGroupItem
                                 value="xl"
                                 aria-label="Extra grande"
@@ -754,7 +762,14 @@ const SHAPES = [
                     </Select>
                 </div>
                 <div
-                    v-if="!['swatches', 'elevation'].includes(str('kind'))"
+                    v-if="
+                        ![
+                            'swatches',
+                            'elevation',
+                            'interior',
+                            'materials',
+                        ].includes(str('kind'))
+                    "
                     class="grid gap-1.5"
                 >
                     <Label>Color</Label>

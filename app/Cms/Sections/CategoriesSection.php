@@ -24,6 +24,7 @@ final class CategoriesSection extends SectionSchema
             Field::textarea('subtitle', 'Texto de apoyo', 'Explora nuestras líneas y encuentra ideas para tu proyecto.', max: 300),
             Field::toggle('featured_only', 'Solo categorías destacadas', false),
             Field::number('limit', 'Máximo de categorías', 6, 1, 12),
+            Field::toggle('show_example', 'Mostrar contenido de ejemplo si aún no hay publicados', false, 'Mientras no publiques categorías, se muestran nuestras líneas de servicio con ilustraciones (sin datos inventados).'),
             Field::text('cta_label', 'Texto del enlace al catálogo', 'Ver todo el catálogo', max: 40),
         ];
     }

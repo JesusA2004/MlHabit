@@ -27,6 +27,7 @@ import {
     Images,
     GalleryHorizontalEnd,
     MonitorPlay,
+    BadgeDollarSign,
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import BadgeBlock from './blocks/BadgeBlock.vue';
@@ -47,6 +48,7 @@ import LeadFormCtaBlock from './blocks/LeadFormCtaBlock.vue';
 import ListBlock from './blocks/ListBlock.vue';
 import PaymentOptionsBlock from './blocks/PaymentOptionsBlock.vue';
 import ProcessStepsBlock from './blocks/ProcessStepsBlock.vue';
+import ServicePricingBlock from './blocks/ServicePricingBlock.vue';
 import ShapeBlock from './blocks/ShapeBlock.vue';
 import SpacerBlock from './blocks/SpacerBlock.vue';
 import StatBlock from './blocks/StatBlock.vue';
@@ -304,6 +306,14 @@ export const BLOCKS: Record<BlockType, BlockDefinition> = {
         component: FinalCtaBlock,
         group: 'dynamic',
         size: [12, 18],
+        props: {},
+    },
+    service_pricing: {
+        label: 'Precios de asesoría y visita',
+        icon: BadgeDollarSign,
+        component: ServicePricingBlock,
+        group: 'dynamic',
+        size: [12, 22],
         props: {},
     },
     lead_form_cta: {

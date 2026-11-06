@@ -2,8 +2,8 @@
 
 namespace App\Services\Web;
 
+use App\Cms\Layout\HomeBlueprint;
 use App\Cms\Layout\LayoutValidator;
-use App\Cms\Layout\LegacyLayouts;
 use App\Enums\SiteSectionType;
 use App\Models\SitePageDraft;
 use App\Models\SitePageVersion;
@@ -276,15 +276,18 @@ class SiteBuilder
             return;
         }
 
-        foreach (self::recommendedOrder() as $index => $type) {
-            $content = $type->schema()->defaults();
+        // Portada por defecto vigente (v3): mismo diseño que la siembra.
+        $snapshot = LayoutValidator::snapshot(['sections' => HomeBlueprint::sections()]);
+        foreach ($snapshot['sections'] as $index => $section) {
             SiteSection::query()->create([
+                'key' => $section['key'],
                 'page' => $page,
-                'type' => $type,
+                'type' => $section['type'],
                 'sort' => ($index + 1) * 10,
                 'is_visible' => true,
-                'content' => $content,
-                'layout' => LegacyLayouts::for($type, $content),
+                'content' => $section['content'],
+                'layout' => $section['layout'],
+                'layout_version' => $section['layout']['version'],
             ]);
         }
     }

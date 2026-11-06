@@ -20,7 +20,16 @@ export type MotionPreset =
     | 'slide-right'
     | 'blur-in'
     | 'mask-reveal'
-    | 'settle';
+    | 'settle'
+    | 'split'
+    | 'wipe-up'
+    | 'wipe-left'
+    | 'wipe-right'
+    | 'rise'
+    | 'pop'
+    | 'blur-up'
+    | 'tilt-in'
+    | 'zoom-out';
 
 export type StaticBlockType =
     | 'heading'
@@ -51,7 +60,8 @@ export type DynamicBlockType =
     | 'testimonials'
     | 'faq'
     | 'final_cta'
-    | 'lead_form_cta';
+    | 'lead_form_cta'
+    | 'service_pricing';
 
 export type BlockType = StaticBlockType | DynamicBlockType;
 
@@ -130,6 +140,8 @@ export type BlockData = {
     items?: unknown[];
     visit?: VisitPolicyData | null;
     image?: ResponsiveImageData | null;
+    /** Asesoría vigente (bloque de precios). */
+    consultation?: { priceFormatted: string; durationMinutes: number } | null;
     empty?: boolean;
 };
 

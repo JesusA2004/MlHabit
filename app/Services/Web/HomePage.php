@@ -15,6 +15,7 @@ use App\Models\ProductCategory;
 use App\Models\ShowcaseProject;
 use App\Models\SiteSection;
 use App\Models\Testimonial;
+use App\Services\Crm\ConsultationSettings;
 use App\Support\Money;
 use App\Support\ResponsiveImage;
 use Illuminate\Support\Collection;
@@ -148,8 +149,12 @@ class HomePage
             if (DynamicBlocks::exists($block['type'])) {
                 $resolved = $this->dynamicData($block['type'], $props, $media, (int) $block['w'], $fullBleed);
                 $empty = DynamicBlocks::isLiveList($block['type']) && ($resolved['items'] ?? []) === [];
+                // «Mostrar contenido de ejemplo»: el bloque dibuja su respaldo
+                // curado (líneas de servicio, ideas ilustradas, compromisos…)
+                // en lugar de ocultar la sección.
+                $example = ($props['show_example'] ?? false) === true;
 
-                if ($empty && ! $editing) {
+                if ($empty && ! $editing && ! $example) {
                     // Una sección curada cuya lista viva está vacía se oculta
                     // completa (su encabezado quedaría huérfano); en un
                     // lienzo libre solo se omite el bloque.
@@ -229,6 +234,10 @@ class HomePage
             'faq' => ['items' => $this->faqs($props)],
             'home_visit' => ['image' => $image(), 'visit' => ($props['show_price'] ?? false) ? $this->visitPolicy() : null],
             'final_cta' => ['image' => $image()],
+            'service_pricing' => ($props['show_prices'] ?? true) ? [
+                'consultation' => $this->consultationOffer(),
+                'visit' => $this->visitPolicy(),
+            ] : ['consultation' => null, 'visit' => null],
             default => [],
         };
     }
@@ -280,6 +289,25 @@ class HomePage
             ->when($topics !== [], fn ($q) => $q->whereIn('topic', $topics))
             ->ordered()->limit((int) ($content['limit'] ?? 8))->get()
             ->map(fn (Faq $f) => $this->presenter->faq($f))->values()->all());
+    }
+
+    /**
+     * Asesoría por videollamada vigente (precio y duración). Sin asesorías
+     * activas no se muestra la tarjeta de precio.
+     *
+     * @return array{priceFormatted: string, durationMinutes: int}|null
+     */
+    public function consultationOffer(): ?array
+    {
+        $settings = ConsultationSettings::current();
+        if (! $settings->enabled) {
+            return null;
+        }
+
+        return [
+            'priceFormatted' => $settings->price->format('MXN'),
+            'durationMinutes' => $settings->durationMinutes,
+        ];
     }
 
     /**

@@ -21,17 +21,18 @@ final class DynamicBlocks
      * @var array<string, array{0: SiteSectionType|null, 1: list<string>, 2: bool, 3: string}>
      */
     private const KINDS = [
-        'categories' => [SiteSectionType::Categories, ['featured_only', 'limit'], true, 'Categorías del catálogo'],
-        'featured_projects' => [SiteSectionType::FeaturedProjects, ['limit'], true, 'Proyectos destacados'],
+        'categories' => [SiteSectionType::Categories, ['featured_only', 'limit', 'show_example'], true, 'Categorías del catálogo'],
+        'featured_projects' => [SiteSectionType::FeaturedProjects, ['limit', 'show_example'], true, 'Proyectos destacados'],
         'process_steps' => [SiteSectionType::Process, ['steps'], false, 'Pasos del proceso'],
         'benefits_list' => [SiteSectionType::Benefits, ['items'], false, 'Lista de beneficios'],
         'payment_options' => [SiteSectionType::PaymentOptions, ['items', 'disclaimer'], false, 'Formas de pago'],
         'home_visit' => [SiteSectionType::HomeVisit, ['show_price', 'media_id'], false, 'Visita a domicilio'],
         'coverage_checker' => [SiteSectionType::Coverage, ['cta_label', 'fallback'], false, 'Verificador de cobertura'],
-        'testimonials' => [SiteSectionType::Testimonials, ['limit'], true, 'Testimonios'],
-        'faq' => [SiteSectionType::Faq, ['topics', 'limit'], true, 'Preguntas frecuentes'],
+        'testimonials' => [SiteSectionType::Testimonials, ['limit', 'show_example'], true, 'Testimonios'],
+        'faq' => [SiteSectionType::Faq, ['topics', 'limit', 'show_example'], true, 'Preguntas frecuentes'],
         'final_cta' => [SiteSectionType::FinalCta, ['eyebrow', 'title', 'body', 'primary_cta_label', 'primary_cta_href', 'secondary_cta_label', 'secondary_cta_href', 'media_id'], false, 'Llamada final'],
         'lead_form_cta' => [null, [], false, 'Invitación a solicitar asesoría'],
+        'service_pricing' => [null, [], false, 'Precios de asesoría y visita'],
     ];
 
     /** @return list<string> */
@@ -67,7 +68,7 @@ final class DynamicBlocks
         [$source, $keys, , $label] = self::KINDS[$type];
 
         if ($source === null) {
-            return self::leadFormCta();
+            return $type === 'service_pricing' ? self::servicePricing() : self::leadFormCta();
         }
 
         return $source->schema()->only($keys, $label);
@@ -111,6 +112,26 @@ final class DynamicBlocks
             Field::textarea('body', 'Texto', 'Llena la solicitud en menos de tres minutos y un asesor te contacta para orientarte.', max: 300),
             Field::text('cta_label', 'Texto del botón', 'Solicita una asesoría', required: true, max: 40),
             Field::link('cta_href', 'Enlace del botón', '/solicitar', required: true),
+        ]);
+    }
+
+    /**
+     * Tarjetas de precio de la asesoría por videollamada y de la visita
+     * técnica. Los montos NO se escriben aquí: salen de la configuración
+     * vigente (asesorías y política de visita activa).
+     */
+    private static function servicePricing(): SubsetSchema
+    {
+        return new SubsetSchema('Precios de asesoría y visita', 'Costo vigente de la asesoría por videollamada y de la visita técnica, con su botón para agendar.', [
+            Field::text('consultation_title', 'Título de la asesoría', 'Asesoría por videollamada', required: true, max: 60),
+            Field::textarea('consultation_body', 'Texto de la asesoría', 'Platicas con un asesor sobre tu espacio, tus ideas y tu presupuesto. Sales con un rumbo claro para tu proyecto.', max: 240),
+            Field::text('consultation_cta_label', 'Botón de la asesoría', 'Agenda tu asesoría', required: true, max: 40),
+            Field::link('consultation_cta_href', 'Enlace de la asesoría', '/solicitar', required: true),
+            Field::text('visit_title', 'Título de la visita', 'Visita técnica a domicilio', required: true, max: 60),
+            Field::textarea('visit_body', 'Texto de la visita', 'Un técnico mide tu espacio, revisa muros e instalaciones y resuelve dudas de materiales.', max: 240),
+            Field::text('visit_cta_label', 'Botón de la visita', 'Agenda visita', required: true, max: 40),
+            Field::link('visit_cta_href', 'Enlace de la visita', '/agendar-visita', required: true),
+            Field::toggle('show_prices', 'Mostrar los costos vigentes', true, 'Se toman de Asesorías y de la política de visita activa. Si no hay política activa, la visita dice «Costo según tu zona».'),
         ]);
     }
 }
