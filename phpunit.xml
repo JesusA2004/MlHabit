@@ -35,5 +35,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="NAS_MOUNTINFO" value="storage/framework/testing/mountinfo-missing"/>
+        <env name="NAS_REACHABILITY_CHECK" value="false"/>
     </php>
 </phpunit>

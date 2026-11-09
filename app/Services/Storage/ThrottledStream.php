@@ -7,14 +7,14 @@ use HashContext;
 /**
  * Envoltura de lectura para copiar archivos entre discos:
  *
- * - limita la velocidad (KB/s del proveedor) durmiendo entre bloques, de
+ * - limita la velocidad (KB/s, NAS_TRANSFER_LIMIT_KBPS) durmiendo entre bloques, de
  *   modo que la subida real al NAS nunca supere el límite configurado;
  * - calcula la huella (xxh128) mientras el archivo pasa, sin leerlo dos
  *   veces del origen;
  * - informa los bytes leídos para el progreso.
  *
  * Funciona con cualquier consumidor que lea con fread/stream_copy_to_stream
- * (disco local) o fread + fstat (SFTP de phpseclib).
+ * o fread + fstat (disco local, también sobre el montaje del NAS).
  */
 final class ThrottledStream
 {

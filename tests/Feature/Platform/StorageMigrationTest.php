@@ -110,7 +110,8 @@ test('per-file failures while the NAS is down are reported and can be retried', 
     $media = localPhoto();
     $this->nas->down = true;
 
-    $this->actingAs($admin)->post('/admin/almacenamiento/traslados', ['direction' => 'to_synology', 'keep_source' => false]);
+    // El NAS cae con el traslado ya iniciado (el botón exige una prueba fresca).
+    app(StorageMigrationService::class)->start('media_local', 'media_synology', false, $admin);
 
     $migration = StorageMigration::query()->sole();
     expect($migration->status)->toBe(StorageMigrationStatus::CompletedWithErrors)
@@ -219,13 +220,16 @@ test('only one migration can run at a time and synology needs a passing test', f
     $admin = F::user(UserRole::SuperAdmin);
     localPhoto();
 
-    StorageProvider::query()->where('key', 'synology')->update(['last_test_result' => json_encode(['status' => 'error'])]);
+    // Sin conexión fresca con el NAS no se puede iniciar (aunque la última prueba guardada fuera buena).
+    $this->nas->down = true;
     $this->actingAs($admin)->post('/admin/almacenamiento/traslados', ['direction' => 'to_synology', 'keep_source' => true])
         ->assertSessionHas('error');
     expect(StorageMigration::query()->count())->toBe(0);
 
+    expect(StorageProvider::query()->where('key', 'synology')->first()->last_test_result['status'])->toBe('disconnected');
+
+    $this->nas->down = false;
     app(StorageMigrationService::class)->create('media_local', 'media_synology', true);
-    StorageProvider::query()->where('key', 'synology')->update(['last_test_result' => json_encode(['status' => 'ok'])]);
     $this->actingAs($admin)->post('/admin/almacenamiento/traslados', ['direction' => 'to_synology', 'keep_source' => true])
         ->assertSessionHas('error');
     expect(StorageMigration::query()->count())->toBe(1);

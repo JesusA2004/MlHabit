@@ -203,8 +203,6 @@ class StorageMigrationService
                 ->update(['status' => Status::Running->value, 'started_at' => now()]);
         }
 
-        SynologyDisk::refreshIfChanged();
-
         $media = Media::withTrashed()->find($item->media_id);
         if ($media === null) {
             $this->finish($item, ItemStatus::Skipped, 'El archivo ya no existe en la biblioteca.');
@@ -452,6 +450,9 @@ class StorageMigrationService
             'totalFiles' => $migration->total_files,
             'totalBytes' => $migration->total_bytes,
             'processedFiles' => $processed,
+            'percent' => $migration->total_files > 0 ? (int) floor($processed * 100 / $migration->total_files) : 100,
+            'lastError' => $migration->items()->where('status', ItemStatus::Failed->value)->whereNotNull('error')
+                ->latest('finished_at')->latest('id')->value('error'),
             'processedBytes' => $processedBytes,
             'transferredBytes' => $transferred,
             'counts' => $counts,

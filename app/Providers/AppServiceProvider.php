@@ -8,7 +8,6 @@ use App\Services\Storage\SynologyDisk;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -32,17 +31,13 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Disco `media_synology`: SFTP con las credenciales guardadas desde
-     * /admin/almacenamiento (ver SynologyDisk).
+     * Disco `media_synology`: disco local sobre el montaje SMB/CIFS del NAS,
+     * con un guardián que verifica el montaje antes de cada operación (ver
+     * SynologyDisk y MountGuardAdapter).
      */
     protected function configureStorage(): void
     {
-        Storage::extend('synology', function (Application $app, array $config) {
-            /** @var FilesystemManager $manager */
-            $manager = $app->make('filesystem');
-
-            return SynologyDisk::create($manager, $config);
-        });
+        Storage::extend('synology-mount', fn (Application $app, array $config) => SynologyDisk::create($config));
     }
 
     protected function configureDefaults(): void

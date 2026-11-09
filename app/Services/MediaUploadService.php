@@ -12,7 +12,9 @@ use App\Models\Media;
 use App\Models\MediaCollection;
 use App\Models\StorageMigrationItem;
 use App\Models\StorageProvider;
+use App\Services\Storage\FallbackSpaceException;
 use App\Services\Storage\MediaStorage;
+use App\Support\MediaPaths;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -71,8 +73,7 @@ class MediaUploadService
         $collection = $this->resolveCollection($collectionPath ?? ($visibility === MediaVisibility::Private ? 'privado/general' : 'sitio/general'));
         $type = MediaType::fromMime($detectedMime);
 
-        $filename = Str::uuid()->toString().'.'.$this->extension($originalFilename);
-        $path = $collection->path.'/'.$filename;
+        ['path' => $path, 'filename' => $filename] = MediaPaths::forUpload($collection->path, $type, $originalFilename, $this->extension($originalFilename));
 
         $storedDisk = $this->putFile($disk, $path, $absoluteTempPath);
         $fellBack = $storedDisk !== $disk;
@@ -121,9 +122,8 @@ class MediaUploadService
             throw new RejectedUploadException('El archivo de reemplazo debe ser del mismo tipo que el original.');
         }
 
-        $directory = dirname($media->path);
-        $filename = Str::uuid()->toString().'.'.$this->extension($file->getClientOriginalName());
-        $newPath = ($directory === '.' ? '' : $directory.'/').$filename;
+        $collectionPath = $media->loadMissing('collection')->collection?->path ?? dirname($media->path);
+        ['path' => $newPath, 'filename' => $filename] = MediaPaths::forUpload($collectionPath, $type, $file->getClientOriginalName(), $this->extension($file->getClientOriginalName()));
 
         $preferredDisk = $media->pending_sync_to ?? $media->disk;
         $storedDisk = $this->putFile($preferredDisk, $newPath, $realPath);
@@ -302,6 +302,8 @@ class MediaUploadService
 
         try {
             return $this->storage->put($disk, $path, $stream);
+        } catch (FallbackSpaceException $e) {
+            throw new RejectedUploadException($e->getMessage());
         } catch (\RuntimeException $e) {
             throw new RejectedUploadException('No se pudo guardar el archivo. Inténtalo de nuevo en unos minutos.');
         } finally {

@@ -82,6 +82,32 @@ return [
         'retry_wait_seconds' => [5, 30],
         'sync_batch' => (int) env('MEDIA_STORAGE_SYNC_BATCH', 200),
         'queue' => env('MEDIA_STORAGE_QUEUE'),
+        // Espacio libre mínimo (MB) que debe quedar en el servidor después de
+        // guardar un archivo como respaldo; si no alcanza, la subida se rechaza.
+        'fallback_reserve_mb' => (int) env('MEDIA_STORAGE_FALLBACK_RESERVE_MB', 1024),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | NAS Synology montado por SMB/CIFS
+    |--------------------------------------------------------------------------
+    | El disco `media_synology` (config/filesystems.php, NAS_MOUNT_PATH) solo
+    | se usa si en `mountinfo` hay un montaje de tipo `fstypes` cuyo origen
+    | es `source`. Con `reachability_check` se comprueba además que el NAS
+    | responde en `port` (TCP, `connect_timeout` s) antes de tocar el
+    | montaje, para no colgarse si se fue la red. Los valores por defecto
+    | son los de producción.
+    */
+    'synology' => [
+        'name' => env('NAS_NAME', 'SynologyExtra'),
+        'source' => env('NAS_MOUNT_SOURCE', '//100.67.89.20/MLHabitat'),
+        'fstypes' => ['cifs', 'smb3'],
+        'mountinfo' => env('NAS_MOUNTINFO', '/proc/self/mountinfo'),
+        'port' => (int) env('NAS_SMB_PORT', 445),
+        'reachability_check' => (bool) env('NAS_REACHABILITY_CHECK', true),
+        'connect_timeout' => (float) env('NAS_CONNECT_TIMEOUT', 2),
+        // Límite de KB/s en traslados servidor ⇄ NAS (0 = sin límite).
+        'transfer_limit_kbps' => (int) env('NAS_TRANSFER_LIMIT_KBPS', 0),
     ],
 
 ];

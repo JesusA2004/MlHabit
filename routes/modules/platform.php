@@ -54,7 +54,6 @@ Route::middleware(['auth', 'verified', 'staff'])
                 ->name('configuracion.update');
 
             Route::get('almacenamiento', [StorageController::class, 'index'])->name('almacenamiento.index');
-            Route::put('almacenamiento/{provider}', [StorageController::class, 'update'])->name('almacenamiento.update');
             Route::post('almacenamiento/{provider}/activar', [StorageController::class, 'activate'])->name('almacenamiento.activar');
             Route::post('almacenamiento/{provider}/probar', [StorageController::class, 'test'])
                 ->middleware('throttle:sensitive-actions')

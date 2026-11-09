@@ -61,15 +61,9 @@ return [
             'report' => false,
         ],
 
-        // Proveedor Synology NAS, alcanzable únicamente a través de una red
-        // Tailscale privada (ver /docs/SYNOLOGY_TAILSCALE.md). NAS_SFTP_HOST
-        // debe ser el nombre MagicDNS del NAS dentro del tailnet, nunca una
-        // IP pública. Mientras estas variables no existan en .env, este
-        // disco queda definido pero sin credenciales (no se escriben aquí
-        // valores de ejemplo) y el proveedor "synology" permanece inactivo
-        // (ver StorageProviderSeeder).
         // Documentos y evidencias de clientes. Sin URL pública: solo se
         // sirven vía PrivateMediaController tras autorizar con Policies.
+        // Nunca van al NAS.
         'media_private' => [
             'driver' => 'local',
             'root' => storage_path('app/private/media'),
@@ -78,24 +72,22 @@ return [
             'report' => false,
         ],
 
-        // Driver "synology" = SFTP con las credenciales guardadas en
-        // /admin/almacenamiento (App\Services\Storage\SynologyDisk); las
-        // variables NAS_SFTP_* quedan como respaldo. Se sirve al navegador
-        // por el mismo /media/… que el disco local (MediaStreamController).
+        // NAS Synology «SynologyExtra», montado en el servidor por SMB/CIFS
+        // vía Tailscale (el montaje y sus credenciales los gestiona Linux).
+        // Driver "synology-mount" = disco local sobre el punto de montaje con
+        // un guardián que verifica el montaje antes de cada operación
+        // (App\Services\Storage\SynologyDisk y MountGuardAdapter). Nunca se
+        // crea el directorio raíz: si el NAS no está montado, el disco falla
+        // y las subidas caen al servidor (MediaStorage). Se sirve al
+        // navegador por el mismo /media/… que el disco local.
         'media_synology' => [
-            'driver' => 'synology',
+            'driver' => 'synology-mount',
+            'root' => env('NAS_MOUNT_PATH', '/mnt/mlhabitat-storage'),
             'url' => '/media',
-            'host' => env('NAS_SFTP_HOST'),
-            'port' => (int) env('NAS_SFTP_PORT', 22),
-            'username' => env('NAS_SFTP_USERNAME'),
-            'password' => env('NAS_SFTP_PASSWORD'),
-            'privateKey' => env('NAS_SFTP_PRIVATE_KEY_PATH'),
-            'root' => env('NAS_SFTP_ROOT', '/ml-habitat'),
-            'timeout' => (int) env('NAS_SFTP_TIMEOUT', 10),
-            // Reintentos de conexión (0 = un solo intento): si el NAS no responde, la subida
-            // cae al servidor de inmediato (ver MediaStorage) en vez de esperar.
-            'maxTries' => (int) env('NAS_SFTP_MAX_TRIES', 0),
+            'visibility' => 'private',
+            'lazy_root_creation' => true,
             'throw' => false,
+            'report' => false,
         ],
 
         's3' => [

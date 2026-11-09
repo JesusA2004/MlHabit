@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\StorageProviderKey;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\StorageProviderRequest;
 use App\Jobs\Storage\PurgeMigrationSources;
 use App\Jobs\Storage\SyncPendingMedia;
 use App\Models\Media;
@@ -15,7 +14,7 @@ use App\Services\ActivityLogger;
 use App\Services\Storage\MediaStorage;
 use App\Services\Storage\PendingMediaSync;
 use App\Services\Storage\StorageMigrationService;
-use App\Services\Storage\SynologyDisk;
+use App\Services\Storage\SynologyMount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -28,9 +27,9 @@ use Throwable;
 
 /**
  * Panel /admin/almacenamiento: muestra el estado real de cada proveedor
- * (local y Synology) y permite configurar y probar la conexión al NAS.
- * Nunca envía credenciales (contraseña, llave privada) de vuelta al
- * navegador, aunque estén guardadas: solo indica si existen.
+ * (local y el NAS «SynologyExtra» montado por SMB/CIFS) y permite probar
+ * la conexión al NAS. No hay credenciales en la interfaz: el montaje lo
+ * gestiona Linux. La configuración histórica guardada en BD no se expone.
  *
  * También muestra dónde vive cada archivo, los pendientes de subir al NAS
  * (respaldo local) y permite trasladar la biblioteca servidor ⇄ Synology
@@ -38,6 +37,8 @@ use Throwable;
  */
 class StorageController extends Controller
 {
+    public function __construct(private readonly SynologyMount $mount) {}
+
     public function index(StorageMigrationService $migrations, MediaStorage $mediaStorage, PendingMediaSync $sync): Response
     {
         Gate::authorize('settings.manage');
@@ -46,7 +47,7 @@ class StorageController extends Controller
         $latest = StorageMigration::query()->latest('id')->first();
 
         return Inertia::render('admin/almacenamiento/Index', [
-            'providers' => $providers->map(fn (StorageProvider $provider) => $this->present($provider))->values(),
+            'providers' => $providers->map(fn (StorageProvider $provider) => $this->present($provider, $mediaStorage))->values(),
             'storage' => $this->summary($mediaStorage, $sync),
             'migration' => $latest !== null ? $migrations->present($latest) : null,
             'history' => StorageMigration::query()->latest('id')->limit(6)->get()
@@ -67,48 +68,16 @@ class StorageController extends Controller
         ]);
     }
 
-    public function update(StorageProviderRequest $request, StorageProvider $provider, ActivityLogger $activity): RedirectResponse
-    {
-        abort_unless($provider->key === StorageProviderKey::Synology, 404);
-
-        $data = $request->validated();
-        $current = $provider->config ?? [];
-
-        $provider->update([
-            'config' => [
-                'disk' => 'media_synology',
-                'host' => $data['host'] ?? null,
-                'port' => $data['port'] ?? 22,
-                'username' => $data['username'] ?? null,
-                'auth_method' => $data['auth_method'],
-                'password' => ! empty($data['password'])
-                    ? $data['password']
-                    : ($current['password'] ?? null),
-                'private_key_path' => ! empty($data['private_key_path'])
-                    ? $data['private_key_path']
-                    : ($current['private_key_path'] ?? null),
-                'transfer_limit_kbps' => $data['transfer_limit_kbps'] ?? null,
-            ],
-        ]);
-
-        SynologyDisk::forget();
-
-        // Nunca registrar contraseñas ni rutas de llaves en la bitácora.
-        $activity->log('almacenamiento.configurado', $provider, [
-            'provider' => $provider->key->value,
-            'host' => $data['host'] ?? null,
-            'auth_method' => $data['auth_method'],
-        ]);
-
-        return back()->with('success', 'Configuración de Synology guardada.');
-    }
-
-    public function activate(StorageProvider $provider, ActivityLogger $activity): RedirectResponse
+    public function activate(StorageProvider $provider, ActivityLogger $activity, MediaStorage $mediaStorage): RedirectResponse
     {
         Gate::authorize('settings.manage');
 
-        if ($provider->key === StorageProviderKey::Synology && ($provider->last_test_result['status'] ?? null) !== 'ok') {
-            return back()->with('error', 'Prueba la conexión con el NAS antes de activarlo.');
+        // Synology solo se activa con una comprobación FRESCA correcta.
+        if ($provider->key === StorageProviderKey::Synology) {
+            $result = $this->checkSynology($provider, $mediaStorage);
+            if ($result['status'] !== 'ok') {
+                return back()->with('error', 'No se activó el NAS: '.$result['message']);
+            }
         }
 
         StorageProvider::query()->update(['is_active' => false]);
@@ -123,34 +92,23 @@ class StorageController extends Controller
     {
         Gate::authorize('settings.manage');
 
-        SynologyDisk::forget();
+        if ($provider->key === StorageProviderKey::Local) {
+            $result = $this->testLocal();
+            $provider->update(['last_tested_at' => now(), 'last_test_result' => $result]);
+        } else {
+            $result = $this->checkSynology($provider, $mediaStorage);
 
-        $result = $provider->key === StorageProviderKey::Local
-            ? $this->testLocal()
-            : $this->testSynology($provider);
-
-        $provider->update([
-            'last_tested_at' => now(),
-            'last_test_result' => $result,
-        ]);
+            // «En cuanto conecte»: si el NAS respondió, lo que quedó en el
+            // servidor por el respaldo se sube ya, sin esperar al programador.
+            if ($result['status'] === 'ok' && $sync->pendingCount() > 0) {
+                SyncPendingMedia::dispatch();
+            }
+        }
 
         $activity->log('almacenamiento.probado', $provider, [
             'provider' => $provider->key->value,
             'result' => $result['status'],
         ]);
-
-        // «En cuanto conecte»: si el NAS respondió, lo que quedó en el
-        // servidor por el respaldo se sube ya, sin esperar al programador.
-        if ($provider->key === StorageProviderKey::Synology) {
-            if ($result['status'] === 'ok') {
-                $mediaStorage->markUp(MediaStorage::REMOTE);
-                if ($sync->pendingCount() > 0) {
-                    SyncPendingMedia::dispatch();
-                }
-            } elseif ($result['status'] === 'error') {
-                $mediaStorage->markDown(MediaStorage::REMOTE, $result['message']);
-            }
-        }
 
         return back()->with(
             $result['status'] === 'ok' ? 'success' : 'error',
@@ -159,7 +117,7 @@ class StorageController extends Controller
     }
 
     /** Inicia un traslado: «to_synology» (servidor → NAS) o «to_local» (emergencia). */
-    public function startMigration(Request $request, StorageMigrationService $migrations): RedirectResponse
+    public function startMigration(Request $request, StorageMigrationService $migrations, MediaStorage $mediaStorage): RedirectResponse
     {
         Gate::authorize('settings.manage');
 
@@ -172,8 +130,14 @@ class StorageController extends Controller
 
         if ($toSynology) {
             $synology = StorageProvider::query()->where('key', StorageProviderKey::Synology->value)->first();
-            if (($synology?->last_test_result['status'] ?? null) !== 'ok') {
-                return back()->with('error', 'Prueba la conexión con el Synology antes de mover archivos.');
+            if ($synology === null) {
+                return back()->with('error', 'No existe el proveedor Synology.');
+            }
+            if ($migrations->active() === null) {
+                $result = $this->checkSynology($synology, $mediaStorage);
+                if ($result['status'] !== 'ok') {
+                    return back()->with('error', 'No se puede mover al NAS: '.$result['message']);
+                }
             }
         }
 
@@ -283,58 +247,30 @@ class StorageController extends Controller
     }
 
     /**
-     * @return array{status: string, message: string, connect: bool, read: bool, write: bool, checkedAt: string}
+     * Comprobación fresca del NAS montado: guarda el resultado y actualiza
+     * el cortacircuitos (ok → reanuda subidas directas; si no, las desvía
+     * al servidor).
+     *
+     * @return array{status: 'ok'|'error'|'disconnected', state: 'connected'|'disconnected'|'error', message: string, checks: array{mount: bool, reachable: bool, write: bool, read: bool, delete: bool}, capacity: array{totalBytes: int, usedBytes: int, freeBytes: int}|null, checkedAt: string}
      */
-    private function testSynology(StorageProvider $provider): array
+    private function checkSynology(StorageProvider $provider, MediaStorage $mediaStorage): array
     {
-        $config = SynologyDisk::mergeProviderConfig((array) config('filesystems.disks.media_synology', []));
-        $hasCredentials = ! empty($config['host']) && ! empty($config['username'])
-            && (! empty($config['password']) || ! empty($config['privateKey']));
+        SynologyMount::flush();
 
-        if (! $hasCredentials) {
-            return [
-                'status' => 'pending',
-                'message' => 'Synology pendiente de configuración.',
-                'connect' => false,
-                'read' => false,
-                'write' => false,
-                'checkedAt' => now()->toIso8601String(),
-            ];
+        $result = $this->mount->check();
+
+        $provider->update([
+            'last_tested_at' => now(),
+            'last_test_result' => $result,
+        ]);
+
+        if ($result['status'] === 'ok') {
+            $mediaStorage->markUp(MediaStorage::REMOTE);
+        } else {
+            $mediaStorage->markDown(MediaStorage::REMOTE, $result['message']);
         }
 
-        $disk = Storage::disk('media_synology');
-        $probePath = '.storage-check/'.Str::uuid().'.tmp';
-        $probeContent = (string) Str::uuid();
-
-        try {
-            $written = $disk->put($probePath, $probeContent);
-            $read = $written !== false ? $disk->get($probePath) : null;
-            $disk->delete($probePath);
-
-            $ok = $read === $probeContent;
-
-            return [
-                'status' => $ok ? 'ok' : 'error',
-                'message' => $ok
-                    ? 'Synology: conexión, lectura y escritura correctas a través de Tailscale.'
-                    : 'Synology: se conectó pero no se pudo escribir o leer en la carpeta. Revisa los permisos de la carpeta compartida.',
-                'connect' => true,
-                'read' => $ok,
-                'write' => $written !== false,
-                'checkedAt' => now()->toIso8601String(),
-            ];
-        } catch (Throwable $e) {
-            Log::warning('Prueba de almacenamiento Synology fallida', ['exception' => $e->getMessage()]);
-
-            return [
-                'status' => 'error',
-                'message' => 'No se pudo conectar con el NAS. Verifica que Tailscale esté activo y las credenciales sean correctas.',
-                'connect' => false,
-                'read' => false,
-                'write' => false,
-                'checkedAt' => now()->toIso8601String(),
-            ];
-        }
+        return $result;
     }
 
     /**
@@ -386,14 +322,12 @@ class StorageController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function present(StorageProvider $provider): array
+    private function present(StorageProvider $provider, MediaStorage $mediaStorage): array
     {
-        $config = $provider->config ?? [];
-        $disk = $config['disk'] ?? ($provider->key === StorageProviderKey::Local ? 'media_local' : 'media_synology');
+        $isLocal = $provider->key === StorageProviderKey::Local;
+        $disk = $isLocal ? MediaStorage::LOCAL : MediaStorage::REMOTE;
 
-        $space = $provider->key === StorageProviderKey::Local ? $this->localSpace() : null;
-
-        return [
+        $data = [
             'id' => $provider->id,
             'key' => $provider->key->value,
             'label' => $provider->label,
@@ -402,17 +336,73 @@ class StorageController extends Controller
             'lastTestResult' => $provider->last_test_result,
             'filesCount' => Media::query()->where('disk', $disk)->count(),
             'filesBytes' => (int) Media::query()->where('disk', $disk)->sum('size'),
-            'space' => $space,
-            'config' => $provider->key === StorageProviderKey::Synology ? [
-                'host' => $config['host'] ?? null,
-                'port' => $config['port'] ?? 22,
-                'username' => $config['username'] ?? null,
-                'authMethod' => $config['auth_method'] ?? 'password',
-                'hasPassword' => ! empty($config['password']),
-                'hasPrivateKey' => ! empty($config['private_key_path']),
-                'transferLimitKbps' => $config['transfer_limit_kbps'] ?? null,
-                'rootPath' => config('filesystems.disks.media_synology.root'),
+            'space' => $isLocal ? $this->localSpace() : null,
+        ];
+
+        if ($provider->key === StorageProviderKey::Synology) {
+            $data['synology'] = $this->synologyState($provider, $mediaStorage);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Estado del NAS para la página. NO toca el montaje (un statfs sobre un
+     * CIFS colgado bloquearía la página): el montaje en vivo sale de
+     * mountinfo y la capacidad, de la última prueba guardada.
+     *
+     * @return array<string, mixed>
+     */
+    private function synologyState(StorageProvider $provider, MediaStorage $mediaStorage): array
+    {
+        $live = $this->mount->mountStatus();
+        $last = is_array($provider->last_test_result) ? $provider->last_test_result : [];
+        $lastOk = ($last['status'] ?? null) === 'ok';
+        $down = $mediaStorage->downReason(MediaStorage::REMOTE);
+
+        if (! $live['mounted']) {
+            $state = $live['problem'] === 'mismatch' ? 'error' : 'disconnected';
+            $message = $live['reason'];
+        } elseif ($down !== null) {
+            $state = 'disconnected';
+            $message = 'El NAS dejó de responder: '.Str::limit($down, 160);
+        } elseif ($lastOk) {
+            $state = 'connected';
+            $message = (string) ($last['message'] ?? 'NAS conectado.');
+        } elseif ($last === [] || ! in_array($last['state'] ?? null, ['error', 'disconnected'], true)) {
+            $state = 'disconnected';
+            $message = 'NAS montado. Pulsa «Probar conexión» para verificarlo.';
+        } else {
+            $state = (string) $last['state'];
+            $message = (string) ($last['message'] ?? 'La última prueba falló.');
+        }
+
+        $capacity = $last['capacity'] ?? null;
+        $checks = $last['checks'] ?? null;
+
+        return [
+            'name' => $this->mount->name(),
+            'host' => $this->mount->host(),
+            'protocol' => 'SMB/CIFS',
+            'share' => $this->mount->share(),
+            'mountPath' => $this->mount->root(),
+            'state' => $state,
+            'message' => $message,
+            'mounted' => $live['mounted'],
+            'capacity' => is_array($capacity) && isset($capacity['totalBytes'], $capacity['usedBytes'], $capacity['freeBytes']) ? [
+                'totalBytes' => (int) $capacity['totalBytes'],
+                'usedBytes' => (int) $capacity['usedBytes'],
+                'freeBytes' => (int) $capacity['freeBytes'],
             ] : null,
+            'checkedAt' => $provider->last_tested_at?->toIso8601String() ?? ($last['checkedAt'] ?? null),
+            'checks' => is_array($checks) ? [
+                'mount' => (bool) ($checks['mount'] ?? false),
+                'reachable' => (bool) ($checks['reachable'] ?? false),
+                'write' => (bool) ($checks['write'] ?? false),
+                'read' => (bool) ($checks['read'] ?? false),
+                'delete' => (bool) ($checks['delete'] ?? false),
+            ] : null,
+            'canActivate' => $live['mounted'] && $lastOk,
         ];
     }
 

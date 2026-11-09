@@ -3,9 +3,7 @@
 namespace App\Services\Storage;
 
 use App\Enums\Permission;
-use App\Enums\StorageProviderKey;
 use App\Models\Media;
-use App\Models\StorageProvider;
 use App\Models\User;
 use App\Notifications\Platform\StorageFallbackActivated;
 use App\Services\ActivityLogger;
@@ -28,7 +26,8 @@ use Throwable;
  * Para no hacer esperar cada subida mientras el NAS está caído, tras un
  * fallo se recuerda «NAS sin conexión» unos minutos (cortacircuitos) y las
  * subidas van directo al servidor. Se avisa a los administradores UNA vez
- * por corte (correo + centro de notificaciones).
+ * por corte (correo + centro de notificaciones). Si tampoco hay espacio en
+ * el servidor, la subida se rechaza (FallbackSpaceException).
  */
 class MediaStorage
 {
@@ -36,7 +35,10 @@ class MediaStorage
 
     public const REMOTE = SynologyDisk::DISK;
 
-    public function __construct(private readonly ActivityLogger $activity) {}
+    public function __construct(
+        private readonly ActivityLogger $activity,
+        private readonly SynologyMount $mount,
+    ) {}
 
     public function isRemote(string $disk): bool
     {
@@ -76,6 +78,7 @@ class MediaStorage
             @rewind($contents);
         }
 
+        $this->assertFallbackSpace($contents);
         $this->write(self::LOCAL, $path, $contents);
         $this->fellBack($preferredDisk, $path, $error);
 
@@ -98,6 +101,17 @@ class MediaStorage
      */
     public function readableDisk(string $disk, string $path): ?string
     {
+        // NAS marcado como caído: primero la copia del servidor, sin esperar.
+        if ($this->isRemote($disk) && $this->downReason($disk) !== null) {
+            try {
+                if (Storage::disk(self::LOCAL)->exists($path)) {
+                    return self::LOCAL;
+                }
+            } catch (Throwable) {
+                // Se intenta el NAS (el guardián falla rápido si no está).
+            }
+        }
+
         try {
             if (Storage::disk($disk)->exists($path)) {
                 return $disk;
@@ -146,6 +160,12 @@ class MediaStorage
      */
     public function probe(string $disk): ?string
     {
+        if ($this->isRemote($disk)) {
+            $result = $this->mount->check();
+
+            return $result['status'] === 'ok' ? null : $result['message'];
+        }
+
         $path = '.storage-check/'.Str::uuid().'.tmp';
         $content = (string) Str::uuid();
 
@@ -166,13 +186,7 @@ class MediaStorage
     /** Límite de transferencia del NAS en KB/s (0 = sin límite). */
     public function transferLimitKbps(): int
     {
-        try {
-            $provider = StorageProvider::query()->where('key', StorageProviderKey::Synology->value)->first();
-
-            return max(0, (int) ($provider?->configValue('transfer_limit_kbps') ?? 0));
-        } catch (Throwable) {
-            return 0;
-        }
+        return max(0, (int) config('media.synology.transfer_limit_kbps', 0));
     }
 
     public function safeError(Throwable $e): string
@@ -189,6 +203,45 @@ class MediaStorage
     {
         if (Storage::disk($disk)->put($path, $contents) === false) {
             throw new RuntimeException("No se pudo guardar el archivo en el disco «{$disk}».");
+        }
+    }
+
+    /**
+     * Antes de guardar en el servidor como respaldo: debe quedar libre al
+     * menos el tamaño del archivo + la reserva configurada.
+     *
+     * @param  string|resource  $contents
+     *
+     * @throws FallbackSpaceException
+     */
+    private function assertFallbackSpace($contents): void
+    {
+        $size = null;
+        if (is_resource($contents)) {
+            $stat = @fstat($contents);
+            $size = is_array($stat) && isset($stat['size']) ? (int) $stat['size'] : null;
+        } elseif (is_string($contents)) {
+            $size = strlen($contents);
+        }
+        if ($size === null) {
+            return;
+        }
+
+        try {
+            $root = Storage::disk(self::LOCAL)->path('');
+            $free = @disk_free_space(is_dir($root) ? $root : storage_path());
+        } catch (Throwable) {
+            return;
+        }
+        if ($free === false) {
+            return;
+        }
+
+        $reserve = max(0, (int) config('media.storage.fallback_reserve_mb', 1024)) * 1024 * 1024;
+        if ($free < $size + $reserve) {
+            Log::error('El NAS no respondió y el servidor no tiene espacio para el respaldo.', ['size' => $size, 'free' => (int) $free]);
+
+            throw new FallbackSpaceException('El almacenamiento no está disponible en este momento y el servidor no tiene espacio para guardarlo. Inténtalo más tarde.');
         }
     }
 

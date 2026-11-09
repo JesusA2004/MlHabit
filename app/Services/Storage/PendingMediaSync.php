@@ -33,8 +33,6 @@ class PendingMediaSync
      */
     public function run(int $limit = 200): array
     {
-        SynologyDisk::refreshIfChanged();
-
         $targets = Media::withTrashed()->whereNotNull('pending_sync_to')->distinct()->pluck('pending_sync_to')->all();
         if ($targets === []) {
             return ['status' => 'idle', 'pushed' => 0, 'failed' => 0, 'remaining' => 0, 'message' => 'No hay archivos pendientes de sincronizar.'];
@@ -69,7 +67,10 @@ class PendingMediaSync
             $this->storage->markUp($target);
             $limitKbps = $this->storage->transferLimitKbps();
 
-            Media::withTrashed()->where('pending_sync_to', $target)->orderBy('id')->limit($limit)->get()
+            // Primero los que menos han fallado: un archivo que falla siempre
+            // no bloquea a los nuevos.
+            Media::withTrashed()->where('pending_sync_to', $target)
+                ->orderBy('sync_attempts')->orderBy('id')->limit($limit)->get()
                 ->each(function (Media $media) use ($target, $limitKbps, &$pushed, &$failed) {
                     try {
                         $this->relocator->relocate($media, $target, keepSource: false, limitKbps: $limitKbps);

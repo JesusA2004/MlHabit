@@ -9,12 +9,12 @@ use App\Models\MediaVariant;
 use App\Services\FfmpegService;
 use App\Services\Storage\MediaRelocator;
 use App\Services\Storage\MediaStorage;
+use App\Support\MediaPaths;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -22,8 +22,9 @@ use Throwable;
  * instalado en el servidor, el video permanece utilizable (estado "ready")
  * simplemente sin miniatura ni duración automáticas.
  *
- * Funciona con el video en el servidor o en el NAS: si el disco no expone
- * una ruta local (SFTP), el video se descarga a un temporal para FFmpeg.
+ * Funciona con el video en el servidor o en el NAS (disco local sobre el
+ * montaje SMB): FFmpeg lee la ruta directa. Si el NAS no está disponible,
+ * el video queda «ready» sin miniatura (no se toca el montaje caído).
  * La miniatura se guarda con respaldo (servidor si el NAS no responde).
  */
 class ProcessVideoMedia implements ShouldQueue
@@ -68,7 +69,7 @@ class ProcessVideoMedia implements ShouldQueue
         $temporaryPoster = tempnam(sys_get_temp_dir(), 'mlh-poster-').'.jpg';
 
         try {
-            $absoluteVideoPath = $this->localPath($media, $temporaryVideo);
+            $absoluteVideoPath = $this->localPath($media, $temporaryVideo, $storage);
             if ($absoluteVideoPath === null) {
                 Log::warning('ProcessVideoMedia: no se pudo leer el video.', ['media_id' => $media->id]);
                 $media->update(['status' => MediaStatus::Ready->value]);
@@ -78,8 +79,7 @@ class ProcessVideoMedia implements ShouldQueue
 
             $duration = $ffmpeg->durationSeconds($absoluteVideoPath);
 
-            $directory = dirname($media->path);
-            $posterPath = ($directory === '.' ? '' : $directory.'/').Str::uuid()->toString().'.jpg';
+            $posterPath = MediaPaths::posterPath($media->path);
 
             if ($ffmpeg->generateThumbnail($absoluteVideoPath, $temporaryPoster)) {
                 $preferred = $media->pending_sync_to ?? $media->disk;
@@ -121,9 +121,15 @@ class ProcessVideoMedia implements ShouldQueue
     /**
      * Ruta local del video: la del disco si es local; si no, un temporal.
      */
-    private function localPath(Media $media, ?string &$temporary): ?string
+    private function localPath(Media $media, ?string &$temporary, MediaStorage $storage): ?string
     {
-        $disk = Storage::disk($media->disk);
+        // Antes de tocar la ruta se comprueba (con el guardián) dónde se puede
+        // leer: un montaje caído nunca se toca directamente.
+        $readable = $storage->readableDisk($media->disk, $media->path);
+        if ($readable === null) {
+            return null;
+        }
+        $disk = Storage::disk($readable);
 
         try {
             $direct = $disk->path($media->path);

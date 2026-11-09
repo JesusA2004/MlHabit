@@ -8,6 +8,7 @@ use App\Models\Media;
 use App\Models\MediaVariant;
 use App\Services\Storage\MediaRelocator;
 use App\Services\Storage\MediaStorage;
+use App\Services\Storage\SynologyUnavailableException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -33,11 +34,29 @@ class GenerateImageVariants implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 2;
+    /** Errores reales permitidos; las esperas por NAS caído no cuentan. */
+    public int $maxExceptions = 2;
 
     public int $timeout = 300;
 
     public function __construct(public int $mediaId) {}
+
+    /** Mientras el NAS esté caído se reintenta (cada 5 min) hasta 12 horas. */
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHours(12);
+    }
+
+    private function remoteAvailable(Media $media): bool
+    {
+        try {
+            Storage::disk($media->disk)->exists($media->path);
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
 
     public function handle(?MediaStorage $storage = null): void
     {
@@ -69,8 +88,23 @@ class GenerateImageVariants implements ShouldQueue
             return;
         }
 
-        $disk = Storage::disk($media->disk);
-        $source = $disk->get($media->path);
+        // El original puede estar en el NAS: si no está disponible (y no hay
+        // copia en el servidor) se reintenta más tarde sin bloquear la cola.
+        $readable = $storage->readableDisk($media->disk, $media->path);
+        if ($readable === null && $storage->isRemote($media->disk) && ! $this->remoteAvailable($media)) {
+            Log::info('GenerateImageVariants: el NAS no está disponible; se reintentará.', ['media_id' => $media->id]);
+            $this->release(300);
+
+            return;
+        }
+
+        try {
+            $source = $readable !== null ? Storage::disk($readable)->get($media->path) : null;
+        } catch (SynologyUnavailableException) {
+            $this->release(300);
+
+            return;
+        }
         if ($source === null) {
             Log::warning('GenerateImageVariants: no se encontró el original.', ['media_id' => $media->id]);
 
