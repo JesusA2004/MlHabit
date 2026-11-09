@@ -67,6 +67,9 @@ export interface StorageMigration {
     finishedAt: string | null;
     createdAt: string | null;
     failures: MigrationFailure[];
+    /** Opcionales: si el backend no los manda, se calculan en el cliente. */
+    percent?: number;
+    lastError?: string | null;
 }
 
 export interface MigrationHistoryEntry {

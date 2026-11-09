@@ -36,6 +36,7 @@ import { formatBytes, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import almacenamiento from '@/routes/admin/almacenamiento';
 import traslados from '@/routes/admin/almacenamiento/traslados';
+import StorageMigrationFailures from './StorageMigrationFailures.vue';
 import type {
     MigrationHistoryEntry,
     MigrationPlan,
@@ -53,7 +54,7 @@ const props = defineProps<{
     migration: StorageMigration | null;
     history: MigrationHistoryEntry[];
     plan: { toSynology: MigrationPlan; toLocal: MigrationPlan };
-    /** El NAS pasó la última prueba de conexión. */
+    /** El NAS está montado, conectado y pasó la última prueba. */
     synologyReady: boolean;
     synologyActive: boolean;
 }>();
@@ -103,31 +104,119 @@ onMounted(() => {
 
 const percent = computed(() => {
     const m = props.migration;
-    if (!m || m.totalFiles === 0) {
+    if (!m) {
         return 0;
+    }
+
+    if (typeof m.percent === 'number') {
+        return Math.min(100, Math.max(0, Math.round(m.percent)));
+    }
+
+    if (m.totalFiles === 0) {
+        return m.isActive ? 0 : 100;
     }
 
     return Math.min(100, Math.round((m.processedFiles / m.totalFiles) * 100));
 });
 
-function formatEta(seconds: number | null): string {
+/** Desglose del avance (trasladados, omitidos, fallidos, pendientes). */
+const breakdown = computed(() => {
+    const c = props.migration?.counts;
+    if (!c) {
+        return [];
+    }
+
+    return [
+        {
+            key: 'done',
+            label: 'Trasladados',
+            value: c.done,
+            dot: 'bg-success',
+            text: '',
+        },
+        {
+            key: 'skipped',
+            label: 'Ya estaban en el destino',
+            value: c.skipped,
+            dot: 'bg-info',
+            text: '',
+        },
+        {
+            key: 'failed',
+            label: 'Con error',
+            value: c.failed,
+            dot: 'bg-danger',
+            text: c.failed > 0 ? 'text-danger-ink' : '',
+        },
+        {
+            key: 'pending',
+            label: 'Pendientes',
+            value: c.pending,
+            dot: 'bg-muted-foreground/40',
+            text: '',
+        },
+    ];
+});
+
+/** Último error conocido: el que mande el backend o el del último fallido. */
+const lastError = computed(() => {
+    const m = props.migration;
+    if (!m) {
+        return null;
+    }
+
+    if (m.lastError) {
+        return m.lastError;
+    }
+
+    for (let i = m.failures.length - 1; i >= 0; i--) {
+        if (m.failures[i].error) {
+            return m.failures[i].error;
+        }
+    }
+
+    return null;
+});
+
+function shorten(text: string, max = 160): string {
+    const line = text.split('\n')[0].trim();
+
+    return line.length > max ? `${line.slice(0, max)}…` : line;
+}
+
+function formatEta(migration: StorageMigration): string {
+    const seconds = migration.etaSeconds;
+
+    if (migration.status === 'queued') {
+        return 'En espera';
+    }
+
     if (seconds === null) {
         return 'Calculando…';
     }
 
     if (seconds < 60) {
-        return 'menos de 1 min';
+        return 'Menos de 1 min';
     }
 
     const minutes = Math.round(seconds / 60);
     if (minutes < 60) {
-        return `${minutes} min`;
+        return `Unos ${minutes} min`;
     }
 
     const hours = Math.floor(minutes / 60);
+    if (hours >= 24) {
+        const days = Math.floor(hours / 24);
+        const restHours = hours % 24;
+
+        return restHours > 0
+            ? `Unos ${days} d ${restHours} h`
+            : `Unos ${days} d`;
+    }
+
     const rest = minutes % 60;
 
-    return rest > 0 ? `${hours} h ${rest} min` : `${hours} h`;
+    return rest > 0 ? `Unas ${hours} h ${rest} min` : `Unas ${hours} h`;
 }
 
 const DIRECTION_LABEL = {
@@ -234,12 +323,30 @@ const purgeLabel = computed(() =>
                         siguen funcionando aunque estén repartidos.
                     </p>
                 </div>
-                <StatusBadge
-                    v-if="props.storage.remoteDown"
-                    tone="warning"
-                    :icon="CloudOff"
-                    label="Synology sin conexión: las subidas van al servidor"
-                />
+            </div>
+
+            <div
+                v-if="props.storage.remoteDown"
+                class="mt-4 flex items-start gap-3 rounded-lg border border-warning/50 bg-warning-soft/60 p-3 text-sm text-warning-ink"
+                role="status"
+            >
+                <CloudOff class="mt-0.5 size-4 shrink-0" />
+                <div class="min-w-0">
+                    <p class="font-medium">El Synology no responde</p>
+                    <p class="mt-0.5 text-xs">
+                        Las subidas nuevas se guardan en el servidor y se pasan
+                        solas al NAS cuando vuelva.
+                        <template v-if="props.storage.pendingSync > 0">
+                            Hay
+                            {{ formatNumber(props.storage.pendingSync) }}
+                            {{
+                                props.storage.pendingSync === 1
+                                    ? 'archivo esperando.'
+                                    : 'archivos esperando.'
+                            }}
+                        </template>
+                    </p>
+                </div>
             </div>
 
             <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -300,9 +407,14 @@ const purgeLabel = computed(() =>
                     </p>
                     <p
                         v-if="props.storage.pendingSyncError"
-                        class="text-xs break-words text-warning-ink"
+                        class="flex items-start gap-1.5 rounded-md bg-warning-soft px-2.5 py-1.5 text-xs break-words text-warning-ink"
+                        :title="props.storage.pendingSyncError"
                     >
-                        Último error: {{ props.storage.pendingSyncError }}
+                        <AlertTriangle class="mt-px size-3.5 shrink-0" />
+                        <span class="min-w-0"
+                            >Último error:
+                            {{ shorten(props.storage.pendingSyncError) }}</span
+                        >
                     </p>
                     <Button
                         v-if="props.storage.pendingSync > 0"
@@ -358,80 +470,126 @@ const purgeLabel = computed(() =>
                         />
                     </div>
 
-                    <Progress
-                        :model-value="percent"
-                        class="h-3"
-                        :aria-label="`Avance del traslado: ${percent}%`"
-                    />
-
-                    <dl
-                        class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4"
+                    <div
+                        v-if="props.migration.waitingForWorker"
+                        class="flex items-start gap-3 rounded-lg border border-warning/50 bg-warning-soft/60 p-3 text-sm text-warning-ink"
+                        role="alert"
                     >
-                        <div>
-                            <dt class="text-xs text-muted-foreground">
-                                Archivos
-                            </dt>
-                            <dd class="font-semibold tabular-nums">
-                                {{
+                        <AlertTriangle class="mt-0.5 size-4 shrink-0" />
+                        <div class="min-w-0">
+                            <p class="font-medium">
+                                El traslado no ha empezado
+                            </p>
+                            <p class="mt-0.5 text-xs">
+                                Lleva más de un minuto en cola. Revisa que el
+                                procesador de tareas del servidor (queue:work)
+                                esté encendido; arrancará solo en cuanto lo
+                                esté.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <div
+                            class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                        >
+                            <span
+                                class="text-2xl font-semibold tabular-nums"
+                                aria-hidden="true"
+                                >{{ percent }}%</span
+                            >
+                            <span class="text-sm text-muted-foreground">
+                                Tiempo restante:
+                                <span class="font-medium text-foreground">{{
+                                    formatEta(props.migration)
+                                }}</span>
+                            </span>
+                        </div>
+                        <Progress
+                            :model-value="percent"
+                            class="h-3"
+                            :aria-label="`Avance del traslado: ${percent}%`"
+                        />
+                        <p
+                            class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground tabular-nums"
+                        >
+                            <span
+                                ><span class="font-medium text-foreground">{{
                                     formatNumber(props.migration.processedFiles)
-                                }}
+                                }}</span>
                                 de
                                 {{ formatNumber(props.migration.totalFiles) }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs text-muted-foreground">
-                                Transferido
-                            </dt>
-                            <dd class="font-semibold tabular-nums">
-                                {{
+                                archivos</span
+                            >
+                            <span
+                                ><span class="font-medium text-foreground">{{
+                                    formatBytes(props.migration.processedBytes)
+                                }}</span>
+                                de
+                                {{ formatBytes(props.migration.totalBytes) }}
+                                procesados</span
+                            >
+                            <span
+                                >{{
                                     formatBytes(
                                         props.migration.transferredBytes,
                                     )
                                 }}
-                                <span class="font-normal text-muted-foreground">
-                                    de
-                                    {{
-                                        formatBytes(props.migration.totalBytes)
-                                    }}</span
-                                >
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs text-muted-foreground">
-                                Errores
-                            </dt>
-                            <dd
-                                :class="
-                                    cn(
-                                        'font-semibold tabular-nums',
-                                        props.migration.counts.failed > 0 &&
-                                            'text-danger-ink',
-                                    )
-                                "
+                                copiados</span
                             >
-                                {{
-                                    formatNumber(props.migration.counts.failed)
-                                }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs text-muted-foreground">
-                                Tiempo restante
-                            </dt>
-                            <dd class="font-semibold">
-                                {{ formatEta(props.migration.etaSeconds) }}
-                            </dd>
-                        </div>
-                    </dl>
+                        </p>
+                    </div>
+
+                    <ul
+                        class="grid grid-cols-2 gap-2 text-sm md:grid-cols-4"
+                        aria-label="Desglose del traslado"
+                    >
+                        <li
+                            v-for="item in breakdown"
+                            :key="item.key"
+                            class="flex flex-col gap-0.5 rounded-md border px-3 py-2"
+                        >
+                            <span
+                                class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+                            >
+                                <span
+                                    :class="cn('size-2 rounded-full', item.dot)"
+                                />
+                                {{ item.label }}
+                            </span>
+                            <span
+                                :class="
+                                    cn('font-semibold tabular-nums', item.text)
+                                "
+                                >{{ formatNumber(item.value) }}</span
+                            >
+                        </li>
+                    </ul>
 
                     <p
-                        v-if="props.migration.waitingForWorker"
-                        class="flex items-start gap-1.5 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning-ink"
+                        v-if="
+                            lastError && props.migration.failures.length === 0
+                        "
+                        class="flex items-start gap-1.5 rounded-md bg-danger-soft px-3 py-2 text-xs break-words text-danger-ink"
+                        :title="lastError"
                     >
                         <AlertTriangle class="mt-px size-3.5 shrink-0" />
-                        El traslado sigue en cola. Verifica que el procesador de
-                        tareas del servidor (queue:work) esté encendido.
+                        <span class="min-w-0"
+                            >Último error: {{ shorten(lastError) }}</span
+                        >
+                    </p>
+
+                    <StorageMigrationFailures
+                        v-if="props.migration.failures.length > 0"
+                        :failures="props.migration.failures"
+                        :total="props.migration.counts.failed"
+                    />
+                    <p
+                        v-if="props.migration.counts.failed > 0"
+                        class="text-xs text-muted-foreground"
+                    >
+                        Podrás reintentar los fallidos cuando termine el
+                        traslado.
                     </p>
 
                     <div class="flex flex-wrap gap-2">
@@ -481,9 +639,8 @@ const purgeLabel = computed(() =>
                             v-if="!props.synologyReady"
                             class="text-xs text-muted-foreground"
                         >
-                            Primero configura el Synology y pulsa «Probar
-                            conexión»; el botón se habilita cuando la prueba
-                            sale bien.
+                            Se habilita cuando el Synology esté conectado y
+                            «Probar conexión» salga bien.
                         </p>
                     </article>
 
@@ -551,97 +708,55 @@ const purgeLabel = computed(() =>
                         </span>
                     </div>
 
-                    <ul class="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-                        <li>
-                            <span class="font-semibold tabular-nums">{{
-                                formatNumber(props.migration.counts.done)
-                            }}</span>
-                            movidos
-                        </li>
-                        <li>
-                            <span class="font-semibold tabular-nums">{{
-                                formatNumber(props.migration.counts.skipped)
-                            }}</span>
-                            ya estaban en el destino
-                        </li>
+                    <ul
+                        class="grid grid-cols-2 gap-2 text-sm md:grid-cols-4"
+                        aria-label="Resultado del traslado"
+                    >
                         <li
-                            :class="
-                                props.migration.counts.failed > 0 &&
-                                'text-danger-ink'
-                            "
+                            v-for="item in breakdown"
+                            :key="item.key"
+                            class="flex flex-col gap-0.5 rounded-md border px-3 py-2"
                         >
-                            <span class="font-semibold tabular-nums">{{
-                                formatNumber(props.migration.counts.failed)
-                            }}</span>
-                            con error
-                        </li>
-                        <li v-if="props.migration.counts.pending > 0">
-                            <span class="font-semibold tabular-nums">{{
-                                formatNumber(props.migration.counts.pending)
-                            }}</span>
-                            sin procesar
-                        </li>
-                        <li>
-                            {{ formatBytes(props.migration.transferredBytes) }}
-                            transferidos
+                            <span
+                                class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+                            >
+                                <span
+                                    :class="cn('size-2 rounded-full', item.dot)"
+                                />
+                                {{ item.label }}
+                            </span>
+                            <span
+                                :class="
+                                    cn('font-semibold tabular-nums', item.text)
+                                "
+                                >{{ formatNumber(item.value) }}</span
+                            >
                         </li>
                     </ul>
+                    <p class="text-xs text-muted-foreground tabular-nums">
+                        {{ formatBytes(props.migration.transferredBytes) }}
+                        copiados de
+                        {{ formatBytes(props.migration.totalBytes) }}.
+                    </p>
 
-                    <div
-                        v-if="props.migration.failures.length > 0"
-                        class="overflow-x-auto rounded-md border"
+                    <p
+                        v-if="
+                            lastError && props.migration.failures.length === 0
+                        "
+                        class="flex items-start gap-1.5 rounded-md bg-danger-soft px-3 py-2 text-xs break-words text-danger-ink"
+                        :title="lastError"
                     >
-                        <table class="w-full text-left text-sm">
-                            <caption class="sr-only">
-                                Archivos que no se pudieron mover
-                            </caption>
-                            <thead
-                                class="bg-muted/50 text-xs text-muted-foreground"
-                            >
-                                <tr>
-                                    <th
-                                        scope="col"
-                                        class="px-3 py-2 font-medium"
-                                    >
-                                        Archivo
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        class="px-3 py-2 font-medium"
-                                    >
-                                        Motivo
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        class="px-3 py-2 text-right font-medium"
-                                    >
-                                        Intentos
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="failure in props.migration.failures"
-                                    :key="failure.id"
-                                    class="border-t"
-                                >
-                                    <td class="px-3 py-2 font-medium break-all">
-                                        {{ failure.filename }}
-                                    </td>
-                                    <td
-                                        class="px-3 py-2 break-words text-muted-foreground"
-                                    >
-                                        {{ failure.error ?? 'Sin detalle' }}
-                                    </td>
-                                    <td
-                                        class="px-3 py-2 text-right tabular-nums"
-                                    >
-                                        {{ failure.attempts }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                        <AlertTriangle class="mt-px size-3.5 shrink-0" />
+                        <span class="min-w-0"
+                            >Último error: {{ shorten(lastError) }}</span
+                        >
+                    </p>
+
+                    <StorageMigrationFailures
+                        v-if="props.migration.failures.length > 0"
+                        :failures="props.migration.failures"
+                        :total="props.migration.counts.failed"
+                    />
 
                     <div class="flex flex-wrap gap-2">
                         <Button

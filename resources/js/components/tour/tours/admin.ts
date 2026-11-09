@@ -1577,22 +1577,36 @@ export const adminModules: HelpModule[] = [
         permission: 'settings.manage',
         summary: 'Dónde se guardan fotos, renders, videos y documentos.',
         purpose:
-            'Elige el proveedor de almacenamiento (por ejemplo, tu servidor Synology). Los archivos nuevos se suben al proveedor activo; los existentes se quedan donde están.',
+            'Elige dónde se guardan los archivos nuevos: el servidor o el Synology de la oficina (montado en el servidor). Los archivos que ya existen se quedan donde están hasta que los muevas.',
         keySteps: [
-            'Captura los datos de conexión del proveedor.',
-            'Pulsa «Probar» para verificar la conexión.',
+            'Revisa el estado y el espacio del Synology.',
+            'Pulsa «Probar conexión» para verificarlo.',
             'Actívalo cuando la prueba salga bien.',
+            'Mueve la multimedia existente si lo necesitas.',
         ],
         steps: [
             header(
                 'Almacenamiento',
                 'Dónde se guardan los archivos de la plataforma.',
             ),
-            card(
-                'Conexión con Synology',
-                'Conexión',
-                'Datos de acceso a tu servidor. Prueba la conexión antes de activarlo.',
-            ),
+            {
+                target: 'storage-synology',
+                title: 'Synology',
+                body: 'Estado, espacio y resultado de la última prueba del NAS. Prueba la conexión y actívalo cuando salga bien.',
+                optional: true,
+            },
+            {
+                target: 'storage-local',
+                title: 'Servidor',
+                body: 'El respaldo siempre disponible. Los documentos privados de clientes siempre se quedan aquí.',
+                optional: true,
+            },
+            {
+                target: 'storage-migration',
+                title: 'Mover multimedia',
+                body: 'Ve dónde está cada archivo y pásalos entre el servidor y el Synology, con el avance en vivo.',
+                optional: true,
+            },
             content(
                 'Proveedor activo',
                 'Solo un proveedor está activo a la vez. Cambiarlo no mueve los archivos que ya existen.',
