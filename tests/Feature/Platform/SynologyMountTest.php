@@ -437,3 +437,12 @@ test('replacing keeps the record but generates a new readable path', function ()
 test('storage admin page still requires settings.manage', function () {
     $this->actingAs(F::user(UserRole::Operations))->get('/admin/almacenamiento')->assertForbidden();
 });
+
+test('the real NAS disk builds public URLs without touching the mount', function () {
+    realMountRoot();
+    config(['media.synology.mountinfo' => storage_path('framework/testing/no-existe')]);
+    SynologyMount::flush();
+
+    expect(Storage::disk('media_synology')->url('sitio/general/imagenes/2026/11/cocina-a1b2c3d4.jpg'))
+        ->toBe('/media/sitio/general/imagenes/2026/11/cocina-a1b2c3d4.jpg');
+});

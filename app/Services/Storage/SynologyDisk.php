@@ -46,7 +46,7 @@ final class SynologyDisk
 
         $flysystemConfig = array_intersect_key($config, array_flip(['directory_visibility', 'disable_asserts', 'retain_visibility', 'url', 'visibility']));
 
-        return (new LocalFilesystemAdapter(new Filesystem($guard, $flysystemConfig), $guard, $config))->diskName(self::DISK);
+        return (new SynologyFilesystemAdapter(new Filesystem($guard, $flysystemConfig), $guard, $config))->diskName(self::DISK);
     }
 
     /** Olvida el disco ya resuelto (se vuelve a construir en el próximo uso). */
